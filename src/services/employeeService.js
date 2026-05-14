@@ -1,0 +1,106 @@
+import { apiClient } from '../lib/apiClient';
+
+// Helper function to convert snake_case to camelCase
+const toCamelCase = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(toCamelCase);
+  
+  return Object.keys(obj).reduce((acc, key) => {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    acc[camelKey] = toCamelCase(obj[key]);
+    return acc;
+  }, {});
+};
+
+// Helper function to convert camelCase to snake_case
+const toSnakeCase = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(toSnakeCase);
+  
+  return Object.keys(obj).reduce((acc, key) => {
+    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    acc[snakeKey] = toSnakeCase(obj[key]);
+    return acc;
+  }, {});
+};
+
+export const employeeService = {
+  // ============================================
+  // AGENT ONBOARDING VERIFICATION (STUBS)
+  // ============================================
+  async getPendingAgentOnboarding() {
+    return { data: [], error: null };
+  },
+  async approveAgentOnboarding(agentId) {
+    return { error: { message: 'Agent onboarding is managed by admin.' } };
+  },
+
+  // ============================================
+  // APPLICATION VERIFICATION
+  // ============================================
+  async getAssignedApplications() {
+    try {
+      const res = await apiClient.get('/loan-applications/me');
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: 'Failed to fetch assigned applications' } };
+    }
+  },
+
+  async reviewApplication(applicationId, reviewData) {
+    try {
+      const res = await apiClient.patch(`/loan-applications/${applicationId}`, toSnakeCase(reviewData));
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: 'Review failed' } };
+    }
+  },
+
+  // ============================================
+  // DOCUMENT VERIFICATION
+  // ============================================
+  async getPendingDocuments() {
+    try {
+      const res = await apiClient.get('/documents', { params: { status: 'pending' } });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: 'Failed to fetch pending documents' } };
+    }
+  },
+
+  async verifyDocument(documentId, verificationData) {
+    try {
+      const res = await apiClient.patch(`/documents/${documentId}/verify`, toSnakeCase(verificationData));
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: 'Verification failed' } };
+    }
+  },
+
+  // ============================================
+  // EMPLOYEE DASHBOARD DATA
+  // ============================================
+  async getEmployeeDashboardStats() {
+    try {
+      const res = await apiClient.get('/loan-applications/me');
+      const apps = res.data || [];
+      
+      return {
+        data: {
+          pendingAgents: 0, // Placeholder
+          assignedApplications: apps.filter(a => a.status === 'submitted' || a.status === 'under_review').length,
+          pendingDocuments: 0, // Placeholder
+          completedToday: 0 // Placeholder
+        },
+        error: null
+      };
+    } catch (error) {
+      return { data: null, error: { message: 'Failed to fetch stats' } };
+    }
+  },
+
+  // Log activity (Stubbed)
+  async logEmployeeActivity(activityData) {
+    console.log('Employee activity log:', activityData);
+  }
+};

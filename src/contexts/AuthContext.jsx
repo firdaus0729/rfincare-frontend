@@ -1,0 +1,140 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { apiClient, setAccessToken } from '../lib/apiClient';
+
+const AuthContext = createContext({})
+
+// Role-based route mapping
+const getRoleBasedRoute = (role) => {
+  const roleRoutes = {
+    'customer': '/customer-dashboard',
+    'admin': '/admin-dashboard',
+    'super_admin': '/admin-dashboard',
+    'employee': '/employee-portal',
+    'agent': '/agent-dashboard'
+  };
+  return roleRoutes?.[role] || '/customer-dashboard';
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider')
+  }
+  return context
+}
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null)
+  const [userProfile, setUserProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
+
+  // Isolated async operations - never called from auth callbacks
+  const profileOperations = {
+    async load(userId) {
+      if (!userId) return
+      setProfileLoading(true)
+      try {
+        const res = await apiClient.get('/auth/me')
+        const profile = res?.data?.profile
+        if (profile) setUserProfile(profile)
+      } catch (error) {
+        console.error('Profile load error:', error)
+      } finally {
+        setProfileLoading(false)
+      }
+    },
+
+    clear() {
+      setUserProfile(null)
+      setProfileLoading(false)
+    }
+  }
+
+  // Auth state handlers - PROTECTED from async modification
+  const authStateHandlers = {
+    setAuthenticated: (userObj) => {
+      setUser(userObj ?? null)
+      setLoading(false)
+      if (userObj?.id) profileOperations?.load(userObj?.id)
+      else profileOperations?.clear()
+    },
+  }
+
+  useEffect(() => {
+    // Initial session check: try refresh-cookie → access token → /me
+    (async () => {
+      try {
+        const refreshRes = await apiClient.post('/auth/refresh')
+        const token = refreshRes?.data?.accessToken
+        if (token) setAccessToken(token)
+
+        const meRes = await apiClient.get('/auth/me')
+        const meUser = meRes?.data?.user
+        const meProfile = meRes?.data?.profile
+        setUser(meUser ?? null)
+        setUserProfile(meProfile ?? null)
+      } catch {
+        setUser(null)
+        setUserProfile(null)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
+
+  // Auth methods
+  const signIn = async (email, password) => {
+    try {
+      const res = await apiClient.post('/auth/login', { email, password })
+      const token = res?.data?.accessToken
+      if (token) setAccessToken(token)
+      authStateHandlers?.setAuthenticated(res?.data?.user)
+      return { data: res?.data, error: null }
+    } catch (error) {
+      return { error: { message: error?.response?.data?.error || 'Network error. Please try again.' } }
+    }
+  }
+
+  const signOut = async () => {
+    try {
+      await apiClient.post('/auth/logout')
+      setAccessToken(null)
+      setUser(null)
+      profileOperations?.clear()
+      return { error: null }
+    } catch (error) {
+      return { error: { message: 'Network error. Please try again.' } }
+    }
+  }
+
+  const updateProfile = async (updates) => {
+    if (!user) return { error: { message: 'No user logged in' } }
+    
+    try {
+      const res = await apiClient.patch('/profiles/me', updates)
+      if (res?.data?.profile) setUserProfile(res?.data?.profile)
+      return { data: res?.data, error: null }
+    } catch (error) {
+      return { error: { message: 'Network error. Please try again.' } }
+    }
+  }
+
+  const value = {
+    user,
+    userProfile,
+    loading,
+    profileLoading,
+    signIn,
+    signOut,
+    updateProfile,
+    isAuthenticated: !!user,
+    getRoleBasedRoute: () => getRoleBasedRoute(userProfile?.role)
+  }
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
