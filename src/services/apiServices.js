@@ -40,11 +40,17 @@ export const bankService = {
     return toCamelCase(res?.data);
   },
   async createBank(bankData) {
-    const res = await apiClient.post('/banks', toSnakeCase(bankData));
+    const payload = toSnakeCase(bankData);
+    if (payload.logo_url === '') payload.logo_url = null;
+    if (payload.logo_alt === '') payload.logo_alt = null;
+    const res = await apiClient.post('/banks', payload);
     return toCamelCase(res?.data);
   },
   async updateBank(bankId, bankData) {
-    const res = await apiClient.patch(`/banks/${bankId}`, toSnakeCase(bankData));
+    const payload = toSnakeCase(bankData);
+    if (payload.logo_url === '') payload.logo_url = null;
+    if (payload.logo_alt === '') payload.logo_alt = null;
+    const res = await apiClient.patch(`/banks/${bankId}`, payload);
     return toCamelCase(res?.data);
   },
   async deleteBank(bankId) {
