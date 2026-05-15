@@ -22,6 +22,7 @@ const DevelopmentPanel = () => {
   const [frontendContent, setFrontendContent] = useState('');
   const [backendPath, setBackendPath] = useState('');
   const [frontendPath, setFrontendPath] = useState('');
+  const [frontendHint, setFrontendHint] = useState('');
   const [loadError, setLoadError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -35,6 +36,7 @@ const DevelopmentPanel = () => {
       setFrontendContent(data?.frontend?.content ?? '');
       setBackendPath(data?.backend?.path ?? '');
       setFrontendPath(data?.frontend?.path ?? '');
+      setFrontendHint(data?.frontend?.hint ?? '');
     } catch (err) {
       setLoadError(err?.response?.data?.error || 'Failed to load environment files');
     }
@@ -145,7 +147,7 @@ const DevelopmentPanel = () => {
           <div>
             <h1 className="text-2xl font-semibold">Developer environment</h1>
             <p className="text-slate-400 text-sm mt-1">
-              Edit .env files saved on disk. Backend changes apply immediately; frontend VITE_* values reload after save.
+              Edit .env files. Backend changes apply on the API server immediately. Frontend values are used for Vercel deploy.
             </p>
           </div>
           <Button variant="outline" onClick={handleLogout}>
@@ -173,6 +175,9 @@ const DevelopmentPanel = () => {
         {loadError && <p className="text-red-400 text-sm mb-4">{loadError}</p>}
         {activePath && (
           <p className="text-xs text-slate-500 mb-2 font-mono break-all">{activePath}</p>
+        )}
+        {activeTab === 'frontend' && frontendHint && (
+          <p className="text-xs text-amber-400/90 mb-3">{frontendHint}</p>
         )}
 
         <textarea
