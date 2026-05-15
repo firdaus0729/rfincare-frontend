@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
@@ -32,9 +32,7 @@ const Header = ({ children }) => {
   const { t } = useTranslation();
   const { user, userProfile } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const moreMenuRef = useRef(null);
 
   const isGuest = !user;
   const currentRole = userProfile?.role || 'customer';
@@ -47,21 +45,6 @@ const Header = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!isMoreOpen) return undefined;
-    const handlePointerDown = (event) => {
-      if (!moreMenuRef.current?.contains(event.target)) {
-        setIsMoreOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('touchstart', handlePointerDown);
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('touchstart', handlePointerDown);
-    };
-  }, [isMoreOpen]);
-
-  useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
@@ -70,7 +53,6 @@ const Header = ({ children }) => {
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
-    setIsMoreOpen(false);
   }, [location.pathname]);
 
   const guestPrimaryNav = useMemo(
@@ -118,24 +100,7 @@ const Header = ({ children }) => {
   const handleNavigation = (path) => {
     navigate(path);
     setIsMobileMenuOpen(false);
-    setIsMoreOpen(false);
   };
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen((open) => {
-      if (!open) setIsMoreOpen(false);
-      return !open;
-    });
-  };
-
-  const toggleMoreMenu = () => {
-    setIsMoreOpen((open) => {
-      if (!open) setIsMobileMenuOpen(false);
-      return !open;
-    });
-  };
-
-  const menusVisible = isMobileMenuOpen || isMoreOpen;
 
   const roleLabel = currentRole === 'super_admin' ? 'Admin' : t(`header.${currentRole}`);
 
@@ -150,64 +115,72 @@ const Header = ({ children }) => {
               </div>
               <span className="header-logo-text">Rfincare</span>
             </div>
-            <nav
-              className={`items-center space-x-1 ${
-                isMobileMenuOpen ? 'hidden' : 'hidden md:flex'
-              }`}
-            >
-              {!menusVisible && visibleNavItems.map((item) => (
+
+            {/* Desktop menu bar — hidden below md */}
+            <nav className="header-nav">
+              {visibleNavItems.map((item) => (
                 <button key={item.path} type="button" onClick={() => handleNavigation(item.path)} className={`header-nav-item ${isActive(item.path) ? 'active' : ''}`}>
-                  <div className="flex items-center space-x-2"><Icon name={item.icon} size={16} /><span>{item.label}</span></div>
+                  <div className="flex items-center space-x-2">
+                    <Icon name={item.icon} size={16} />
+                    <span>{item.label}</span>
+                  </div>
                 </button>
               ))}
               {moreNavItems.length > 0 && (
-                <div className="relative" ref={moreMenuRef}>
-                  <button
-                    type="button"
-                    onClick={toggleMoreMenu}
-                    className={`header-nav-item flex items-center space-x-1 ${isMoreOpen ? 'active' : ''}`}
-                    aria-expanded={isMoreOpen}
-                    aria-haspopup="true"
-                  >
+                <div className="relative group">
+                  <button type="button" className="header-nav-item flex items-center space-x-1">
                     <span>{t('header.more')}</span>
-                    <Icon name={isMoreOpen ? 'ChevronUp' : 'ChevronDown'} size={16} />
+                    <Icon name="ChevronDown" size={16} />
                   </button>
-                  {isMoreOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-popover border border-border rounded-lg shadow-lg z-50">
-                      <div className="py-2">
-                        {moreNavItems.map((item) => (
-                          <button key={item.path} type="button" onClick={() => handleNavigation(item.path)} className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center space-x-2">
-                            <Icon name={item.icon} size={16} /><span>{item.label}</span>
-                          </button>
-                        ))}
-                      </div>
+                  <div className="absolute right-0 mt-2 w-56 bg-popover border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <div className="py-2">
+                      {moreNavItems.map((item) => (
+                        <button key={item.path} type="button" onClick={() => handleNavigation(item.path)} className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center space-x-2">
+                          <Icon name={item.icon} size={16} />
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
             </nav>
+
             <div className="header-actions">
               <LanguageSwitcher />
               {!isGuest && <span className={`role-badge ${currentRole}`}>{roleLabel}</span>}
               {children}
-              <Button variant="ghost" size="icon" className="header-mobile-toggle" onClick={toggleMobileMenu}>
+              {/* Menu icon — visible only below md (when menu bar is hidden) */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="header-mobile-toggle"
+                onClick={() => setIsMobileMenuOpen((open) => !open)}
+                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={isMobileMenuOpen}
+              >
                 <Icon name={isMobileMenuOpen ? 'X' : 'Menu'} size={24} />
               </Button>
             </div>
           </div>
         </div>
       </header>
+
       {isMobileMenuOpen && (
-        <div className="mobile-menu animate-slide-in">
+        <div className="mobile-menu animate-slide-in md:hidden">
           <div className="mobile-menu-content">
             {mobileItems.map((item) => (
               <button key={item.path} type="button" onClick={() => handleNavigation(item.path)} className={`mobile-menu-item ${isActive(item.path) ? 'active' : ''}`}>
-                <div className="flex items-center space-x-3"><Icon name={item.icon} size={20} /><span>{item.label}</span></div>
+                <div className="flex items-center space-x-3">
+                  <Icon name={item.icon} size={20} />
+                  <span>{item.label}</span>
+                </div>
               </button>
             ))}
           </div>
         </div>
       )}
+
       <div className="h-16" />
     </>
   );

@@ -165,8 +165,9 @@
     font-family: var(--font-headline);
   }
 
+  /* Menu bar: visible md+ only */
   .header-nav {
-    @apply hidden md:flex items-center space-x-1;
+    @apply hidden md:flex items-center space-x-1 flex-1 justify-center;
   }
 
   .header-nav-item {
@@ -186,8 +187,9 @@
     @apply flex items-center space-x-3;
   }
 
+  /* Menu icon: visible below md only (when menu bar is hidden) */
   .header-mobile-toggle {
-    @apply md:hidden p-2 rounded-lg hover:bg-muted transition-colors;
+    @apply flex md:!hidden p-2 rounded-lg hover:bg-muted transition-colors;
   }
 
   /* Mobile Menu Styles */
