@@ -34,8 +34,8 @@ export async function saveEnvFile(target, content) {
 }
 
 export async function refreshRuntimeConfig() {
-  const base = getApiBaseUrl();
-  if (!base) return null;
-  const res = await fetch(`${base.replace(/\/$/, '')}/public/runtime-config`);
+  const base = getApiBaseUrl()?.replace(/\/$/, '') || '';
+  const url = base ? `${base}/public/runtime-config` : '/public/runtime-config';
+  const res = await fetch(url);
   return res.ok ? res.json() : null;
 }

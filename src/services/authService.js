@@ -194,10 +194,9 @@ export const authService = {
   },
 
   async signInWithOAuth(provider) {
-    const base = import.meta.env?.VITE_API_BASE_URL || '';
     const map = { google: 'google', microsoft: 'microsoft', outlook: 'microsoft', apple: 'apple' };
     const p = map[provider] || provider;
-    window.location.href = `${base}/auth/oauth/${p}`;
+    window.location.href = `/auth/oauth/${p}`;
     return { data: { redirecting: true }, error: null };
   },
 };

@@ -16,15 +16,10 @@ export function getApiBaseUrl() {
 }
 
 export async function loadRuntimeConfig() {
-  const base = buildTime.VITE_API_BASE_URL || '';
-  if (!base) {
-    loaded = true;
-    return runtime;
-  }
+  const base = buildTime.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
+  const configUrl = base ? `${base}/public/runtime-config` : '/public/runtime-config';
   try {
-    const res = await fetch(`${base.replace(/\/$/, '')}/public/runtime-config`, {
-      credentials: 'omit',
-    });
+    const res = await fetch(configUrl, { credentials: 'omit' });
     if (res.ok) {
       const data = await res.json();
       runtime = { ...buildTime, ...(data?.vite || {}) };
