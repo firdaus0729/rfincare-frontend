@@ -6,6 +6,7 @@ import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import { getLoanProductBySlug, LOAN_PRODUCTS } from '../../constants/loanProducts';
 import NotFound from '../NotFound';
+import BankOffersSection from './components/BankOffersSection';
 
 const ProductLanding = () => {
   const { loanType } = useParams();
@@ -84,6 +85,8 @@ const ProductLanding = () => {
             </div>
           </div>
         </section>
+
+        <BankOffersSection product={product} />
 
         <section className="py-10 bg-background border-t border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
