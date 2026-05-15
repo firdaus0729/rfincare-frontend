@@ -13,6 +13,7 @@ import FinancialInfoForm from './components/FinancialInfoForm';
 import ReviewSubmitForm from './components/ReviewSubmitForm';
 import AutoSaveIndicator from './components/AutoSaveIndicator';
 import Icon from '../../components/AppIcon';
+import { normalizeLoanApiKey } from '../../constants/loanProducts';
 
 const SESSION_KEY = 'loan_assessment_session';
 
@@ -33,15 +34,6 @@ const generateCredentials = (formData) => {
   const email = `${username}@rfincare.customer`;
   const password = `RFC${phone || timestamp}${Math.random()?.toString(36)?.substring(2, 6)?.toUpperCase()}@`;
   return { email, password, username };
-};
-
-const LOAN_TYPE_MAP = {
-  personal: 'personal_loan',
-  home: 'home_loan',
-  business: 'business_loan',
-  auto: 'auto_loan',
-  personal_loan: 'personal_loan',
-  home_loan: 'home_loan',
 };
 
 const CustomerAssessmentPortal = () => {
@@ -92,7 +84,7 @@ const CustomerAssessmentPortal = () => {
         loanAmount: quick?.loanAmount || prev.loanAmount,
         monthlyIncome: quick?.monthlyIncome || prev.monthlyIncome,
         creditScoreRange: quick?.creditScore || quick?.creditScoreRange || prev.creditScoreRange,
-        loanPurpose: LOAN_TYPE_MAP[quick?.loanType] || LOAN_TYPE_MAP[loanTypeParam] || prev.loanPurpose,
+        loanPurpose: normalizeLoanApiKey(quick?.loanType || loanTypeParam) || prev.loanPurpose,
         employmentType: quick?.employmentType || prev.employmentType,
       }));
     }

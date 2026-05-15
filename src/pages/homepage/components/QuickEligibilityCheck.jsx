@@ -4,6 +4,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
+import { LOAN_PRODUCTS } from '../../../constants/loanProducts';
 
 const QuickEligibilityCheck = () => {
   const navigate = useNavigate();
@@ -14,12 +15,7 @@ const QuickEligibilityCheck = () => {
     creditScore: ''
   });
 
-  const loanTypes = [
-    { value: 'personal', label: 'Personal Loan' },
-    { value: 'home', label: 'Home Loan' },
-    { value: 'business', label: 'Business Loan' },
-    { value: 'auto', label: 'Auto Loan' }
-  ];
+  const loanTypes = LOAN_PRODUCTS.map((p) => ({ value: p.slug, label: p.label }));
 
   const creditScoreRanges = [
     { value: 'excellent', label: 'Excellent (750+)' },
@@ -30,7 +26,11 @@ const QuickEligibilityCheck = () => {
 
   const handleSubmit = (e) => {
     e?.preventDefault();
-    navigate('/customer-assessment-portal', { state: { quickCheck: formData } });
+    if (formData.loanType) {
+      navigate(`/eligibility-assessment?loanType=${formData.loanType}`, { state: { quickCheck: formData } });
+    } else {
+      navigate('/eligibility-assessment', { state: { quickCheck: formData } });
+    }
   };
 
   return (

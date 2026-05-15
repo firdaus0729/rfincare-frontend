@@ -29,8 +29,10 @@ export const bankService = {
     const res = await apiClient.get('/banks', { params: { includeInactive: true } });
     return toCamelCase(res?.data);
   },
-  async getActiveBanks() {
-    const res = await apiClient.get('/banks');
+  async getActiveBanks(options = {}) {
+    const params = { includeProducts: true };
+    if (options.loanType) params.loanType = options.loanType;
+    const res = await apiClient.get('/banks', { params });
     return toCamelCase(res?.data);
   },
   async getBankById(bankId) {

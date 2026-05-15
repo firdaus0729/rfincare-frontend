@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/AppIcon';
+import { LOAN_PRODUCTS } from '../../../constants/loanProducts';
 
 const Footer = () => {
   const navigate = useNavigate();
@@ -9,12 +10,10 @@ const Footer = () => {
   const currentYear = new Date()?.getFullYear();
 
   const footerLinks = {
-    products: [
-      { label: t('footer.personalLoans'), path: '/customer-assessment-portal?loanType=personal' },
-      { label: t('footer.homeLoans'), path: '/customer-assessment-portal?loanType=home' },
-      { label: t('footer.businessLoans'), path: '/customer-assessment-portal?loanType=business' },
-      { label: t('footer.autoLoans'), path: '/customer-assessment-portal?loanType=auto' },
-    ],
+    products: LOAN_PRODUCTS.map((p) => ({
+      label: p.label,
+      path: `/products/${p.slug}`,
+    })),
     company: [
       { label: t('footer.aboutUs'), path: '/about-us' },
       { label: t('footer.howItWorks'), path: '/homepage#how-it-works' },

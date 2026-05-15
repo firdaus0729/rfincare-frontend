@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getLoanProductBySlug } from '../../constants/loanProducts';
 
 import Header from '../../components/ui/Header';
 import Icon from '../../components/AppIcon';
@@ -14,6 +15,9 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const BankMarketplace = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const loanTypeSlug = searchParams.get('loanType');
+  const activeProduct = getLoanProductBySlug(loanTypeSlug);
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('probability-desc');
@@ -36,17 +40,27 @@ const BankMarketplace = () => {
 
   useEffect(() => {
     loadBanks();
-  }, []);
+  }, [loanTypeSlug]);
 
   const loadBanks = async () => {
     try {
       setLoading(true);
-      const data = await bankService?.getActiveBanks();
-      
-      // Transform data to match existing UI structure
-      const transformedBanks = data?.map(bank => {
+      const data = await bankService?.getActiveBanks({
+        loanType: loanTypeSlug || undefined,
+      });
+
+      const transformedBanks = data?.map((bank) => {
         const products = bank?.bankProducts || [];
         const primaryProduct = products?.[0] || {};
+        const productData = typeof primaryProduct?.data === 'object'
+          ? primaryProduct.data
+          : (() => {
+              try {
+                return JSON.parse(primaryProduct?.data || '{}');
+              } catch {
+                return {};
+              }
+            })();
         
         return {
           id: bank?.id,
@@ -57,13 +71,14 @@ const BankMarketplace = () => {
           reviews: `${bank?.reviewsCount || 0} reviews`,
           probability: 75, // Default, will be calculated based on user profile
           probabilityReason: 'Based on your profile and eligibility criteria',
-          interestRate: primaryProduct?.interestRateMin || 8.0,
-          processingFee: primaryProduct?.processingFeePercentage 
-            ? `${primaryProduct?.processingFeePercentage}% + GST` 
+          interestRate: productData?.interestRateMin || productData?.interest_rate_min || 8.0,
+          processingFee: productData?.processingFeePercentage || productData?.processing_fee_percentage
+            ? `${productData?.processingFeePercentage || productData?.processing_fee_percentage}% + GST`
             : 'Contact bank',
-          maxAmount: `₹${(primaryProduct?.maxLoanAmount || 2000000)?.toLocaleString('en-IN')}`,
-          maxTenure: `${primaryProduct?.maxTenureYears || 20} years`,
-          features: primaryProduct?.features || [],
+          maxAmount: `₹${(productData?.maxLoanAmount || productData?.max_loan_amount || 2000000)?.toLocaleString('en-IN')}`,
+          maxTenure: `${productData?.maxTenureYears || productData?.max_tenure_years || 20} years`,
+          features: productData?.features || [],
+          loanType: primaryProduct?.loanType || productData?.loanType || productData?.loan_type,
           certifications: bank?.certifications || [],
           customersServed: bank?.customersServed || '10,000+',
           partnershipDuration: bank?.partnershipDuration || 'Partner since 2020',
@@ -110,7 +125,12 @@ const BankMarketplace = () => {
   };
 
   const handleApply = (bank) => {
-    navigate('/bank-selection-and-consent', { state: { selectedBank: bank } });
+    const qs = activeProduct ? `?loanType=${activeProduct.slug}` : '';
+    if (user) {
+      navigate('/bank-selection-and-consent', { state: { selectedBank: bank, loanType: activeProduct?.apiKey } });
+      return;
+    }
+    navigate(`/customer-assessment-portal${qs}`, { state: { selectedBank: bank } });
   };
 
   const filteredAndSortedBanks = useMemo(() => {
@@ -185,17 +205,41 @@ const BankMarketplace = () => {
               Home
             </button>
             <Icon name="ChevronRight" size={16} />
+            {activeProduct ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/products/${activeProduct.slug}`)}
+                  className="hover:text-primary transition-colors"
+                >
+                  {activeProduct.label}
+                </button>
+                <Icon name="ChevronRight" size={16} />
+              </>
+            ) : null}
             <span className="text-foreground font-medium">Bank Marketplace</span>
           </div>
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
             <div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2">
-                Find Your Perfect Lender
+                {activeProduct ? `${activeProduct.label} — Compare Banks` : 'Find Your Perfect Lender'}
               </h1>
               <p className="text-sm md:text-base text-muted-foreground">
-                Compare personalized loan offers from our trusted banking partners
+                {activeProduct
+                  ? `Lenders offering ${activeProduct.label.toLowerCase()} products matched to your search`
+                  : 'Compare personalized loan offers from our trusted banking partners'}
               </p>
+              {activeProduct && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <Button size="sm" variant="outline" onClick={() => navigate('/bank-marketplace')}>
+                    Show all loan types
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/eligibility-assessment?loanType=${activeProduct.slug}`)}>
+                    Check eligibility
+                  </Button>
+                </div>
+              )}
             </div>
 
             {compareList?.length > 0 &&

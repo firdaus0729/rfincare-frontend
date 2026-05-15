@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { LOAN_PRODUCTS, getLoanProductBySlug, normalizeLoanApiKey } from '../../constants/loanProducts';
 import Header from '../../components/ui/Header';
 import Footer from '../homepage/components/Footer';
 
@@ -12,9 +13,12 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const EligibilityAssessment = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { user } = useAuth();
+  const prefillProduct = getLoanProductBySlug(searchParams.get('loanType'));
   const [formData, setFormData] = useState({
-    loanType: '',
+    loanType: prefillProduct?.apiKey || '',
     loanAmount: '',
     monthlyIncome: '',
     employmentType: '',
@@ -28,13 +32,19 @@ const EligibilityAssessment = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  const loanTypes = [
-    { value: 'home_loan', label: 'Home Loan' },
-    { value: 'personal_loan', label: 'Personal Loan' },
-    { value: 'auto_loan', label: 'Car Loan' },
-    { value: 'business_loan', label: 'Business Loan' },
-    { value: 'education_loan', label: 'Education Loan' }
-  ];
+  useEffect(() => {
+    const quick = location.state?.quickCheck;
+    if (!quick) return;
+    setFormData((prev) => ({
+      ...prev,
+      loanType: normalizeLoanApiKey(quick.loanType) || prev.loanType,
+      loanAmount: quick.loanAmount || prev.loanAmount,
+      monthlyIncome: quick.monthlyIncome || prev.monthlyIncome,
+      creditScore: quick.creditScore || prev.creditScore,
+    }));
+  }, [location.state]);
+
+  const loanTypes = LOAN_PRODUCTS.map((p) => ({ value: p.apiKey, label: p.label }));
 
   const employmentTypes = [
     { value: 'salaried', label: 'Salaried' },
@@ -105,10 +115,14 @@ const EligibilityAssessment = () => {
   };
 
   const handleApplyNow = () => {
+    const slug = LOAN_PRODUCTS.find((p) => p.apiKey === formData.loanType)?.slug;
+    const qs = slug ? `?loanType=${slug}` : '';
     if (user) {
-      navigate('/customer-assessment-portal', { state: { eligibilityData: { ...formData, ...result } } });
+      navigate(`/customer-assessment-portal${qs}`, { state: { eligibilityData: { ...formData, ...result } } });
     } else {
-      navigate('/customer-assessment-portal', { state: { quickCheck: formData, eligibilityData: { ...formData, ...result } } });
+      navigate(`/customer-assessment-portal${qs}`, {
+        state: { quickCheck: formData, eligibilityData: { ...formData, ...result } },
+      });
     }
   };
 

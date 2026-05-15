@@ -23,6 +23,7 @@ const PUBLIC_GUEST_PATHS = new Set([
 function isPublicGuestRoute(pathname) {
   if (!pathname) return true;
   if (pathname.startsWith('/legal/')) return true;
+  if (pathname.startsWith('/products/')) return true;
   return PUBLIC_GUEST_PATHS.has(pathname);
 }
 
