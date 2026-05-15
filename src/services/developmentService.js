@@ -1,11 +1,22 @@
 import axios from 'axios';
 import { getApiBaseUrl } from '../lib/runtimeConfig';
 
+const DEV_SESSION_KEY = 'dev_panel_session_token';
+
 function devClient() {
-  return axios.create({
+  const client = axios.create({
     baseURL: getApiBaseUrl(),
     withCredentials: true,
   });
+  client.interceptors.request.use((config) => {
+    const token = sessionStorage.getItem(DEV_SESSION_KEY);
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+  return client;
 }
 
 export async function checkDevSession() {
@@ -15,12 +26,19 @@ export async function checkDevSession() {
 
 export async function devLogin(password) {
   const { data } = await devClient().post('/development-panel/login', { password });
+  if (data?.sessionToken) {
+    sessionStorage.setItem(DEV_SESSION_KEY, data.sessionToken);
+  }
   return data;
 }
 
 export async function devLogout() {
-  const { data } = await devClient().post('/development-panel/logout');
-  return data;
+  try {
+    const { data } = await devClient().post('/development-panel/logout');
+    return data;
+  } finally {
+    sessionStorage.removeItem(DEV_SESSION_KEY);
+  }
 }
 
 export async function fetchEnvFiles() {

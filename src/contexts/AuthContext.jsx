@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
     // Initial session check: try refresh-cookie → access token → /me
     (async () => {
       try {
-        const refreshRes = await apiClient.post('/auth/refresh')
+        const refreshRes = await apiClient.post('/auth/refresh', {}, { skipAuthRefresh: true })
         const token = refreshRes?.data?.accessToken
         if (token) setAccessToken(token)
 

@@ -32,8 +32,9 @@ apiClient.interceptors.response.use(
 
     if (!original || original.__isRetry) throw error;
     if (status !== 401) throw error;
+    if (original.skipAuthRefresh) throw error;
+    if (!accessToken) throw error;
 
-    // Avoid infinite loop: don't refresh on auth endpoints
     if (original.url?.startsWith('/auth/')) throw error;
 
     if (!refreshingPromise) {
