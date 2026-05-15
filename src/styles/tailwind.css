@@ -192,7 +192,7 @@
 
   /* Mobile Menu Styles */
   .mobile-menu {
-    @apply md:hidden bg-card border-t border-border;
+    @apply md:hidden fixed top-16 left-0 right-0 bottom-0 z-40 bg-card border-t border-border overflow-y-auto;
     transition: all var(--transition-base);
   }
 
