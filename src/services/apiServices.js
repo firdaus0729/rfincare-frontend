@@ -172,8 +172,8 @@ export const auditService = {
         oldValues,
         newValues,
       });
-    } catch (e) {
-      console.error('Audit log failed:', e);
+    } catch {
+      // Non-blocking: bank/CMS actions should succeed even if audit logging fails
     }
   },
   async getLogs(filters = {}) {
