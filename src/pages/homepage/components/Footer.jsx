@@ -10,29 +10,29 @@ const Footer = () => {
 
   const footerLinks = {
     products: [
-      { label: t('footer.personalLoans'), path: '/customer-assessment-portal' },
-      { label: t('footer.homeLoans'), path: '/customer-assessment-portal' },
-      { label: t('footer.businessLoans'), path: '/customer-assessment-portal' },
-      { label: t('footer.autoLoans'), path: '/customer-assessment-portal' }
+      { label: t('footer.personalLoans'), path: '/customer-assessment-portal?loanType=personal' },
+      { label: t('footer.homeLoans'), path: '/customer-assessment-portal?loanType=home' },
+      { label: t('footer.businessLoans'), path: '/customer-assessment-portal?loanType=business' },
+      { label: t('footer.autoLoans'), path: '/customer-assessment-portal?loanType=auto' },
     ],
     company: [
-      { label: t('footer.aboutUs'), path: '/homepage' },
-      { label: t('footer.howItWorks'), path: '/homepage' },
+      { label: t('footer.aboutUs'), path: '/about-us' },
+      { label: t('footer.howItWorks'), path: '/homepage#how-it-works' },
       { label: t('footer.bankPartners'), path: '/bank-marketplace' },
-      { label: t('footer.careers'), path: '/homepage' }
+      { label: t('footer.careers'), path: '/legal/careers' },
     ],
     resources: [
-      { label: t('footer.helpCenter'), path: '/homepage' },
-      { label: t('footer.financialGuides'), path: '/homepage' },
-      { label: t('footer.loanCalculator'), path: '/homepage' },
-      { label: t('footer.blog'), path: '/homepage' }
+      { label: t('footer.helpCenter'), path: '/legal/help-center' },
+      { label: t('footer.financialGuides'), path: '/legal/financial-guides' },
+      { label: t('footer.loanCalculator'), path: '/eligibility-assessment' },
+      { label: 'Share Your Story', path: '/share-your-story' },
     ],
     legal: [
-      { label: t('footer.privacyPolicy'), path: '/homepage' },
-      { label: t('footer.termsOfService'), path: '/homepage' },
-      { label: t('footer.cookiePolicy'), path: '/homepage' },
-      { label: t('footer.compliance'), path: '/homepage' }
-    ]
+      { label: t('footer.privacyPolicy'), path: '/legal/privacy-policy' },
+      { label: t('footer.termsOfService'), path: '/legal/terms-of-service' },
+      { label: t('footer.cookiePolicy'), path: '/legal/cookie-policy' },
+      { label: t('footer.compliance'), path: '/legal/help-center' },
+    ],
   };
 
   const socialLinks = [
@@ -48,12 +48,8 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 md:gap-10 mb-8 md:mb-10">
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
-                <img
-                  src="/assets/images/Logo_-_Copy_-_Copy-1771484476490.jpg"
-                  alt="Rfincare Logo"
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary">
+                <span className="text-primary-foreground font-bold text-lg">R</span>
               </div>
               <span className="text-xl font-bold text-foreground">Rfincare</span>
             </div>

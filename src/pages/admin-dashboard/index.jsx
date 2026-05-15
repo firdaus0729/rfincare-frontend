@@ -23,6 +23,7 @@ import AccessControlModal from './components/AccessControlModal';
 import DocumentVerificationModal from './components/DocumentVerificationModal';
 import { adminService } from '../../services/adminService';
 import BankManagementTab from './components/BankManagementTab';
+import HomepageCmsTab from './components/HomepageCmsTab';
 
 
 const AdminDashboard = () => {
@@ -97,7 +98,8 @@ const AdminDashboard = () => {
     { id: 'bank-marketplace', label: 'Bank Marketplace', icon: 'Building' },
     { id: 'approval-matrix', label: 'Approval Matrix', icon: 'Grid' },
     { id: 'reports', label: 'Reports', icon: 'BarChart' },
-    { id: 'audit-logs', label: 'Audit Logs', icon: 'Shield' }
+    { id: 'audit-logs', label: 'Audit Logs', icon: 'Shield' },
+    { id: 'homepage-cms', label: 'Homepage CMS', icon: 'Layout' },
   ];
 
   useEffect(() => {
@@ -501,6 +503,8 @@ const AdminDashboard = () => {
                 )}
 
                 {activeTab === 'bank-management' && <BankManagementTab />}
+
+                {activeTab === 'homepage-cms' && <HomepageCmsTab />}
 
                 {/* System Configuration Tab */}
                 {activeTab === 'system' && (

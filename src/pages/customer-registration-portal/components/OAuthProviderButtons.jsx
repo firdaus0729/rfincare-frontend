@@ -11,37 +11,23 @@ const OAuthProviderButtons = ({ onProviderSelect, onEmailSignup }) => {
       id: 'google',
       name: 'Google',
       icon: 'https://www.google.com/favicon.ico',
-      iconAlt: 'Google logo with multicolored G letter',
-      color: 'bg-white hover:bg-gray-50 text-gray-900 border-gray-300'
+      iconAlt: 'Google',
+      color: 'bg-white hover:bg-gray-50 text-gray-900 border-gray-300',
     },
     {
       id: 'microsoft',
-      name: 'Microsoft',
+      name: 'Microsoft / Outlook',
       icon: 'https://www.microsoft.com/favicon.ico',
-      iconAlt: 'Microsoft logo with four colored squares',
-      color: 'bg-white hover:bg-gray-50 text-gray-900 border-gray-300'
+      iconAlt: 'Microsoft',
+      color: 'bg-white hover:bg-gray-50 text-gray-900 border-gray-300',
     },
     {
-      id: 'outlook',
-      name: 'Outlook',
-      icon: 'https://outlook.live.com/favicon.ico',
-      iconAlt: 'Outlook logo with blue envelope icon',
-      color: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
+      id: 'apple',
+      name: 'Apple',
+      icon: 'https://www.apple.com/favicon.ico',
+      iconAlt: 'Apple',
+      color: 'bg-black hover:bg-gray-900 text-white border-black',
     },
-    {
-      id: 'yahoo',
-      name: 'Yahoo',
-      icon: 'https://www.yahoo.com/favicon.ico',
-      iconAlt: 'Yahoo logo with purple Y letter',
-      color: 'bg-purple-600 hover:bg-purple-700 text-white border-purple-600'
-    },
-    {
-      id: 'rediff',
-      name: 'Rediff',
-      icon: 'https://www.rediff.com/favicon.ico',
-      iconAlt: 'Rediff logo with red and white design',
-      color: 'bg-red-600 hover:bg-red-700 text-white border-red-600'
-    }
   ];
 
   const handleOAuthClick = async (provider) => {

@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import Header from '../../components/ui/Header';
 import HeroSection from './components/HeroSection';
 import QuickEligibilityCheck from './components/QuickEligibilityCheck';
-import RoleBasedAccess from './components/RoleBasedAccess';
 import LoanTypesShowcase from './components/LoanTypesShowcase';
 import TrustSignals from './components/TrustSignals';
 import TestimonialsSection from './components/TestimonialsSection';
@@ -28,7 +27,6 @@ const Homepage = () => {
         <QuickEligibilityCheck />
         <NewsSection />
         <VideosSection />
-        <RoleBasedAccess />
         <LoanTypesShowcase />
         <HowItWorksSection />
         <PartnersSection />

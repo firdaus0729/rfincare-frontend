@@ -12,6 +12,10 @@ import AboutUs from './pages/about-us';
 import ContactUs from './pages/contact-us';
 import ProductComparison from './pages/product-comparison';
 import EligibilityAssessment from './pages/eligibility-assessment';
+import LegalPage from './pages/legal-page';
+import ShareYourStory from './pages/share-your-story';
+import OAuthCallback from './pages/oauth-callback';
+import DevelopmentPanel from './pages/development';
 
 // Login Pages (Separate for each role)
 import LoginPage from './pages/login-page';
@@ -68,6 +72,10 @@ function Routes() {
           <Route path="/contact-us" element={<ContactUs />} />
           <Route path="/product-comparison" element={<ProductComparison />} />
           <Route path="/eligibility-assessment" element={<EligibilityAssessment />} />
+          <Route path="/legal/:slug" element={<LegalPage />} />
+          <Route path="/share-your-story" element={<ShareYourStory />} />
+          <Route path="/oauth/callback" element={<OAuthCallback />} />
+          <Route path="/development" element={<DevelopmentPanel />} />
           
           {/* ==================== LOGIN ROUTES (Separate for each role) ==================== */}
           <Route path="/login-page" element={<LoginPage />} />

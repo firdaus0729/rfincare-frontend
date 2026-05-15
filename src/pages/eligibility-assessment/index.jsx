@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import { customerJourneyService } from '../../services/customerJourneyService';
+import { homepageService } from '../../services/homepageService';
 import { useAuth } from '../../contexts/AuthContext';
 
 const EligibilityAssessment = () => {
@@ -57,72 +58,49 @@ const EligibilityAssessment = () => {
   const calculateEligibility = async (e) => {
     e?.preventDefault();
     setLoading(true);
-    
-    const income = parseFloat(formData?.monthlyIncome);
-    const requestedAmount = parseFloat(formData?.loanAmount);
-    const existingEMI = parseFloat(formData?.existingLoans) || 0;
-
-    // Simple eligibility calculation
-    const maxEMI = income * 0.5; // 50% of income
-    const availableEMI = maxEMI - existingEMI;
-    const eligibleAmount = availableEMI * 60; // Assuming 5-year tenure
-
-    let eligibilityScore = 0;
-    let status = '';
-    let message = '';
-
-    // Credit score impact
-    if (formData?.creditScore === 'excellent') eligibilityScore += 40;
-    else if (formData?.creditScore === 'good') eligibilityScore += 30;
-    else if (formData?.creditScore === 'fair') eligibilityScore += 20;
-    else eligibilityScore += 10;
-
-    // Income to loan ratio
-    if (requestedAmount <= eligibleAmount) eligibilityScore += 40;
-    else if (requestedAmount <= eligibleAmount * 1.2) eligibilityScore += 25;
-    else eligibilityScore += 10;
-
-    // Employment type
-    if (formData?.employmentType === 'salaried') eligibilityScore += 20;
-    else eligibilityScore += 15;
-
-    if (eligibilityScore >= 80) {
-      status = 'high';
-      message = 'Excellent! You have high chances of loan approval with competitive interest rates.';
-    } else if (eligibilityScore >= 60) {
-      status = 'medium';
-      message = 'Good! You are eligible for a loan. Some banks may offer you favorable terms.';
-    } else {
-      status = 'low';
-      message = 'You may face challenges in loan approval. Consider improving your credit score or reducing existing debts.';
-    }
-
-    const calculatedResult = {
-      score: eligibilityScore,
-      status,
-      message,
-      eligibleAmount: Math.floor(eligibleAmount),
-      requestedAmount
-    };
-
-    setResult(calculatedResult);
-
-    // Save assessment if user is logged in
-    if (user) {
-      await customerJourneyService?.createEligibilityAssessment({
+    try {
+      const apiResult = await homepageService.calculateEligibility({
         loanType: formData?.loanType,
-        loanAmount: requestedAmount,
-        monthlyIncome: income,
+        loanAmount: formData?.loanAmount,
+        monthlyIncome: formData?.monthlyIncome,
         employmentType: formData?.employmentType,
+        creditScore: formData?.creditScore,
         creditScoreRange: formData?.creditScore,
-        existingLoans: existingEMI,
-        eligibilityScore,
-        eligibilityStatus: status,
-        eligibleAmount: Math.floor(eligibleAmount),
-        message
+        existingLoans: formData?.existingLoans || 0,
       });
-    }
 
+      const probability = apiResult.overallProbability ?? 0;
+      const status =
+        probability >= 80 ? 'high' : probability >= 60 ? 'medium' : 'low';
+
+      const calculatedResult = {
+        score: probability,
+        status,
+        message: apiResult.message,
+        eligibleAmount: apiResult.eligibleAmount,
+        requestedAmount: parseFloat(formData?.loanAmount),
+        banks: apiResult.banks || [],
+        overallProbability: probability,
+      };
+      setResult(calculatedResult);
+
+      if (user) {
+        await customerJourneyService?.createEligibilityAssessment({
+          loanType: formData?.loanType,
+          loanAmount: parseFloat(formData?.loanAmount),
+          monthlyIncome: parseFloat(formData?.monthlyIncome),
+          employmentType: formData?.employmentType,
+          creditScoreRange: formData?.creditScore,
+          existingLoans: parseFloat(formData?.existingLoans) || 0,
+          eligibilityScore: probability,
+          eligibilityStatus: status,
+          eligibleAmount: apiResult.eligibleAmount,
+          message: apiResult.message,
+        });
+      }
+    } catch {
+      setResult({ score: 0, status: 'low', message: 'Could not calculate eligibility. Please try again.' });
+    }
     setLoading(false);
   };
 
@@ -130,7 +108,7 @@ const EligibilityAssessment = () => {
     if (user) {
       navigate('/customer-assessment-portal', { state: { eligibilityData: { ...formData, ...result } } });
     } else {
-      navigate('/authentication-management-center?role=customer', { state: { returnTo: '/customer-assessment-portal', eligibilityData: { ...formData, ...result } } });
+      navigate('/customer-assessment-portal', { state: { quickCheck: formData, eligibilityData: { ...formData, ...result } } });
     }
   };
 

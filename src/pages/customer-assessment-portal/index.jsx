@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../../lib/apiClient';
 import { applicationService } from '../../services/apiServices';
 
@@ -35,8 +35,19 @@ const generateCredentials = (formData) => {
   return { email, password, username };
 };
 
+const LOAN_TYPE_MAP = {
+  personal: 'personal_loan',
+  home: 'home_loan',
+  business: 'business_loan',
+  auto: 'auto_loan',
+  personal_loan: 'personal_loan',
+  home_loan: 'home_loan',
+};
+
 const CustomerAssessmentPortal = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const sessionKey = useRef(getOrCreateSessionKey());
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -70,6 +81,22 @@ const CustomerAssessmentPortal = () => {
   });
 
   const [errors, setErrors] = useState({});
+
+  // Prefill from eligibility quick check / product links
+  useEffect(() => {
+    const quick = location.state?.quickCheck || location.state?.eligibilityData;
+    const loanTypeParam = searchParams.get('loanType');
+    if (quick || loanTypeParam) {
+      setFormData((prev) => ({
+        ...prev,
+        loanAmount: quick?.loanAmount || prev.loanAmount,
+        monthlyIncome: quick?.monthlyIncome || prev.monthlyIncome,
+        creditScoreRange: quick?.creditScore || quick?.creditScoreRange || prev.creditScoreRange,
+        loanPurpose: LOAN_TYPE_MAP[quick?.loanType] || LOAN_TYPE_MAP[loanTypeParam] || prev.loanPurpose,
+        employmentType: quick?.employmentType || prev.employmentType,
+      }));
+    }
+  }, [location.state, searchParams]);
 
   // Load saved progress on mount
   useEffect(() => {

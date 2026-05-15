@@ -194,6 +194,10 @@ export const authService = {
   },
 
   async signInWithOAuth(provider) {
-    return { data: null, error: { message: 'OAuth is currently disabled. Please use email/password.' } };
-  }
+    const base = import.meta.env?.VITE_API_BASE_URL || '';
+    const map = { google: 'google', microsoft: 'microsoft', outlook: 'microsoft', apple: 'apple' };
+    const p = map[provider] || provider;
+    window.location.href = `${base}/auth/oauth/${p}`;
+    return { data: { redirecting: true }, error: null };
+  },
 };

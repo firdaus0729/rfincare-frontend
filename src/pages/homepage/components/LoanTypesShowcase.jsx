@@ -1,10 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
+import Button from '../../../components/ui/Button';
 
 const LoanTypesShowcase = () => {
+  const navigate = useNavigate();
   const loanTypes = [
     {
       id: 1,
+      loanType: 'personal',
       title: 'Personal Loans',
       description: 'Flexible financing for life\'s important moments - weddings, education, medical expenses, or debt consolidation',
       icon: 'Wallet',
@@ -14,6 +18,7 @@ const LoanTypesShowcase = () => {
     },
     {
       id: 2,
+      loanType: 'home',
       title: 'Home Loans',
       description: 'Make your dream home a reality with competitive rates and personalized mortgage solutions',
       icon: 'Home',
@@ -23,6 +28,7 @@ const LoanTypesShowcase = () => {
     },
     {
       id: 3,
+      loanType: 'business',
       title: 'Business Loans',
       description: 'Fuel your entrepreneurial vision with capital designed to help your business grow and thrive',
       icon: 'Briefcase',
@@ -32,6 +38,7 @@ const LoanTypesShowcase = () => {
     },
     {
       id: 4,
+      loanType: 'auto',
       title: 'Auto Loans',
       description: 'Drive away in your perfect vehicle with affordable financing options for new and used cars',
       icon: 'Car',
@@ -88,6 +95,14 @@ const LoanTypesShowcase = () => {
                   </li>
                 ))}
               </ul>
+              <Button
+                variant="default"
+                size="sm"
+                className="mt-4 w-full"
+                onClick={() => navigate(`/customer-assessment-portal?loanType=${loan.loanType}`)}
+              >
+                Apply Now
+              </Button>
             </div>
           ))}
         </div>

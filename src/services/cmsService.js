@@ -1,0 +1,24 @@
+import { apiClient } from '../lib/apiClient';
+
+export const cmsService = {
+  news: {
+    list: () => apiClient.get('/cms/news').then((r) => r.data),
+    create: (body) => apiClient.post('/cms/news', body).then((r) => r.data),
+    update: (id, body) => apiClient.put(`/cms/news/${id}`, body).then((r) => r.data),
+    remove: (id) => apiClient.delete(`/cms/news/${id}`).then((r) => r.data),
+  },
+  videos: {
+    list: () => apiClient.get('/cms/videos').then((r) => r.data),
+    create: (body) => apiClient.post('/cms/videos', body).then((r) => r.data),
+    update: (id, body) => apiClient.put(`/cms/videos/${id}`, body).then((r) => r.data),
+    remove: (id) => apiClient.delete(`/cms/videos/${id}`).then((r) => r.data),
+  },
+  legal: {
+    list: () => apiClient.get('/cms/legal').then((r) => r.data),
+    update: (slug, body) => apiClient.put(`/cms/legal/${slug}`, body).then((r) => r.data),
+  },
+  stories: {
+    list: (status = 'pending') => apiClient.get('/cms/success-stories', { params: { status } }).then((r) => r.data),
+    moderate: (id, body) => apiClient.post(`/cms/success-stories/${id}/moderate`, body).then((r) => r.data),
+  },
+};
