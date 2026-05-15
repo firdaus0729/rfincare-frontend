@@ -28,7 +28,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build --sourcemap",
+    "build": "vite build --sourcemap && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\"",
     "serve": "vite preview"
   },
   "dependencies": {
