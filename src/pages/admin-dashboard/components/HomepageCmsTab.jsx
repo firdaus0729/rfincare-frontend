@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import LegalContentEditor from '../../../components/cms/LegalContentEditor';
 import { cmsService } from '../../../services/cmsService';
 import { homepageService } from '../../../services/homepageService';
+import { prepareLegalHtml } from '../../../utils/legalContent';
 
 const HomepageCmsTab = () => {
   const [tab, setTab] = useState('news');
@@ -89,8 +91,21 @@ const HomepageCmsTab = () => {
             ))}
           </select>
           <Input label="Title" value={legalForm.title} onChange={(e) => setLegalForm({ ...legalForm, title: e.target.value })} />
-          <textarea className="w-full min-h-[200px] border rounded p-3" value={legalForm.bodyHtml} onChange={(e) => setLegalForm({ ...legalForm, bodyHtml: e.target.value })} />
-          <Button onClick={() => cmsService.legal.update(legalSlug, legalForm)}>Save legal page</Button>
+          <LegalContentEditor
+            label="Page content (paragraphs, headings, lists)"
+            value={legalForm.bodyHtml}
+            onChange={(bodyHtml) => setLegalForm({ ...legalForm, bodyHtml })}
+          />
+          <Button
+            onClick={() =>
+              cmsService.legal.update(legalSlug, {
+                title: legalForm.title,
+                bodyHtml: prepareLegalHtml(legalForm.bodyHtml),
+              }).then(() => loadLegal(legalSlug))
+            }
+          >
+            Save legal page
+          </Button>
         </div>
       )}
     </div>

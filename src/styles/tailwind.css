@@ -71,8 +71,9 @@
     --color-conversion-foreground: #FFFFFF; /* white */
     
     /* Typography - Using system font stacks for reliability */
-    --font-headline: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    --font-headline: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-legal: 'Source Serif 4', Georgia, 'Times New Roman', serif;
     --font-accent: 'Courier New', Courier, monospace;
     
     /* Spacing Base Unit */
@@ -388,5 +389,76 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Legal / policy pages */
+  .legal-page .legal-document-title {
+    font-family: var(--font-headline);
+    letter-spacing: -0.02em;
+  }
+
+  .legal-document {
+    font-family: var(--font-legal);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: var(--color-foreground);
+  }
+
+  .legal-document p {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    color: color-mix(in srgb, var(--color-foreground) 92%, transparent);
+  }
+
+  .legal-document h2 {
+    font-family: var(--font-headline);
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    color: var(--color-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .legal-document h3 {
+    font-family: var(--font-headline);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-foreground);
+  }
+
+  .legal-document ul {
+    margin: 0.75rem 0 1.5rem;
+    padding-left: 1.5rem;
+    list-style-type: disc;
+  }
+
+  .legal-document li {
+    margin-bottom: 0.5rem;
+    padding-left: 0.25rem;
+  }
+
+  .legal-document li::marker {
+    color: var(--color-primary);
+  }
+
+  .legal-document strong {
+    font-family: var(--font-headline);
+    font-weight: 600;
+    color: var(--color-foreground);
+  }
+
+  .legal-document a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .legal-document a:hover {
+    opacity: 0.85;
   }
 }
