@@ -106,6 +106,29 @@ const AdminDashboard = () => {
     loadDashboardData();
   }, [activeTab]);
 
+  const mapApplicationRow = (app) => ({
+    id: app?.id,
+    customerName: app?.customer?.fullName || 'Unknown',
+    customerEmail: app?.customer?.email || '',
+    customerImage: 'https://img.rocket.new/generatedImages/rocket_gen_img_14da91c34-1763294780479.png',
+    customerImageAlt: `Profile picture of ${app?.customer?.fullName}`,
+    loanType: app?.loanType || 'Unknown',
+    amount: app?.loanAmount || 0,
+    bankName: app?.bank?.name || 'Unknown',
+    bankLogo: app?.bank?.logoUrl || '',
+    bankLogoAlt: `${app?.bank?.name} logo`,
+    status: app?.status || 'pending',
+    priority: app?.adminPriority || 'medium',
+    date: new Date(app?.createdAt)?.toISOString()?.split('T')?.[0] || '',
+  });
+
+  const loadApplications = async (filterState = filters) => {
+    const { data: apps } = await adminService?.getAllApplications(filterState);
+    if (apps) {
+      setApplicationsData(apps.map(mapApplicationRow));
+    }
+  };
+
   const loadDashboardData = async () => {
     setLoading(true);
     try {
@@ -152,26 +175,8 @@ const AdminDashboard = () => {
         ]);
       }
 
-      // Load applications if on applications tab
       if (activeTab === 'applications') {
-        const { data: apps } = await adminService?.getAllApplications(filters);
-        if (apps) {
-          setApplicationsData(apps?.map(app => ({
-            id: app?.id,
-            customerName: app?.customer?.fullName || 'Unknown',
-            customerEmail: app?.customer?.email || '',
-            customerImage: "https://img.rocket.new/generatedImages/rocket_gen_img_14da91c34-1763294780479.png",
-            customerImageAlt: `Profile picture of ${app?.customer?.fullName}`,
-            loanType: app?.loanType || 'Unknown',
-            amount: app?.loanAmount || 0,
-            bankName: app?.bank?.name || 'Unknown',
-            bankLogo: app?.bank?.logoUrl || '',
-            bankLogoAlt: `${app?.bank?.name} logo`,
-            status: app?.status || 'pending',
-            priority: app?.adminPriority || 'medium',
-            date: new Date(app?.createdAt)?.toISOString()?.split('T')?.[0] || ''
-          })));
-        }
+        await loadApplications(filters);
       }
 
       // Load agents if on agents tab
@@ -237,16 +242,26 @@ const AdminDashboard = () => {
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => {
+      const next = { ...prev, [key]: value };
+      if (activeTab === 'applications') {
+        setTimeout(() => loadApplications(next), 0);
+      }
+      return next;
+    });
   };
 
   const handleResetFilters = () => {
-    setFilters({
+    const reset = {
       search: '',
       status: 'all',
       priority: 'all',
-      loanType: 'all'
-    });
+      loanType: 'all',
+    };
+    setFilters(reset);
+    if (activeTab === 'applications') {
+      loadApplications(reset);
+    }
   };
 
   const handleViewDetails = (application) => {
@@ -434,7 +449,7 @@ const AdminDashboard = () => {
                 {/* Applications Tab */}
                 {activeTab === 'applications' && (
                   <div className="space-y-6">
-                    <FilterPanel filters={filters} onFilterChange={setFilters} onReset={handleResetFilters} />
+                    <FilterPanel filters={filters} onFilterChange={handleFilterChange} onReset={handleResetFilters} />
                     <ApplicationTable
                       applications={applicationsData}
                       onViewDetails={handleViewApplicationDetails}

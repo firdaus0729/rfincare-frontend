@@ -17,9 +17,9 @@ export const registrationService = {
   async getPendingRegistrations() {
     try {
       const res = await apiClient.get('/auth/registrations');
-      const data = res.data.registrations || [];
+      const rows = res.data.registrations || [];
 
-      return data.filter(reg => reg.registration_status === 'pending').map(reg => ({
+      const data = rows.filter(reg => reg.registration_status === 'pending').map(reg => ({
         id: reg.id,
         email: reg.email,
         fullName: reg.full_name,
@@ -42,8 +42,13 @@ export const registrationService = {
         rejectionReason: reg.rejection_reason,
         createdAt: reg.created_at
       }));
+
+      return { data, error: null };
     } catch (error) {
-      throw new Error(error.response?.data?.error || 'Failed to fetch registrations');
+      return {
+        data: [],
+        error: { message: error.response?.data?.error || 'Failed to fetch registrations' },
+      };
     }
   },
 

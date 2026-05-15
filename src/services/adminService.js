@@ -1,10 +1,9 @@
 import { apiClient } from '../lib/apiClient';
 
-// Helper function to convert snake_case to camelCase
 const toCamelCase = (obj) => {
   if (!obj || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj.map(toCamelCase);
-  
+
   return Object.keys(obj).reduce((acc, key) => {
     const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
     acc[camelKey] = toCamelCase(obj[key]);
@@ -12,22 +11,7 @@ const toCamelCase = (obj) => {
   }, {});
 };
 
-// Helper function to convert camelCase to snake_case
-const toSnakeCase = (obj) => {
-  if (!obj || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(toSnakeCase);
-  
-  return Object.keys(obj).reduce((acc, key) => {
-    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    acc[snakeKey] = toSnakeCase(obj[key]);
-    return acc;
-  }, {});
-};
-
 export const adminService = {
-  // ============================================
-  // AGENT & EMPLOYEE MANAGEMENT (STUBS)
-  // ============================================
   async createAgentOnboarding(agentData) {
     return { data: null, error: { message: 'Agent creation migrated to manual seeding for security.' } };
   },
@@ -41,23 +25,20 @@ export const adminService = {
     return { data: [], error: null };
   },
 
-  // ============================================
-  // APPLICATION MANAGEMENT
-  // ============================================
   async getAllApplications(filters = {}) {
     try {
       const res = await apiClient.get('/loan-applications', { params: filters });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: null, error: { message: error.response?.data?.error || 'Failed to fetch applications' } };
+      return { data: [], error: { message: error.response?.data?.error || 'Failed to fetch applications' } };
     }
   },
 
   async approveApplication(applicationId, reviewNotes = '') {
     try {
-      const res = await apiClient.patch(`/loan-applications/${applicationId}`, { 
-        status: 'approved', 
-        reviewNotes 
+      const res = await apiClient.patch(`/loan-applications/${applicationId}`, {
+        status: 'approved',
+        review_notes: reviewNotes,
       });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
@@ -67,9 +48,9 @@ export const adminService = {
 
   async rejectApplication(applicationId, rejectionReason) {
     try {
-      const res = await apiClient.patch(`/loan-applications/${applicationId}`, { 
-        status: 'rejected', 
-        rejectionReason 
+      const res = await apiClient.patch(`/loan-applications/${applicationId}`, {
+        status: 'rejected',
+        rejection_reason: rejectionReason,
       });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
@@ -77,32 +58,71 @@ export const adminService = {
     }
   },
 
-  // ============================================
-  // DASHBOARD STATS
-  // ============================================
   async getDashboardStats() {
     try {
-      // Assuming a generic dashboard endpoint or aggregating from applications
-      const res = await apiClient.get('/loan-applications');
-      const apps = res.data || [];
-      
+      const res = await apiClient.get('/admin/stats');
+      const stats = toCamelCase(res.data);
       return {
         data: {
-          totalApplications: apps.length,
-          pendingReviews: apps.filter(a => a.status === 'submitted' || a.status === 'pending').length,
-          activeAgents: 0, // Placeholder
-          approvalRate: apps.length > 0 ? `${((apps.filter(a => a.status === 'approved').length / apps.length) * 100).toFixed(1)}%` : '0%'
+          totalApplications: stats?.totalApplications ?? 0,
+          pendingReviews: stats?.pendingReviews ?? 0,
+          activeAgents: stats?.activeAgents ?? 0,
+          approvalRate: stats?.approvalRate ?? '0%',
         },
-        error: null
+        error: null,
       };
     } catch (error) {
-      return { data: null, error: { message: 'Failed to fetch dashboard stats' } };
+      return { data: null, error: { message: error.response?.data?.error || 'Failed to fetch dashboard stats' } };
     }
   },
 
-  // ============================================
-  // DOCUMENT MANAGEMENT (ADMIN)
-  // ============================================
+  async getAllAgents() {
+    try {
+      const res = await apiClient.get('/admin/agents');
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: [], error: { message: error.response?.data?.error || 'Failed to fetch agents' } };
+    }
+  },
+
+  async getAllEmployees() {
+    try {
+      const res = await apiClient.get('/admin/employees');
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: [], error: { message: error.response?.data?.error || 'Failed to fetch employees' } };
+    }
+  },
+
+  async approveAgent(agentId) {
+    try {
+      const res = await apiClient.patch(`/admin/agents/${agentId}`, {
+        account_status: 'active',
+        onboarding_status: 'active',
+      });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: error.response?.data?.error || 'Failed to approve agent' } };
+    }
+  },
+
+  async rejectAgent(agentId, reason) {
+    try {
+      const res = await apiClient.patch(`/admin/agents/${agentId}`, {
+        account_status: 'inactive',
+        onboarding_status: 'suspended',
+        rejection_reason: reason,
+      });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: error.response?.data?.error || 'Failed to reject agent' } };
+    }
+  },
+
+  async updateAgentCommission() {
+    return { error: { message: 'Commission configuration is not available in this release.' } };
+  },
+
   async getAllDocuments(filters = {}) {
     try {
       const res = await apiClient.get('/documents', { params: filters });
@@ -112,9 +132,16 @@ export const adminService = {
     }
   },
 
-  // Other stubs for audit logs and config
-  async getAuditLogs() { return { data: [], error: null }; },
-  async getSystemConfigurations() { return { data: [], error: null }; },
-  async updateSystemConfiguration() { return { error: null }; },
-  async generateReport() { return { data: null, error: { message: 'Reporting service unavailable' } }; }
+  async getAuditLogs() {
+    return { data: [], error: null };
+  },
+  async getSystemConfigurations() {
+    return { data: [], error: null };
+  },
+  async updateSystemConfiguration() {
+    return { error: null };
+  },
+  async generateReport() {
+    return { data: null, error: { message: 'Reporting service unavailable' } };
+  },
 };
