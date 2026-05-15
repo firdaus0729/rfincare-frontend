@@ -13,6 +13,24 @@ import ComparisonModal from './components/ComparisonModal';
 import { bankService } from '../../services/apiServices';
 import { useAuth } from '../../contexts/AuthContext';
 
+function isAllFilterValue(value) {
+  return value == null || value === '' || value === 'all';
+}
+
+function matchesNumericRange(value, actual) {
+  if (isAllFilterValue(value)) return true;
+  const parts = String(value).split('-').map((v) => v.replace('+', ''));
+  const min = parseFloat(parts[0]);
+  const max = parts[1] ? parseFloat(parts[1]) : null;
+  if (Number.isNaN(min)) return true;
+  const num = Number(actual);
+  if (Number.isNaN(num)) return false;
+  if (max != null && !Number.isNaN(max)) {
+    return num >= min && num <= max;
+  }
+  return num >= min;
+}
+
 const BankMarketplace = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -48,8 +66,9 @@ const BankMarketplace = () => {
       const data = await bankService?.getActiveBanks({
         loanType: loanTypeSlug || undefined,
       });
+      const list = Array.isArray(data) ? data : [];
 
-      const transformedBanks = data?.map((bank) => {
+      const transformedBanks = list.map((bank) => {
         const products = bank?.bankProducts || [];
         const primaryProduct = products?.[0] || {};
         const productData = typeof primaryProduct?.data === 'object'
@@ -87,9 +106,10 @@ const BankMarketplace = () => {
         };
       });
       
-      setBanks(transformedBanks);
+      setBanks(transformedBanks || []);
     } catch (err) {
       setError(err?.message);
+      setBanks([]);
       console.error('Failed to load banks:', err);
     } finally {
       setLoading(false);
@@ -142,24 +162,16 @@ const BankMarketplace = () => {
       );
     }
 
-    if (filters?.interestRate !== 'all') {
-      const [min, max] = filters?.interestRate?.split('-')?.map((v) => v?.replace('+', ''));
-      result = result?.filter((bank) => {
-        if (max) {
-          return bank?.interestRate >= parseFloat(min) && bank?.interestRate <= parseFloat(max);
-        }
-        return bank?.interestRate >= parseFloat(min);
-      });
+    if (!isAllFilterValue(filters?.interestRate)) {
+      result = result.filter((bank) =>
+        matchesNumericRange(filters.interestRate, bank?.interestRate)
+      );
     }
 
-    if (filters?.probability !== 'all') {
-      const [min, max] = filters?.probability?.split('-')?.map((v) => v?.replace('+', ''));
-      result = result?.filter((bank) => {
-        if (max) {
-          return bank?.probability >= parseFloat(min) && bank?.probability <= parseFloat(max);
-        }
-        return bank?.probability >= parseFloat(min);
-      });
+    if (!isAllFilterValue(filters?.probability)) {
+      result = result.filter((bank) =>
+        matchesNumericRange(filters.probability, bank?.probability)
+      );
     }
 
     if (filters?.bankTypes?.length > 0) {
@@ -190,7 +202,7 @@ const BankMarketplace = () => {
     });
 
     return result;
-  }, [filters, sortBy]);
+  }, [banks, filters, sortBy]);
 
   const comparedBanks = banks?.filter((bank) => compareList?.includes(bank?.id));
 
@@ -311,7 +323,12 @@ const BankMarketplace = () => {
               onViewModeChange={setViewMode} />
 
 
-            {filteredAndSortedBanks?.length === 0 ?
+            {loading ? (
+            <section className="bg-card rounded-lg border border-border p-8 md:p-12 text-center">
+                <span className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4" />
+                <p className="text-muted-foreground">Loading partner banks...</p>
+              </section>
+            ) : filteredAndSortedBanks?.length === 0 ? (
             <div className="bg-card rounded-lg border border-border p-8 md:p-12 text-center">
                 <Icon name="Search" size={48} className="text-muted mx-auto mb-4" />
                 <h3 className="text-lg md:text-xl font-bold text-foreground mb-2">
@@ -323,7 +340,8 @@ const BankMarketplace = () => {
                 <Button variant="outline" onClick={handleResetFilters} iconName="RotateCcw">
                   Reset Filters
                 </Button>
-              </div> :
+              </div>
+            ) : (
 
             <div className={
             viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6' : 'space-y-4 md:space-y-6'
@@ -348,7 +366,7 @@ const BankMarketplace = () => {
 
               )}
               </div>
-            }
+            )}
           </div>
         </div>
 
