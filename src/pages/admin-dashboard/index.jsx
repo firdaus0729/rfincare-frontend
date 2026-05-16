@@ -22,6 +22,7 @@ import CommissionConfigModal from './components/CommissionConfigModal';
 import AccessControlModal from './components/AccessControlModal';
 import DocumentVerificationModal from './components/DocumentVerificationModal';
 import { adminService } from '../../services/adminService';
+import { getLoanProductBySlug } from '../../constants/loanProducts';
 import BankManagementTab from './components/BankManagementTab';
 import HomepageCmsTab from './components/HomepageCmsTab';
 
@@ -106,20 +107,43 @@ const AdminDashboard = () => {
     loadDashboardData();
   }, [activeTab]);
 
+  const resolveLoanTypeLabel = (app) => {
+    if (app?.loanTypeLabel) return app.loanTypeLabel;
+    const raw = app?.loanType || app?.data?.loanPurpose || app?.data?.loan_purpose;
+    const product = getLoanProductBySlug(raw);
+    if (product) return product.label;
+    if (raw) {
+      return String(raw)
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    return 'Not specified';
+  };
+
+  const resolveLoanAmount = (app) => {
+    const amount =
+      app?.loanAmount ??
+      app?.requestedLoanAmount ??
+      app?.data?.requestedLoanAmount ??
+      app?.data?.requested_loan_amount;
+    const num = Number(amount);
+    return Number.isFinite(num) ? num : 0;
+  };
+
   const mapApplicationRow = (app) => ({
     id: app?.id,
     customerName: app?.customer?.fullName || 'Unknown',
     customerEmail: app?.customer?.email || '',
     customerImage: 'https://img.rocket.new/generatedImages/rocket_gen_img_14da91c34-1763294780479.png',
     customerImageAlt: `Profile picture of ${app?.customer?.fullName}`,
-    loanType: app?.loanType || 'Unknown',
-    amount: app?.loanAmount || 0,
-    bankName: app?.bank?.name || 'Unknown',
+    loanType: resolveLoanTypeLabel(app),
+    amount: resolveLoanAmount(app),
+    bankName: app?.bank?.name || 'Not selected',
     bankLogo: app?.bank?.logoUrl || '',
-    bankLogoAlt: `${app?.bank?.name} logo`,
+    bankLogoAlt: app?.bank?.name ? `${app.bank.name} logo` : 'Bank',
     status: app?.status || 'pending',
     priority: app?.adminPriority || 'medium',
-    date: new Date(app?.createdAt)?.toISOString()?.split('T')?.[0] || '',
+    date: new Date(app?.createdAt || app?.submittedAt)?.toISOString()?.split('T')?.[0] || '',
   });
 
   const loadApplications = async (filterState = filters) => {

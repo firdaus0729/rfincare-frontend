@@ -8,11 +8,15 @@ const ApplicationTable = ({ applications, onViewDetails, onApprove, onReject }) 
 
   const getStatusBadge = (status) => {
     const statusConfig = {
+      draft: { bg: 'bg-muted', text: 'text-muted-foreground', label: 'Draft' },
       pending: { bg: 'bg-warning/10', text: 'text-warning', label: 'Pending Review' },
+      submitted: { bg: 'bg-warning/10', text: 'text-warning', label: 'Submitted' },
       'under-review': { bg: 'bg-blue-500/10', text: 'text-blue-600', label: 'Under Review' },
+      under_review: { bg: 'bg-blue-500/10', text: 'text-blue-600', label: 'Under Review' },
       approved: { bg: 'bg-success/10', text: 'text-success', label: 'Approved' },
       rejected: { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Rejected' },
-      'documents-pending': { bg: 'bg-orange-500/10', text: 'text-orange-600', label: 'Docs Pending' }
+      'documents-pending': { bg: 'bg-orange-500/10', text: 'text-orange-600', label: 'Docs Pending' },
+      documents_pending: { bg: 'bg-orange-500/10', text: 'text-orange-600', label: 'Docs Pending' },
     };
 
     const config = statusConfig?.[status] || statusConfig?.pending;
@@ -105,7 +109,11 @@ const ApplicationTable = ({ applications, onViewDetails, onApprove, onReject }) 
                   <span className="text-sm md:text-base text-foreground">{app?.loanType}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm md:text-base font-semibold text-foreground whitespace-nowrap">${app?.amount?.toLocaleString()}</span>
+                  <span className="text-sm md:text-base font-semibold text-foreground whitespace-nowrap">
+                    {app?.amount > 0
+                      ? `₹${app.amount.toLocaleString('en-IN')}`
+                      : '—'}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center space-x-2">
