@@ -27,7 +27,7 @@ const CommissionTracker = ({ commissions }) => {
     <div className="bg-card rounded-lg border border-border p-4 md:p-6">
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <h2 className="text-lg md:text-xl font-bold text-foreground">Commission Tracker</h2>
-        <Icon name="DollarSign" size={20} color="var(--color-primary)" />
+        <Icon name="IndianRupee" size={20} color="var(--color-primary)" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-4 text-white">

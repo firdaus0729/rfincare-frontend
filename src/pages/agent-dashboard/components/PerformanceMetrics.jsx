@@ -6,7 +6,7 @@ const PerformanceMetrics = ({ metrics }) => {
     const icons = {
       customers: 'Users',
       conversions: 'TrendingUp',
-      earnings: 'DollarSign',
+      earnings: 'IndianRupee',
       satisfaction: 'Star'
     };
     return icons?.[type] || 'Activity';

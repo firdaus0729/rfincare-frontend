@@ -60,7 +60,7 @@ const CTASection = () => {
 
             <div className="flex flex-col items-center space-y-2">
               <div className="w-12 h-12 md:w-14 md:h-14 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <Icon name="DollarSign" size={24} color="white" />
+                <Icon name="IndianRupee" size={24} color="white" />
               </div>
               <h3 className="text-base md:text-lg font-semibold">No Hidden Fees</h3>
               <p className="text-xs md:text-sm text-white/80">Completely free for customers</p>

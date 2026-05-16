@@ -30,7 +30,7 @@ const DocumentManagementCenter = () => {
   const categories = [
   { id: 'identity', name: 'Identity Proof', icon: 'User' },
   { id: 'address', name: 'Address Proof', icon: 'MapPin' },
-  { id: 'income', name: 'Income Documents', icon: 'DollarSign' },
+  { id: 'income', name: 'Income Documents', icon: 'IndianRupee' },
   { id: 'bank', name: 'Bank Statements', icon: 'Building2' },
   { id: 'property', name: 'Property Documents', icon: 'Home' },
   { id: 'other', name: 'Other Documents', icon: 'FileText' }];

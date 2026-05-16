@@ -8,7 +8,7 @@ const RecentActivity = ({ activities }) => {
       'client-added': 'UserPlus',
       'document-uploaded': 'Upload',
       'status-changed': 'RefreshCw',
-      'commission-earned': 'DollarSign',
+      'commission-earned': 'IndianRupee',
       'meeting-scheduled': 'Calendar',
       'message-sent': 'MessageSquare',
       'application-submitted': 'Send'

@@ -64,7 +64,7 @@ const ReportsAndAnalytics = () => {
       value: '₹2.4M',
       change: '+15.8%',
       trend: 'up',
-      icon: 'DollarSign',
+      icon: 'IndianRupee',
       color: 'var(--color-admin-primary)',
       subtitle: 'Commission paid: ₹180K'
     },
@@ -116,7 +116,7 @@ const ReportsAndAnalytics = () => {
       name: 'Financial Summary Report',
       description: 'Complete financial overview including revenue, commissions, processing fees, and profit margins by product type.',
       category: 'financial',
-      icon: 'DollarSign',
+      icon: 'IndianRupee',
       frequency: 'Monthly',
       lastGenerated: '3 days ago',
       isScheduled: true

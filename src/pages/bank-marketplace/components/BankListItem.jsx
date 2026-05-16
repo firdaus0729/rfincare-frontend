@@ -82,7 +82,10 @@ const BankListItem = ({ bank, onApply, onCompare, isComparing }) => {
           </div>
 
           <div className="flex-1 bg-muted rounded-lg p-3 md:p-4">
-            <span className="text-xs text-muted-foreground block mb-1">Max Amount</span>
+            <div className="flex items-center gap-1 mb-1">
+              <Icon name="IndianRupee" size={14} className="text-primary" />
+              <span className="text-xs text-muted-foreground">Max Amount</span>
+            </div>
             <span className="text-base md:text-lg font-semibold text-foreground whitespace-nowrap">
               {bank?.maxAmount}
             </span>

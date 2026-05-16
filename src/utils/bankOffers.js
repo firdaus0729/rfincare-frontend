@@ -92,11 +92,4 @@ export function buildBankOffers(banks, loanProduct) {
   });
 }
 
-export function formatLoanAmount(value) {
-  if (value == null || value === '') return 'On request';
-  const num = Number(value);
-  if (Number.isNaN(num)) return String(value);
-  if (num >= 10000000) return `₹${(num / 10000000).toFixed(1)} Cr`;
-  if (num >= 100000) return `₹${(num / 100000).toFixed(1)} L`;
-  return `₹${num.toLocaleString('en-IN')}`;
-}
+export { formatLoanAmount } from './currency.js';

@@ -21,7 +21,7 @@ const ContextBanner = ({ loanType, loanAmount }) => {
               <span className="text-xs font-medium text-foreground">{loanType}</span>
             </div>
             <div className="flex items-center space-x-2 px-3 py-1.5 bg-card rounded-lg border border-border">
-              <Icon name="DollarSign" size={14} color="var(--color-success)" />
+              <Icon name="IndianRupee" size={14} color="var(--color-success)" />
               <span className="text-xs font-medium text-foreground">${loanAmount?.toLocaleString()}</span>
             </div>
           </div>

@@ -133,7 +133,10 @@ const BankOffersSection = ({ product }) => {
 
                   <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                     <div>
-                      <p className="text-muted-foreground text-xs">Max amount</p>
+                      <p className="text-muted-foreground text-xs flex items-center gap-1">
+                        <Icon name="IndianRupee" size={12} className="text-primary shrink-0" />
+                        Max amount
+                      </p>
                       <p className="font-semibold text-foreground">
                         {formatLoanAmount(offer.maxAmount)}
                       </p>

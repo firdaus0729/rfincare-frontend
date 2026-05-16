@@ -37,7 +37,7 @@ const ImpactAnalyzer = ({ isOpen, onClose, impactData }) => {
             <div className="bg-success/10 rounded-lg p-4 border border-success/20">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
-                  <Icon name="DollarSign" size={20} color="var(--color-success)" />
+                  <Icon name="IndianRupee" size={20} color="var(--color-success)" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Revenue Impact</p>

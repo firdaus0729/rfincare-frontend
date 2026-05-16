@@ -108,7 +108,7 @@ const AdditionalQuestionnaire = () => {
     id: "income",
     title: "Income & Assets",
     description: "Additional income sources and asset information",
-    icon: "DollarSign",
+    icon: "IndianRupee",
     color: "var(--color-success)",
     questions: [
     {

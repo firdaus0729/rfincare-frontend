@@ -114,7 +114,7 @@ const BankCard = ({ bank, onApply, onCompare, isComparing }) => {
       <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
         <div className="bg-muted rounded-lg p-2 md:p-3">
           <div className="flex items-center space-x-1 mb-1">
-            <Icon name="DollarSign" size={14} className="text-primary" />
+            <Icon name="IndianRupee" size={14} className="text-primary" />
             <span className="text-xs text-muted-foreground">Max Amount</span>
           </div>
           <span className="text-sm md:text-base font-semibold text-foreground whitespace-nowrap">

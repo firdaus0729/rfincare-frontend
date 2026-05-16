@@ -28,7 +28,7 @@ const QuickActions = ({ onActionClick }) => {
     {
       id: 'view-commission',
       label: 'Commission Report',
-      icon: 'DollarSign',
+      icon: 'IndianRupee',
       color: 'from-amber-500 to-amber-600',
       description: 'View earnings'
     }
