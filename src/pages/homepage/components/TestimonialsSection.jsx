@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import { homepageService } from '../../../services/homepageService';
+import { getStoryPhotoUrl } from '../../../utils/storyMedia';
 
 const TestimonialsSection = () => {
   const [activeTab, setActiveTab] = useState('customer');
@@ -29,13 +30,23 @@ const TestimonialsSection = () => {
           ))}
         </div>
         <div className="grid md:grid-cols-3 gap-6">
-          {items.map((s) => (
-            <blockquote key={s.id} className="bg-card border rounded-xl p-6">
-              <p className="text-sm text-muted-foreground italic">&ldquo;{s.storyText}&rdquo;</p>
-              <footer className="mt-4 font-semibold">{s.name}{s.location ? `, ${s.location}` : ''}</footer>
-              {s.loanAmount && <p className="text-xs text-muted-foreground">{s.loanAmount}</p>}
-            </blockquote>
-          ))}
+          {items.map((s) => {
+            const photoSrc = getStoryPhotoUrl(s.photoUrl);
+            return (
+              <blockquote key={s.id} className="bg-card border rounded-xl p-6 flex flex-col">
+                {photoSrc && (
+                  <img
+                    src={photoSrc}
+                    alt=""
+                    className="w-16 h-16 rounded-full object-cover mb-4 border border-border"
+                  />
+                )}
+                <p className="text-sm text-muted-foreground italic flex-1">&ldquo;{s.storyText}&rdquo;</p>
+                <footer className="mt-4 font-semibold">{s.name}{s.location ? `, ${s.location}` : ''}</footer>
+                {s.loanAmount && <p className="text-xs text-muted-foreground">{s.loanAmount}</p>}
+              </blockquote>
+            );
+          })}
         </div>
         <p className="text-center mt-6 text-sm text-muted-foreground">
           <a href="/share-your-story" className="text-primary font-medium">Share your story</a>

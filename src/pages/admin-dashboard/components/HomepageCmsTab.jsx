@@ -5,6 +5,7 @@ import LegalContentEditor from '../../../components/cms/LegalContentEditor';
 import { cmsService } from '../../../services/cmsService';
 import { homepageService } from '../../../services/homepageService';
 import { prepareLegalHtml } from '../../../utils/legalContent';
+import { getStoryPhotoUrl, formatStoryDate } from '../../../utils/storyMedia';
 
 const HomepageCmsTab = () => {
   const [tab, setTab] = useState('news');
@@ -72,16 +73,100 @@ const HomepageCmsTab = () => {
         </div>
       )}
       {tab === 'stories' && (
-        <ul className="space-y-3">{stories.map((s) => (
-          <li key={s.id} className="border p-4 rounded-lg">
-            <p className="font-medium">{s.submitter_name}</p>
-            <p className="text-sm mt-2">{s.story_text}</p>
-            <div className="flex gap-2 mt-3">
-              <Button size="sm" onClick={() => cmsService.stories.moderate(s.id, { action: 'approve' }).then(load)}>Approve</Button>
-              <Button size="sm" variant="outline" onClick={() => cmsService.stories.moderate(s.id, { action: 'reject', rejectionReason: 'Not suitable' }).then(load)}>Reject</Button>
-            </div>
-          </li>
-        ))}</ul>
+        <ul className="space-y-4">
+          {stories.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">No pending stories.</p>
+          )}
+          {stories.map((s) => {
+            const photoSrc = getStoryPhotoUrl(s.photo_url);
+            return (
+              <li key={s.id} className="border border-border rounded-xl p-5 bg-card shadow-sm">
+                <div className="flex flex-col lg:flex-row gap-5">
+                  {photoSrc && (
+                    <div className="flex-shrink-0">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Submitted photo</p>
+                      <a href={photoSrc} target="_blank" rel="noopener noreferrer" className="block">
+                        <img
+                          src={photoSrc}
+                          alt={`Photo from ${s.submitter_name}`}
+                          className="w-full max-w-[220px] rounded-lg border border-border object-cover max-h-56"
+                        />
+                      </a>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">{s.submitter_name}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Submitted {formatStoryDate(s.created_at)}
+                        {s.story_type && (
+                          <span className="ml-2 capitalize inline-flex px-2 py-0.5 rounded-full bg-muted">
+                            {s.story_type}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                      <div>
+                        <dt className="text-muted-foreground">Email</dt>
+                        <dd className="font-medium break-all">
+                          <a href={`mailto:${s.submitter_email}`} className="text-primary hover:underline">
+                            {s.submitter_email || '—'}
+                          </a>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Phone</dt>
+                        <dd className="font-medium">
+                          {s.submitter_phone ? (
+                            <a href={`tel:${s.submitter_phone}`} className="text-primary hover:underline">
+                              {s.submitter_phone}
+                            </a>
+                          ) : (
+                            '—'
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Location</dt>
+                        <dd className="font-medium">{s.location || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Loan amount</dt>
+                        <dd className="font-medium">{s.loan_amount || '—'}</dd>
+                      </div>
+                    </dl>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Story</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap rounded-lg bg-muted/50 p-3 border border-border">
+                        {s.story_text}
+                      </p>
+                    </div>
+                    {!photoSrc && (
+                      <p className="text-xs text-muted-foreground italic">No photo submitted</p>
+                    )}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button size="sm" onClick={() => cmsService.stories.moderate(s.id, { action: 'approve' }).then(load)}>
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const reason = window.prompt('Rejection reason (optional):', 'Not suitable for publication');
+                          if (reason === null) return;
+                          cmsService.stories.moderate(s.id, { action: 'reject', rejectionReason: reason || 'Not suitable' }).then(load);
+                        }}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
       {tab === 'legal' && (
         <div className="space-y-4 max-w-3xl">

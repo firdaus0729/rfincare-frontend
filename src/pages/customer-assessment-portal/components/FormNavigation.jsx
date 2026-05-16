@@ -8,10 +8,15 @@ const FormNavigation = ({
   onNext, 
   onSave,
   isValid,
-  isSaving 
+  isSaving,
+  nextLabel,
+  submitLabel,
 }) => {
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
+  const primaryLabel = isLastStep
+    ? (submitLabel || 'Submit Application')
+    : (nextLabel || 'Next Step');
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 md:mt-10 lg:mt-12 pt-6 md:pt-8 border-t border-border">
@@ -57,7 +62,7 @@ const FormNavigation = ({
           fullWidth
           className="sm:w-auto"
         >
-          {isLastStep ? 'Submit Assessment' : 'Next Step'}
+          {primaryLabel}
         </Button>
       </div>
     </div>

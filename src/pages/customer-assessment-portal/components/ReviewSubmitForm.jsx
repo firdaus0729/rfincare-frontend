@@ -143,7 +143,8 @@ const ReviewSubmitForm = ({ formData, errors, onChange }) => {
               <li>• Actual loan terms will be determined by individual lenders</li>
               <li>• A hard credit inquiry may be performed by lenders you choose to apply with</li>
               <li>• You are not obligated to accept any loan offers</li>
-              <li>• Upon submission, your account will be created automatically with login credentials</li>
+              <li>• After review, you will upload documents and sign before final submission</li>
+              <li>• Your account will be created when you continue to document upload</li>
             </ul>
           </div>
         </div>

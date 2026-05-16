@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { apiClient } from '../../lib/apiClient';
+import { apiClient, setAccessToken } from '../../lib/apiClient';
 import { applicationService } from '../../services/apiServices';
+import { applicationService as appService } from '../../services/applicationService';
+import { useAuth } from '../../contexts/AuthContext';
 
 import Header from '../../components/ui/Header';
 import ProgressIndicator from './components/ProgressIndicator';
@@ -11,11 +13,14 @@ import AddressInfoForm from './components/AddressInfoForm';
 import EmploymentInfoForm from './components/EmploymentInfoForm';
 import FinancialInfoForm from './components/FinancialInfoForm';
 import ReviewSubmitForm from './components/ReviewSubmitForm';
+import DocumentUploadStep from './components/DocumentUploadStep';
+import ConsentSignatureForm from './components/ConsentSignatureForm';
 import AutoSaveIndicator from './components/AutoSaveIndicator';
 import Icon from '../../components/AppIcon';
 import { normalizeLoanApiKey } from '../../constants/loanProducts';
 
 const SESSION_KEY = 'loan_assessment_session';
+const CREDENTIALS_KEY = 'loan_assessment_credentials';
 
 const getOrCreateSessionKey = () => {
   let key = localStorage.getItem(SESSION_KEY);
@@ -26,28 +31,40 @@ const getOrCreateSessionKey = () => {
   return key;
 };
 
+/** Stable credentials per applicant so re-submit can log in after 409. */
 const generateCredentials = (formData) => {
-  const firstName = (formData?.firstName || '')?.toLowerCase()?.replace(/[^a-z0-9]/g, '');
-  const phone = (formData?.phone || '')?.replace(/[^0-9]/g, '')?.slice(-4);
-  const timestamp = Date.now()?.toString()?.slice(-4);
-  const username = `${firstName}${phone || timestamp}`;
+  const firstName = (formData?.firstName || 'user')?.toLowerCase()?.replace(/[^a-z0-9]/g, '') || 'user';
+  const phone = (formData?.phone || '')?.replace(/[^0-9]/g, '')?.slice(-4) || '0000';
+  const username = `${firstName}${phone}`;
   const email = `${username}@rfincare.customer`;
-  const password = `RFC${phone || timestamp}${Math.random()?.toString(36)?.substring(2, 6)?.toUpperCase()}@`;
+  const password = `RFC${phone}${firstName.slice(0, 4).toUpperCase()}!`;
   return { email, password, username };
+};
+
+const getStoredCredentials = (formData) => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CREDENTIALS_KEY) || 'null');
+    if (stored?.phone === formData?.phone) return stored;
+  } catch { /* ignore */ }
+  return null;
 };
 
 const CustomerAssessmentPortal = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const sessionKey = useRef(getOrCreateSessionKey());
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreparingAccount, setIsPreparingAccount] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState(null);
   const [submitError, setSubmitError] = useState('');
+  const [applicationId, setApplicationId] = useState(null);
+  const [uploadedDocs, setUploadedDocs] = useState({});
   const autoSaveTimer = useRef(null);
 
   const steps = [
@@ -55,7 +72,9 @@ const CustomerAssessmentPortal = () => {
     { id: 'address', label: 'Address', description: 'Where do you live?' },
     { id: 'employment', label: 'Employment', description: 'Your work and income details' },
     { id: 'financial', label: 'Financial', description: 'Your loan requirements' },
-    { id: 'review', label: 'Review', description: 'Verify and submit' }
+    { id: 'review', label: 'Review', description: 'Verify your information' },
+    { id: 'documents', label: 'Documents', description: 'Upload required documents' },
+    { id: 'signature', label: 'Submit', description: 'Sign and submit your application' },
   ];
 
   const [formData, setFormData] = useState({
@@ -69,7 +88,8 @@ const CustomerAssessmentPortal = () => {
     loanPurpose: '', loanAmount: '', creditScoreRange: '',
     monthlyDebtPayments: '', totalAssets: '',
     hasBankruptcy: false, hasForeclosure: false, hasTaxLiens: false, hasCoSignedLoans: false,
-    certifyAccuracy: false, authorizeCredit: false, agreeTerms: false, consentCommunications: false
+    certifyAccuracy: false, authorizeCredit: false, agreeTerms: false, consentCommunications: false,
+    consentSignatureAgreed: false, customerSignature: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -94,19 +114,27 @@ const CustomerAssessmentPortal = () => {
   useEffect(() => {
     const loadSavedProgress = async () => {
       try {
-        // Try localStorage first (fast)
         const localData = localStorage.getItem('loan_assessment_form_data');
         const localStep = localStorage.getItem('loan_assessment_step');
+        const savedAppId = localStorage.getItem('loan_assessment_application_id');
         if (localData) {
-          setFormData(prev => ({ ...prev, ...JSON.parse(localData) }));
+          setFormData((prev) => ({ ...prev, ...JSON.parse(localData) }));
         }
         if (localStep) {
           setCurrentStep(parseInt(localStep, 10));
         }
-      } catch (err) {
-        // Silently fail - use localStorage fallback
+        if (savedAppId) {
+          setApplicationId(savedAppId);
+        }
+        const storedCreds = getStoredCredentials(
+          localData ? JSON.parse(localData) : formData,
+        );
+        if (storedCreds) {
+          setGeneratedCredentials(storedCreds);
+        }
+      } catch {
+        // use defaults
       }
-
     };
     loadSavedProgress();
   }, []);
@@ -206,6 +234,25 @@ const CustomerAssessmentPortal = () => {
         if (!formData?.agreeTerms) newErrors.agreeTerms = 'You must agree to terms and conditions';
         break;
 
+      case 5: {
+        const required = ['pan_card', 'aadhaar_card', 'income_proof'];
+        required.forEach((type) => {
+          if (!uploadedDocs?.[type]) {
+            newErrors[type] = 'This document is required';
+          }
+        });
+        break;
+      }
+
+      case 6:
+        if (!formData?.consentSignatureAgreed) {
+          newErrors.consentSignatureAgreed = 'You must agree to submit with your electronic signature';
+        }
+        if (!formData?.customerSignature) {
+          newErrors.customerSignature = 'Please draw your signature in the box above';
+        }
+        break;
+
       default:
         break;
     }
@@ -214,17 +261,129 @@ const CustomerAssessmentPortal = () => {
     return Object.keys(newErrors)?.length === 0;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      // Save progress immediately on next
-      saveProgress(formData, currentStep + 1);
-      if (currentStep === steps?.length - 1) {
-        handleSubmit();
-      } else {
-        setCurrentStep(prev => prev + 1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+  const buildApplicationPayload = (customerId, status = 'draft') => ({
+    title: formData?.title || null,
+    first_name: formData?.firstName,
+    middle_name: formData?.middleName || null,
+    last_name: formData?.lastName,
+    date_of_birth: formData?.dateOfBirth,
+    gender: formData?.gender || null,
+    marital_status: formData?.maritalStatus || null,
+    email: formData?.email,
+    phone: formData?.phone,
+    aadhaar_number: formData?.aadhaar || null,
+    pan_number: formData?.pan || null,
+    address_line1: formData?.addressLine1,
+    address_line2: formData?.addressLine2 || null,
+    city: formData?.city,
+    district: formData?.district || null,
+    state: formData?.state,
+    pin_code: formData?.pinCode,
+    residence_type: formData?.residenceType || null,
+    years_at_address: formData?.yearsAtAddress ? parseInt(formData?.yearsAtAddress, 10) : null,
+    monthly_rent: formData?.monthlyRent ? parseFloat(formData?.monthlyRent) : null,
+    employment_type: formData?.employmentType,
+    employer_name: formData?.employerName || null,
+    job_title: formData?.jobTitle || null,
+    industry: formData?.industry || null,
+    years_employed: formData?.yearsEmployed ? parseInt(formData?.yearsEmployed, 10) : null,
+    annual_income: formData?.annualIncome ? parseFloat(formData?.annualIncome) : 0,
+    monthly_income: formData?.monthlyIncome ? parseFloat(formData?.monthlyIncome) : 0,
+    employer_phone: formData?.employerPhone || null,
+    loan_purpose: formData?.loanPurpose,
+    requested_loan_amount: formData?.loanAmount ? parseFloat(formData?.loanAmount) : 0,
+    credit_score_range: formData?.creditScoreRange || null,
+    monthly_debt_payments: formData?.monthlyDebtPayments ? parseFloat(formData?.monthlyDebtPayments) : null,
+    total_assets: formData?.totalAssets ? parseFloat(formData?.totalAssets) : null,
+    has_bankruptcy: formData?.hasBankruptcy || false,
+    has_foreclosure: formData?.hasForeclosure || false,
+    has_tax_liens: formData?.hasTaxLiens || false,
+    has_co_signed_loans: formData?.hasCoSignedLoans || false,
+    status,
+    application_number: `RFC${Date.now()}`,
+    customer_id: customerId || null,
+  });
+
+  const authenticateApplicant = async () => {
+    if (user?.id) return user.id;
+
+    const stored = getStoredCredentials(formData);
+    const credentials = stored || generateCredentials(formData);
+    setGeneratedCredentials(credentials);
+
+    const persistAndSetToken = (accessToken, userId) => {
+      if (accessToken) setAccessToken(accessToken);
+      localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ ...credentials, phone: formData?.phone }));
+      return userId;
+    };
+
+    try {
+      const res = await apiClient.post('/auth/signup', {
+        email: credentials.email,
+        password: credentials.password,
+        fullName: `${formData?.firstName || ''} ${formData?.lastName || ''}`.trim(),
+        phone: formData?.phone || '',
+        role: 'customer',
+      });
+      return persistAndSetToken(res?.data?.accessToken, res?.data?.user?.id);
+    } catch (signupErr) {
+      if (signupErr?.response?.status !== 409) throw signupErr;
+      const loginRes = await apiClient.post('/auth/login', {
+        email: credentials.email,
+        password: credentials.password,
+      });
+      return persistAndSetToken(loginRes?.data?.accessToken, loginRes?.data?.user?.id);
     }
+  };
+
+  const ensureAuthAndDraftApplication = async () => {
+    setIsPreparingAccount(true);
+    setSubmitError('');
+    try {
+      const userId = await authenticateApplicant();
+      if (applicationId) {
+        await applicationService.updateApplication(applicationId, buildApplicationPayload(userId, 'draft'));
+        return applicationId;
+      }
+      const app = await applicationService.createApplication(buildApplicationPayload(userId, 'draft'));
+      const id = app?.id;
+      setApplicationId(id);
+      localStorage.setItem('loan_assessment_application_id', id);
+      return id;
+    } finally {
+      setIsPreparingAccount(false);
+    }
+  };
+
+  const handleNext = async () => {
+    if (!validateStep(currentStep)) return;
+
+    setSubmitError('');
+
+    if (currentStep === 4) {
+      setIsSubmitting(true);
+      try {
+        await ensureAuthAndDraftApplication();
+        saveProgress(formData, 5);
+        setCurrentStep(5);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        const msg = err?.response?.data?.error || err?.message || 'Could not create your account. Please try again.';
+        setSubmitError(msg);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (currentStep === steps.length - 1) {
+      handleFinalSubmit();
+      return;
+    }
+
+    saveProgress(formData, currentStep + 1);
+    setCurrentStep((prev) => prev + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePrevious = () => {
@@ -237,81 +396,62 @@ const CustomerAssessmentPortal = () => {
     saveProgress(formData, currentStep);
   };
 
-  const handleSubmit = async () => {
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     setSubmitError('');
     try {
-      const credentials = generateCredentials(formData);
-      setGeneratedCredentials(credentials);
+      let appId = applicationId;
+      if (!appId) {
+        appId = await ensureAuthAndDraftApplication();
+      }
 
-      // Create Node API auth user with auto-generated credentials (also logs them in)
-      const res = await apiClient.post('/auth/signup', {
-        email: credentials?.email,
-        password: credentials?.password,
-        fullName: `${formData?.firstName || ''} ${formData?.lastName || ''}`?.trim(),
-        phone: formData?.phone || '',
-        role: 'customer'
-      });
-
-      const userId = res?.data?.user?.id;
-
-      // Save the complete loan application as draft/submitted
-      const applicationData = {
-        title: formData?.title || null,
-        first_name: formData?.firstName,
-        middle_name: formData?.middleName || null,
-        last_name: formData?.lastName,
-        date_of_birth: formData?.dateOfBirth,
-        gender: formData?.gender || null,
-        marital_status: formData?.maritalStatus || null,
-        email: formData?.email,
-        phone: formData?.phone,
-        aadhaar_number: formData?.aadhaar || null,
-        pan_number: formData?.pan || null,
-        address_line1: formData?.addressLine1,
-        address_line2: formData?.addressLine2 || null,
-        city: formData?.city,
-        district: formData?.district || null,
-        state: formData?.state,
-        pin_code: formData?.pinCode,
-        residence_type: formData?.residenceType || null,
-        years_at_address: formData?.yearsAtAddress ? parseInt(formData?.yearsAtAddress) : null,
-        monthly_rent: formData?.monthlyRent ? parseFloat(formData?.monthlyRent) : null,
-        employment_type: formData?.employmentType,
-        employer_name: formData?.employerName || null,
-        job_title: formData?.jobTitle || null,
-        industry: formData?.industry || null,
-        years_employed: formData?.yearsEmployed ? parseInt(formData?.yearsEmployed) : null,
-        annual_income: formData?.annualIncome ? parseFloat(formData?.annualIncome) : 0,
-        monthly_income: formData?.monthlyIncome ? parseFloat(formData?.monthlyIncome) : 0,
-        employer_phone: formData?.employerPhone || null,
-        loan_purpose: formData?.loanPurpose,
-        requested_loan_amount: formData?.loanAmount ? parseFloat(formData?.loanAmount) : 0,
-        credit_score_range: formData?.creditScoreRange || null,
-        monthly_debt_payments: formData?.monthlyDebtPayments ? parseFloat(formData?.monthlyDebtPayments) : null,
-        total_assets: formData?.totalAssets ? parseFloat(formData?.totalAssets) : null,
-        has_bankruptcy: formData?.hasBankruptcy || false,
-        has_foreclosure: formData?.hasForeclosure || false,
-        has_tax_liens: formData?.hasTaxLiens || false,
-        has_co_signed_loans: formData?.hasCoSignedLoans || false,
-        status: 'submitted',
-        submitted_at: new Date()?.toISOString(),
-        application_number: `RFC${Date.now()}`,
-        customer_id: userId || null
+      const signaturePayload = {
+        customer_signature: formData.customerSignature,
+        signature_signed_at: new Date().toISOString(),
+        signature_name: [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(' '),
       };
 
-      await applicationService.createApplication(applicationData);
+      await applicationService.updateApplication(appId, {
+        ...buildApplicationPayload(user?.id, 'documents_pending'),
+        ...signaturePayload,
+      });
+
+      await appService.saveConsents(appId, {
+        certify_accuracy: formData.certifyAccuracy,
+        authorize_credit: formData.authorizeCredit,
+        agree_terms: formData.agreeTerms,
+        consent_communications: formData.consentCommunications,
+        electronic_signature: formData.consentSignatureAgreed,
+      });
+
+      await appService.submitApplication(appId);
 
       localStorage.removeItem('loan_assessment_form_data');
       localStorage.removeItem('loan_assessment_step');
+      localStorage.removeItem('loan_assessment_application_id');
       localStorage.removeItem(SESSION_KEY);
-
 
       setShowSuccessModal(true);
     } catch (err) {
       console.error('Submit error:', err);
-      setSubmitError(err?.message || 'Submission failed. Please try again.');
+      const msg = err?.response?.data?.error || err?.message || 'Submission failed. Please try again.';
+      setSubmitError(msg);
+    } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDocUploaded = (docType, meta) => {
+    setUploadedDocs((prev) => ({ ...prev, [docType]: meta }));
+    if (errors?.[docType]) {
+      setErrors((prev) => ({ ...prev, [docType]: '' }));
+    }
+  };
+
+  const handleSignatureChange = (dataUrl) => {
+    setFormData((prev) => ({ ...prev, customerSignature: dataUrl }));
+    if (errors?.customerSignature) {
+      setErrors((prev) => ({ ...prev, customerSignature: '' }));
     }
   };
 
@@ -331,6 +471,24 @@ const CustomerAssessmentPortal = () => {
         return <FinancialInfoForm formData={formData} errors={errors} onChange={handleChange} />;
       case 4:
         return <ReviewSubmitForm formData={formData} errors={errors} onChange={handleChange} />;
+      case 5:
+        return (
+          <DocumentUploadStep
+            applicationId={applicationId}
+            uploadedDocs={uploadedDocs}
+            onUploaded={handleDocUploaded}
+            errors={errors}
+          />
+        );
+      case 6:
+        return (
+          <ConsentSignatureForm
+            formData={formData}
+            errors={errors}
+            onChange={handleChange}
+            onSignatureChange={handleSignatureChange}
+          />
+        );
       default:
         return null;
     }
@@ -381,7 +539,9 @@ const CustomerAssessmentPortal = () => {
             onNext={handleNext}
             onSave={handleSaveProgress}
             isValid={true}
-            isSaving={isSaving || isSubmitting}
+            isSaving={isSaving || isSubmitting || isPreparingAccount}
+            nextLabel={currentStep === 4 ? 'Continue to Documents' : undefined}
+            submitLabel="Submit Application"
           />
         </div>
 

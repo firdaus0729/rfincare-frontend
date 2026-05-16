@@ -103,7 +103,7 @@ const HeroSection = () => {
                 </button>
                 <span className="text-white/40">•</span>
                 <button
-                  onClick={() => navigate('/login-page')}
+                  onClick={() => navigate('/customer-login')}
                   className="text-sm text-white/80 hover:text-white underline transition-colors"
                 >
                   Login

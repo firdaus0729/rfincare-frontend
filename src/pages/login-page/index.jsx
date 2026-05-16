@@ -44,20 +44,14 @@ const LoginPage = () => {
       borderColor: 'border-gray-400',
       hoverColor: 'hover:bg-gray-200',
       iconBg: 'bg-gray-500',
-      route: '/agent-login'
+      route: '/agent-login',
     },
-    {
-      id: 'customer',
-      title: 'Customer Login/Sign-up',
-      description: 'Apply for loans and track applications',
-      icon: 'User',
-      bgColor: 'bg-purple-100',
-      borderColor: 'border-purple-400',
-      hoverColor: 'hover:bg-purple-200',
-      iconBg: 'bg-purple-600',
-      route: '/customer-login'
-    }
   ];
+
+  const staffLoginLinks = loginPortals.map((portal) => ({
+    ...portal,
+    href: `${window.location.origin}${portal.route}`,
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,7 +62,15 @@ const LoginPage = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Welcome Back</h1>
             <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto">
-              Select your role to access your personalized dashboard
+              Staff portal access — select your role below. Customers should use{' '}
+              <button
+                type="button"
+                onClick={() => navigate('/customer-login')}
+                className="underline font-semibold hover:text-white"
+              >
+                Customer Login
+              </button>
+              .
             </p>
           </div>
         </section>
@@ -76,8 +78,11 @@ const LoginPage = () => {
         {/* Login Portals */}
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center mb-12">Choose Your Portal</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <h2 className="text-3xl font-bold text-center mb-4">Choose Your Portal</h2>
+            <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">
+              Internal team logins only. Bookmark or share the direct links below.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {loginPortals?.map((portal) => (
                 <div
                   key={portal?.id}
@@ -88,7 +93,10 @@ const LoginPage = () => {
                     <Icon name={portal?.icon} size={32} color="white" />
                   </div>
                   <h3 className="text-xl font-bold text-center mb-2">{portal?.title}</h3>
-                  <p className="text-sm text-gray-700 text-center mb-4">{portal?.description}</p>
+                  <p className="text-sm text-gray-700 text-center mb-2">{portal?.description}</p>
+                  <p className="text-xs text-gray-500 text-center mb-4 font-mono break-all px-1">
+                    {portal?.route}
+                  </p>
                   <Button
                     variant="default"
                     size="sm"
@@ -102,6 +110,23 @@ const LoginPage = () => {
                   </Button>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-12 max-w-2xl mx-auto rounded-xl border border-gray-200 bg-gray-50 p-6">
+              <h3 className="text-lg font-semibold text-center mb-4">Direct login links</h3>
+              <ul className="space-y-3">
+                {staffLoginLinks.map((link) => (
+                  <li key={link.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+                    <span className="font-medium text-foreground">{link.title}</span>
+                    <a
+                      href={link.route}
+                      className="font-mono text-primary hover:underline break-all"
+                    >
+                      {link.href}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>

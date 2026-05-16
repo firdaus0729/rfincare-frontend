@@ -13,8 +13,19 @@ export const homepageService = {
     const res = await apiClient.get('/public/success-stories');
     return res.data;
   },
-  async submitStory(payload) {
-    const res = await apiClient.post('/public/success-stories', payload);
+  async submitStory(payload, photoFile = null) {
+    const form = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        form.append(key, value);
+      }
+    });
+    if (photoFile) {
+      form.append('photo', photoFile);
+    }
+    const res = await apiClient.post('/public/success-stories', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data;
   },
   async calculateEligibility(payload) {

@@ -35,6 +35,7 @@ const CTASection = () => {
               className="border-2 border-white text-white hover:bg-white/10 text-base md:text-lg px-8 py-4"
               iconName="Calculator"
               iconPosition="left"
+              onClick={() => navigate('/eligibility-assessment')}
             >
               Calculate Eligibility
             </Button>

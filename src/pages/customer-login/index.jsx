@@ -218,10 +218,10 @@ const CustomerLogin = () => {
         {/* Footer Links */}
         <div className="text-center space-y-2">
           <button
-            onClick={() => navigate('/login-page')}
+            onClick={() => navigate('/homepage')}
             className="text-sm text-gray-600 hover:text-gray-900 underline"
           >
-            Back to Login Selection
+            Back to Home
           </button>
         </div>
       </div>
