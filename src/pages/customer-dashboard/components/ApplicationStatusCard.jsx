@@ -1,28 +1,35 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import { formatInr } from '../../../utils/currency';
 
 const ApplicationStatusCard = ({ application, onViewDetails }) => {
   const getStatusColor = (status) => {
     const colors = {
-      'pending': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      'under_review': 'bg-blue-100 text-blue-800 border-blue-300',
-      'approved': 'bg-green-100 text-green-800 border-green-300',
-      'rejected': 'bg-red-100 text-red-800 border-red-300',
-      'documents_required': 'bg-orange-100 text-orange-800 border-orange-300',
-      'processing': 'bg-purple-100 text-purple-800 border-purple-300'
+      draft: 'bg-gray-100 text-gray-800 border-gray-300',
+      pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      submitted: 'bg-sky-100 text-sky-800 border-sky-300',
+      under_review: 'bg-blue-100 text-blue-800 border-blue-300',
+      approved: 'bg-green-100 text-green-800 border-green-300',
+      rejected: 'bg-red-100 text-red-800 border-red-300',
+      documents_required: 'bg-orange-100 text-orange-800 border-orange-300',
+      documents_pending: 'bg-orange-100 text-orange-800 border-orange-300',
+      processing: 'bg-purple-100 text-purple-800 border-purple-300',
     };
     return colors?.[status] || 'bg-gray-100 text-gray-800 border-gray-300';
   };
 
   const getStatusIcon = (status) => {
     const icons = {
-      'pending': 'Clock',
-      'under_review': 'FileSearch',
-      'approved': 'CheckCircle2',
-      'rejected': 'XCircle',
-      'documents_required': 'AlertCircle',
-      'processing': 'RefreshCw'
+      draft: 'FileEdit',
+      pending: 'Clock',
+      submitted: 'Send',
+      under_review: 'FileSearch',
+      approved: 'CheckCircle2',
+      rejected: 'XCircle',
+      documents_required: 'AlertCircle',
+      documents_pending: 'AlertCircle',
+      processing: 'RefreshCw',
     };
     return icons?.[status] || 'FileText';
   };
@@ -35,12 +42,15 @@ const ApplicationStatusCard = ({ application, onViewDetails }) => {
 
   const getProgressPercentage = (status) => {
     const progress = {
-      'pending': 20,
-      'documents_required': 40,
-      'under_review': 60,
-      'processing': 80,
-      'approved': 100,
-      'rejected': 100
+      draft: 10,
+      pending: 20,
+      submitted: 35,
+      documents_required: 45,
+      documents_pending: 45,
+      under_review: 60,
+      processing: 80,
+      approved: 100,
+      rejected: 100,
     };
     return progress?.[status] || 0;
   };
@@ -78,15 +88,17 @@ const ApplicationStatusCard = ({ application, onViewDetails }) => {
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Loan Amount</p>
             <p className="text-lg md:text-xl font-bold text-foreground whitespace-nowrap">
-              ${application?.loanAmount?.toLocaleString()}
+              {formatInr(application?.loanAmount)}
             </p>
           </div>
+          {application?.interestRate != null && application?.interestRate !== '' && (
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Interest Rate</p>
             <p className="text-sm md:text-base font-semibold text-primary whitespace-nowrap">
-              {application?.interestRate}% APR
+              {application.interestRate}% APR
             </p>
           </div>
+          )}
         </div>
       </div>
       <div className="mb-4">

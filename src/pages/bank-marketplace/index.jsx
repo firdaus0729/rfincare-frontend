@@ -12,6 +12,10 @@ import SortBar from './components/SortBar';
 import ComparisonModal from './components/ComparisonModal';
 import { bankService } from '../../services/apiServices';
 import { useAuth } from '../../contexts/AuthContext';
+import {
+  applyComparisonOverrides,
+  mapBankForMarketplace,
+} from '../../utils/bankMarketplace';
 
 function isAllFilterValue(value) {
   return value == null || value === '' || value === 'all';
@@ -43,6 +47,7 @@ const BankMarketplace = () => {
   const [compareList, setCompareList] = useState([]);
   const [showComparison, setShowComparison] = useState(false);
   const [banks, setBanks] = useState([]);
+  const [comparisonOverrides, setComparisonOverrides] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -68,45 +73,9 @@ const BankMarketplace = () => {
       });
       const list = Array.isArray(data) ? data : [];
 
-      const transformedBanks = list.map((bank) => {
-        const products = bank?.bankProducts || [];
-        const primaryProduct = products?.[0] || {};
-        const productData = typeof primaryProduct?.data === 'object'
-          ? primaryProduct.data
-          : (() => {
-              try {
-                return JSON.parse(primaryProduct?.data || '{}');
-              } catch {
-                return {};
-              }
-            })();
-        
-        return {
-          id: bank?.id,
-          name: bank?.name,
-          logo: bank?.logoUrl,
-          logoAlt: bank?.logoAlt || `${bank?.name} logo`,
-          rating: bank?.rating || 4.5,
-          reviews: `${bank?.reviewsCount || 0} reviews`,
-          probability: 75, // Default, will be calculated based on user profile
-          probabilityReason: 'Based on your profile and eligibility criteria',
-          interestRate: productData?.interestRateMin || productData?.interest_rate_min || 8.0,
-          processingFee: productData?.processingFeePercentage || productData?.processing_fee_percentage
-            ? `${productData?.processingFeePercentage || productData?.processing_fee_percentage}% + GST`
-            : 'Contact bank',
-          maxAmount: `₹${(productData?.maxLoanAmount || productData?.max_loan_amount || 2000000)?.toLocaleString('en-IN')}`,
-          maxTenure: `${productData?.maxTenureYears || productData?.max_tenure_years || 20} years`,
-          features: productData?.features || [],
-          loanType: primaryProduct?.loanType || productData?.loanType || productData?.loan_type,
-          certifications: bank?.certifications || [],
-          customersServed: bank?.customersServed || '10,000+',
-          partnershipDuration: bank?.partnershipDuration || 'Partner since 2020',
-          type: bank?.bankType || 'private',
-          description: `Trusted financial institution offering competitive loan products with ${primaryProduct?.interestRateMin || 8}% interest rate.`
-        };
-      });
-      
+      const transformedBanks = list.map((bank) => mapBankForMarketplace(bank, loanTypeSlug));
       setBanks(transformedBanks || []);
+      setComparisonOverrides({});
     } catch (err) {
       setError(err?.message);
       setBanks([]);
@@ -130,6 +99,57 @@ const BankMarketplace = () => {
       bankTypes: [],
       features: []
     });
+  };
+
+  const handleComparisonChange = (bankId, patch) => {
+    setComparisonOverrides((prev) => {
+      const base = prev[bankId] || {};
+      const bank = banks.find((b) => b.id === bankId);
+      const next = { ...base, ...patch };
+      if (patch.featuresText !== undefined) {
+        next.features = patch.featuresText
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+      if (!prev[bankId] && bank) {
+        if (next.interestRate === undefined) next.interestRate = bank.interestRate;
+        if (next.processingFee === undefined) next.processingFee = bank.processingFee;
+        if (next.otherCharges === undefined) next.otherCharges = bank.otherCharges;
+        if (next.featuresText === undefined) {
+          next.featuresText = (bank.features || []).join('\n');
+        }
+      }
+      return { ...prev, [bankId]: next };
+    });
+  };
+
+  const getDisplayBank = (bank) => {
+    const overrides = comparisonOverrides[bank.id];
+    if (!overrides) return bank;
+    const merged = applyComparisonOverrides(bank, {
+      ...overrides,
+      interestRate:
+        overrides.interestRate !== '' && overrides.interestRate != null
+          ? overrides.interestRate
+          : bank.interestRate,
+      features:
+        overrides.features ||
+        (overrides.featuresText
+          ? overrides.featuresText.split('\n').map((s) => s.trim()).filter(Boolean)
+          : bank.features),
+    });
+    return merged;
+  };
+
+  const getComparisonFieldValues = (bank) => {
+    const o = comparisonOverrides[bank.id];
+    return {
+      interestRate: o?.interestRate ?? bank.interestRate,
+      processingFee: o?.processingFee ?? bank.processingFee,
+      otherCharges: o?.otherCharges ?? bank.otherCharges,
+      featuresText: o?.featuresText ?? (bank.features || []).join('\n'),
+    };
   };
 
   const handleCompareToggle = (bankId) => {
@@ -204,7 +224,9 @@ const BankMarketplace = () => {
     return result;
   }, [banks, filters, sortBy]);
 
-  const comparedBanks = banks?.filter((bank) => compareList?.includes(bank?.id));
+  const comparedBanks = banks
+    ?.filter((bank) => compareList?.includes(bank?.id))
+    ?.map((bank) => getDisplayBank(bank));
 
   return (
     <div className="min-h-screen bg-background">
@@ -350,18 +372,23 @@ const BankMarketplace = () => {
               viewMode === 'grid' ?
               <BankCard
                 key={bank?.id}
-                bank={bank}
+                bank={getDisplayBank(bank)}
                 onApply={handleApply}
                 onCompare={handleCompareToggle}
-                isComparing={compareList?.includes(bank?.id)} /> :
+                isComparing={compareList?.includes(bank?.id)}
+                showComparisonFields
+                comparisonValues={getComparisonFieldValues(bank)}
+                onComparisonChange={handleComparisonChange}
+              /> :
 
 
               <BankListItem
                 key={bank?.id}
-                bank={bank}
+                bank={getDisplayBank(bank)}
                 onApply={handleApply}
                 onCompare={handleCompareToggle}
-                isComparing={compareList?.includes(bank?.id)} />
+                isComparing={compareList?.includes(bank?.id)}
+              />
 
 
               )}
@@ -394,8 +421,12 @@ const BankMarketplace = () => {
       {showComparison &&
       <ComparisonModal
         banks={comparedBanks}
+        rawBanks={banks.filter((b) => compareList.includes(b.id))}
+        comparisonOverrides={comparisonOverrides}
+        onComparisonChange={handleComparisonChange}
         onClose={() => setShowComparison(false)}
-        onApply={handleApply} />
+        onApply={handleApply}
+      />
 
       }
     </div>);

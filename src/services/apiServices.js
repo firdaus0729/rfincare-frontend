@@ -60,8 +60,8 @@ export const bankService = {
     const res = await apiClient.get(`/banks/${bankId}/products`);
     return toCamelCase(res?.data);
   },
-  async createBankProduct(productData) {
-    const res = await apiClient.post(`/banks/${productData?.bankId}/products`, toSnakeCase(productData));
+  async createBankProduct(bankId, productData) {
+    const res = await apiClient.post(`/banks/${bankId}/products`, toSnakeCase(productData));
     return toCamelCase(res?.data);
   },
   async updateBankProduct(productId, productData) {
@@ -77,25 +77,63 @@ export const bankService = {
   }
 };
 
+async function fetchApprovalMatrixRules(path = '/approval-matrix-rules') {
+  try {
+    const res = await apiClient.get(path);
+    return toCamelCase(res?.data);
+  } catch (err) {
+    if (path === '/approval-matrix-rules' && err?.response?.status === 404) {
+      const fallback = await apiClient.get('/admin/approval-matrix-rules');
+      return toCamelCase(fallback?.data);
+    }
+    throw err;
+  }
+}
+
 export const approvalMatrixService = {
   async getAllRules() {
-    const res = await apiClient.get('/approval-matrix-rules');
-    return toCamelCase(res?.data);
+    return fetchApprovalMatrixRules('/approval-matrix-rules');
   },
   async getRulesByBank(bankId) {
     const res = await apiClient.get(`/banks/${bankId}/approval-matrix-rules`);
     return toCamelCase(res?.data);
   },
   async createRule(ruleData) {
-    const res = await apiClient.post('/approval-matrix-rules', toSnakeCase(ruleData));
-    return toCamelCase(res?.data);
+    const payload = toSnakeCase(ruleData);
+    try {
+      const res = await apiClient.post('/approval-matrix-rules', payload);
+      return toCamelCase(res?.data);
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        const res = await apiClient.post('/admin/approval-matrix-rules', payload);
+        return toCamelCase(res?.data);
+      }
+      throw err;
+    }
   },
   async updateRule(ruleId, ruleData) {
-    const res = await apiClient.patch(`/approval-matrix-rules/${ruleId}`, toSnakeCase(ruleData));
-    return toCamelCase(res?.data);
+    const payload = toSnakeCase(ruleData);
+    try {
+      const res = await apiClient.patch(`/approval-matrix-rules/${ruleId}`, payload);
+      return toCamelCase(res?.data);
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        const res = await apiClient.patch(`/admin/approval-matrix-rules/${ruleId}`, payload);
+        return toCamelCase(res?.data);
+      }
+      throw err;
+    }
   },
   async deleteRule(ruleId) {
-    await apiClient.delete(`/approval-matrix-rules/${ruleId}`);
+    try {
+      await apiClient.delete(`/approval-matrix-rules/${ruleId}`);
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        await apiClient.delete(`/admin/approval-matrix-rules/${ruleId}`);
+        return;
+      }
+      throw err;
+    }
   },
   async calculateProbability(bankId, userProfile) {
     const res = await apiClient.post(`/banks/${bankId}/calculate-approval-probability`, userProfile);

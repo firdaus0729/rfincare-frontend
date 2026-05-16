@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from '../../components/ui/Header';
 
 import Button from '../../components/ui/Button';
@@ -76,23 +76,63 @@ const ApprovalMatrixManagement = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadBanks = useCallback(async () => {
     try {
-      setLoading(true);
-      const [rulesData, banksData] = await Promise.all([
-        approvalMatrixService?.getAllRules(),
-        bankService?.getActiveBanks()
-      ]);
-      setRules(rulesData);
-      setBanks(banksData);
+      const data = await bankService.getAllBanks();
+      setBanks(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err?.message);
-    } finally {
-      setLoading(false);
+      console.error('Failed to load banks:', err);
+      setBanks([]);
     }
+  }, []);
+
+  const bankOptions = useMemo(
+    () =>
+      (banks || [])
+        .filter((b) => b?.id && (b?.name || b?.bankName))
+        .map((b) => ({
+          value: b.id,
+          label: b.name || b.bankName,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [banks],
+  );
+
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    const [rulesResult, banksResult] = await Promise.allSettled([
+      approvalMatrixService.getAllRules(),
+      bankService.getAllBanks(),
+    ]);
+
+    if (rulesResult.status === 'fulfilled') {
+      setRules(Array.isArray(rulesResult.value) ? rulesResult.value : []);
+    } else {
+      setRules([]);
+      const status = rulesResult.reason?.response?.status;
+      const msg =
+        rulesResult.reason?.response?.data?.error
+        || rulesResult.reason?.message
+        || 'Failed to load approval rules';
+      setError(
+        status === 404
+          ? 'Approval matrix API is not available on the server. Redeploy the backend (Render) with the latest code, then refresh this page.'
+          : msg,
+      );
+    }
+
+    if (banksResult.status === 'fulfilled') {
+      setBanks(Array.isArray(banksResult.value) ? banksResult.value : []);
+    } else {
+      await loadBanks();
+    }
+
+    setLoading(false);
   };
 
-  const handleOpenModal = (rule = null) => {
+  const handleOpenModal = async (rule = null) => {
+    await loadBanks();
     if (rule) {
       setEditingRule(rule);
       setFormData({
@@ -217,9 +257,14 @@ const ApprovalMatrixManagement = () => {
               Configure dynamic eligibility rules for bank suggestions
             </p>
           </div>
-          <Button onClick={() => handleOpenModal()} iconName="Plus">
-            Add Rule
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={loadBanks} iconName="RefreshCw">
+              Refresh banks
+            </Button>
+            <Button onClick={() => handleOpenModal()} iconName="Plus">
+              Add Rule
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -332,11 +377,12 @@ const ApprovalMatrixManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <Select
                   label="Bank"
-                  options={banks?.map(b => ({ value: b?.id, label: b?.name }))}
+                  options={bankOptions}
                   value={formData?.bankId}
                   onChange={(value) => setFormData({ ...formData, bankId: value })}
                   required
                   searchable
+                  placeholder={bankOptions.length ? 'Select bank' : 'No banks — add banks in Bank Marketplace first'}
                 />
                 <Select
                   label="Loan Type"

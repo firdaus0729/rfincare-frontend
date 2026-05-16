@@ -24,6 +24,62 @@ const toSnakeCase = (obj) => {
   }, {});
 };
 
+const DASHBOARD_NEXT_STEPS = {
+  draft: 'Complete and submit your application',
+  submitted: 'We will review your application shortly',
+  under_review: 'Our team is reviewing your application',
+  documents_pending: 'Upload any requested documents',
+  documents_required: 'Upload requested documents to continue',
+  approved: 'Your loan has been approved — check your email for next steps',
+  rejected: 'View details for more information',
+  processing: 'Your application is being processed',
+};
+
+function mapApplicationForDashboard(app) {
+  if (!app) return app;
+  const data = app.data && typeof app.data === 'object' ? app.data : {};
+  const status = app.status;
+  const dateSrc = app.submittedAt || app.submitted_at || app.createdAt || app.created_at;
+  let appliedDate = '—';
+  if (dateSrc) {
+    try {
+      appliedDate = new Date(dateSrc).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      appliedDate = '—';
+    }
+  }
+  const rawAmount =
+    app.loanAmount ??
+    app.loan_amount ??
+    data.requestedLoanAmount ??
+    data.requested_loan_amount ??
+    data.loan_amount ??
+    data.loanAmount ??
+    0;
+  const interestRate = data.interestRate ?? data.interest_rate ?? null;
+  return {
+    id: app.id,
+    status,
+    bankName: app.bank?.name || app.bankName || 'Rfincare Partner',
+    loanType:
+      app.loanTypeLabel ||
+      app.loan_type_label ||
+      app.loanType ||
+      app.loan_type ||
+      data.loan_purpose ||
+      data.loanPurpose ||
+      'Loan Application',
+    loanAmount: Number(rawAmount) || 0,
+    interestRate,
+    appliedDate,
+    nextStep: DASHBOARD_NEXT_STEPS[status] || 'Track your application status here',
+  };
+}
+
 export const customerJourneyService = {
   // Eligibility Assessment
   async createEligibilityAssessment(assessmentData) {
@@ -63,9 +119,10 @@ export const customerJourneyService = {
   async getDocuments(customerId, applicationId = null) {
     try {
       const res = await apiClient.get('/documents', { params: { customerId, applicationId } });
-      return { data: toCamelCase(res.data), error: null };
-    } catch (error) {
-      return { data: null, error };
+      const list = toCamelCase(res.data);
+      return { data: Array.isArray(list) ? list : [], error: null };
+    } catch {
+      return { data: [], error: null };
     }
   },
 
@@ -84,12 +141,16 @@ export const customerJourneyService = {
   },
 
   // Application Management
-  async getApplications(customerId) {
+  async getApplications() {
     try {
       const res = await apiClient.get('/loan-applications/me');
-      return { data: toCamelCase(res.data), error: null };
-    } catch (error) {
-      return { data: null, error };
+      const list = toCamelCase(res.data) || [];
+      const mapped = Array.isArray(list)
+        ? list.map(mapApplicationForDashboard)
+        : [];
+      return { data: mapped, error: null };
+    } catch {
+      return { data: [], error: null };
     }
   },
 
@@ -112,18 +173,28 @@ export const customerJourneyService = {
   },
 
   // Notifications
-  async getNotifications(customerId) {
+  async getNotifications() {
     try {
-      const res = await apiClient.get(`/customers/${customerId}/notifications`);
-      return { data: toCamelCase(res.data), error: null };
-    } catch (error) {
-      return { data: null, error };
+      const res = await apiClient.get('/notifications/me');
+      const list = toCamelCase(res.data);
+      return { data: Array.isArray(list) ? list : [], error: null };
+    } catch {
+      return { data: [], error: null };
     }
   },
 
   async markNotificationAsRead(notificationId) {
     try {
       await apiClient.patch(`/notifications/${notificationId}/read`);
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  async markAllNotificationsAsRead() {
+    try {
+      await apiClient.patch('/notifications/me/read-all');
       return { error: null };
     } catch (error) {
       return { error };
@@ -154,18 +225,36 @@ export const customerJourneyService = {
     }
   },
 
-  // Real-time subscriptions (Polling fallback)
+  // Real-time subscriptions (polling fallback)
   subscribeToApplicationUpdates(applicationId, callback) {
     const interval = setInterval(async () => {
       try {
         const res = await apiClient.get(`/loan-applications/${applicationId}`);
-        callback({ new: res.data });
-      } catch {}
-    }, 5000);
+        callback({ eventType: 'UPDATE', new: toCamelCase(res.data) });
+      } catch {
+        /* ignore poll errors */
+      }
+    }, 30000);
+    return { __polling: interval };
+  },
+
+  subscribeToDocumentUpdates(customerId, callback) {
+    const interval = setInterval(async () => {
+      const { data } = await this.getDocuments(customerId);
+      if (data) callback({ eventType: 'REFRESH', new: data });
+    }, 30000);
+    return { __polling: interval };
+  },
+
+  subscribeToNotifications(_customerId, callback) {
+    const interval = setInterval(async () => {
+      const { data } = await this.getNotifications();
+      if (data) callback({ eventType: 'REFRESH', new: data });
+    }, 30000);
     return { __polling: interval };
   },
 
   unsubscribe(channel) {
     if (channel?.__polling) clearInterval(channel.__polling);
-  }
+  },
 };

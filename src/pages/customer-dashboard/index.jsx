@@ -31,59 +31,61 @@ const CustomerDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      loadDashboardData();
-      setupRealtimeSubscriptions();
-    }
-  }, [user]);
+    if (!user?.id) return undefined;
+
+    loadDashboardData();
+
+    const docChannel = customerJourneyService.subscribeToDocumentUpdates(user.id, (payload) => {
+      if (payload?.eventType === 'REFRESH' && Array.isArray(payload.new)) {
+        setDocuments(payload.new);
+        return;
+      }
+      if (payload?.eventType === 'INSERT') {
+        setDocuments((prev) => [payload.new, ...prev]);
+      } else if (payload?.eventType === 'UPDATE') {
+        setDocuments((prev) =>
+          prev.map((doc) => (doc?.id === payload?.new?.id ? payload.new : doc)),
+        );
+      } else if (payload?.eventType === 'DELETE') {
+        setDocuments((prev) => prev.filter((doc) => doc?.id !== payload?.old?.id));
+      }
+    });
+
+    const notifChannel = customerJourneyService.subscribeToNotifications(user.id, (payload) => {
+      if (payload?.eventType === 'REFRESH' && Array.isArray(payload.new)) {
+        setNotifications(payload.new);
+        return;
+      }
+      if (payload?.eventType === 'INSERT') {
+        setNotifications((prev) => [payload.new, ...prev]);
+      }
+    });
+
+    return () => {
+      customerJourneyService.unsubscribe(docChannel);
+      customerJourneyService.unsubscribe(notifChannel);
+    };
+  }, [user?.id]);
 
   const loadDashboardData = async () => {
+    if (!user?.id) return;
     setLoading(true);
-    
-    // Load applications
-    const { data: appsData } = await customerJourneyService?.getApplications(user?.id);
-    if (appsData) {
-      setApplications(appsData);
+    try {
+      const [{ data: appsData }, { data: docsData }, { data: notifsData }] = await Promise.all([
+        customerJourneyService.getApplications(),
+        customerJourneyService.getDocuments(user.id),
+        customerJourneyService.getNotifications(),
+      ]);
+
+      setApplications(appsData || []);
       if (appsData?.length > 0) {
-        setSelectedApplicationId(appsData?.[0]?.id);
+        setSelectedApplicationId(appsData[0].id);
       }
+      setDocuments(docsData || []);
+      setNotifications(notifsData || []);
+    } finally {
+      setLoading(false);
     }
-
-    // Load documents
-    const { data: docsData } = await customerJourneyService?.getDocuments(user?.id);
-    if (docsData) setDocuments(docsData);
-
-    // Load notifications
-    const { data: notifsData } = await customerJourneyService?.getNotifications(user?.id);
-    if (notifsData) setNotifications(notifsData);
-
-    setLoading(false);
-  };
-
-  const setupRealtimeSubscriptions = () => {
-    // Subscribe to document updates
-    const docChannel = customerJourneyService?.subscribeToDocumentUpdates(user?.id, (payload) => {
-      if (payload?.eventType === 'INSERT') {
-        setDocuments(prev => [payload?.new, ...prev]);
-      } else if (payload?.eventType === 'UPDATE') {
-        setDocuments(prev => prev?.map(doc => doc?.id === payload?.new?.id ? payload?.new : doc));
-      } else if (payload?.eventType === 'DELETE') {
-        setDocuments(prev => prev?.filter(doc => doc?.id !== payload?.old?.id));
-      }
-    });
-
-    // Subscribe to notifications
-    const notifChannel = customerJourneyService?.subscribeToNotifications(user?.id, (payload) => {
-      if (payload?.eventType === 'INSERT') {
-        setNotifications(prev => [payload?.new, ...prev]);
-      }
-    });
-
-    // Cleanup on unmount
-    return () => {
-      customerJourneyService?.unsubscribe(docChannel);
-      customerJourneyService?.unsubscribe(notifChannel);
-    };
   };
 
   const handleUploadSuccess = (newDocument) => {
@@ -96,8 +98,8 @@ const CustomerDashboard = () => {
   };
 
   const handleMarkAllRead = async () => {
-    await customerJourneyService?.markAllNotificationsAsRead(user?.id);
-    setNotifications(prev => prev?.map(n => ({ ...n, isRead: true })));
+    await customerJourneyService.markAllNotificationsAsRead();
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
   const handleLogout = async () => {

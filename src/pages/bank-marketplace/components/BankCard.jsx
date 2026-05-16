@@ -2,8 +2,17 @@ import React from 'react';
 import Image from '../../../components/AppImage';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import BankComparisonFields from './BankComparisonFields';
 
-const BankCard = ({ bank, onApply, onCompare, isComparing }) => {
+const BankCard = ({
+  bank,
+  onApply,
+  onCompare,
+  isComparing,
+  showComparisonFields = false,
+  comparisonValues,
+  onComparisonChange,
+}) => {
   const getProbabilityColor = (probability) => {
     if (probability >= 80) return 'text-success';
     if (probability >= 60) return 'text-warning';
@@ -78,9 +87,9 @@ const BankCard = ({ bank, onApply, onCompare, isComparing }) => {
         </div>
         <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{bank?.probabilityReason}</p>
       </div>
-      {/* Interest Rate */}
-      <div className="bg-muted rounded-lg p-3 md:p-4 mb-4 md:mb-6">
-        <div className="flex items-baseline justify-between">
+      {/* Rates & charges */}
+      <div className="bg-muted rounded-lg p-3 md:p-4 mb-4 md:mb-6 space-y-3">
+        <div className="flex items-baseline justify-between gap-4">
           <div>
             <span className="text-xs md:text-sm text-muted-foreground">Interest Rate</span>
             <div className="flex items-baseline space-x-1 mt-1">
@@ -97,17 +106,32 @@ const BankCard = ({ bank, onApply, onCompare, isComparing }) => {
             </div>
           </div>
         </div>
+        <div>
+          <span className="text-xs md:text-sm text-muted-foreground">Other charges</span>
+          <p className="text-sm font-medium text-foreground mt-1">{bank?.otherCharges || '—'}</p>
+        </div>
       </div>
+
+      {showComparisonFields && onComparisonChange && (
+        <BankComparisonFields
+          bankId={bank?.id}
+          values={comparisonValues}
+          onChange={onComparisonChange}
+        />
+      )}
+
       {/* Key Features */}
       <div className="space-y-2 md:space-y-3 mb-4 md:mb-6 flex-grow">
         <h4 className="text-xs md:text-sm font-semibold text-foreground">Key Features</h4>
         <div className="space-y-2">
-          {bank?.features?.map((feature, index) => (
-            <div key={index} className="flex items-start space-x-2">
+          {(bank?.features?.length ? bank.features : ['Use the fields above to list product features']).map(
+            (feature, index) => (
+            <div key={`${feature}-${index}`} className="flex items-start space-x-2">
               <Icon name="CheckCircle2" size={16} className="text-success flex-shrink-0 mt-0.5" />
               <span className="text-xs md:text-sm text-muted-foreground line-clamp-2">{feature}</span>
             </div>
-          ))}
+          ),
+          )}
         </div>
       </div>
       {/* Loan Details */}

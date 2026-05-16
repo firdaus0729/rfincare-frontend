@@ -5,7 +5,26 @@ import Header from '../../components/ui/Header';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
+import { LOAN_PRODUCTS } from '../../constants/loanProducts';
+import { formFromProduct, productDataFromForm } from '../../utils/bankMarketplace';
 import { bankService, auditService } from '../../services/apiServices';
+
+const emptyProductForm = () => ({
+  id: '',
+  loanType: 'personal_loan',
+  interestRateMin: '8.5',
+  interestRateMax: '12',
+  processingFeePercentage: '1',
+  otherCharges: 'Legal & documentation as applicable',
+  maxLoanAmount: '4000000',
+  maxTenureYears: '5',
+  featuresText: 'Quick disbursal\nNo collateral\nFlexible tenure',
+});
+
+const loanTypeOptions = LOAN_PRODUCTS.map((p) => ({
+  value: p.apiKey,
+  label: p.label,
+}));
 
 const BankMarketplaceManagement = () => {
   const [banks, setBanks] = useState([]);
@@ -13,6 +32,7 @@ const BankMarketplaceManagement = () => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingBank, setEditingBank] = useState(null);
+  const [productForm, setProductForm] = useState(emptyProductForm());
   const [formData, setFormData] = useState({
     name: '',
     logoUrl: '',
@@ -43,7 +63,17 @@ const BankMarketplaceManagement = () => {
     }
   };
 
-  const handleOpenModal = (bank = null) => {
+  const loadProductForBank = async (bankId) => {
+    try {
+      const products = await bankService.getBankProducts(bankId);
+      const first = products?.[0];
+      setProductForm(first ? formFromProduct(first) : emptyProductForm());
+    } catch {
+      setProductForm(emptyProductForm());
+    }
+  };
+
+  const handleOpenModal = async (bank = null) => {
     if (bank) {
       setEditingBank(bank);
       setFormData({
@@ -57,10 +87,12 @@ const BankMarketplaceManagement = () => {
         customersServed: bank?.customersServed,
         partnershipDuration: bank?.partnershipDuration,
         certifications: bank?.certifications || [],
-        displayPriority: bank?.displayPriority
+        displayPriority: bank?.displayPriority,
       });
+      await loadProductForBank(bank.id);
     } else {
       setEditingBank(null);
+      setProductForm(emptyProductForm());
       setFormData({
         name: '',
         logoUrl: '',
@@ -83,20 +115,42 @@ const BankMarketplaceManagement = () => {
     setEditingBank(null);
   };
 
+  const saveBankProduct = async (bankId) => {
+    const loanLabel =
+      loanTypeOptions.find((o) => o.value === productForm.loanType)?.label || 'Loan';
+    const payload = {
+      name: `${formData.name} ${loanLabel}`.trim(),
+      ...productDataFromForm(productForm),
+    };
+    if (productForm.id) {
+      await bankService.updateBankProduct(productForm.id, payload);
+    } else {
+      const created = await bankService.createBankProduct(bankId, payload);
+      if (created?.id) {
+        setProductForm((prev) => ({ ...prev, id: created.id }));
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e?.preventDefault();
     try {
+      let bankId = editingBank?.id;
       if (editingBank) {
-        await bankService?.updateBank(editingBank?.id, formData);
-        await auditService?.logAction('UPDATE', 'banks', editingBank?.id, editingBank, formData);
+        await bankService.updateBank(editingBank.id, formData);
+        await auditService.logAction('UPDATE', 'banks', editingBank.id, editingBank, formData);
       } else {
-        await bankService?.createBank(formData);
-        await auditService?.logAction('CREATE', 'banks', null, null, formData);
+        const created = await bankService.createBank(formData);
+        bankId = created?.id;
+        await auditService.logAction('CREATE', 'banks', bankId, null, formData);
+      }
+      if (bankId) {
+        await saveBankProduct(bankId);
       }
       await loadBanks();
       handleCloseModal();
     } catch (err) {
-      setError(err?.message);
+      setError(err?.message || 'Failed to save bank');
     }
   };
 
@@ -314,6 +368,90 @@ const BankMarketplaceManagement = () => {
                 onChange={(e) => setFormData({ ...formData, partnershipDuration: e?.target?.value })}
                 placeholder="e.g., Partner since 2018"
               />
+
+              <div className="border-t border-border pt-4 mt-2 space-y-4">
+                <h3 className="text-base font-semibold text-foreground">
+                  Loan product (marketplace comparison)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  These fields appear on bank cards for customers comparing interest rate, fees, and features.
+                </p>
+                <Select
+                  label="Loan type"
+                  options={loanTypeOptions}
+                  value={productForm.loanType}
+                  onChange={(value) => setProductForm({ ...productForm, loanType: value })}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Interest rate min (% p.a.)"
+                    type="number"
+                    step="0.01"
+                    value={productForm.interestRateMin}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, interestRateMin: e.target.value })
+                    }
+                  />
+                  <Input
+                    label="Interest rate max (% p.a.)"
+                    type="number"
+                    step="0.01"
+                    value={productForm.interestRateMax}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, interestRateMax: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Processing fee (%)"
+                    type="number"
+                    step="0.01"
+                    value={productForm.processingFeePercentage}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, processingFeePercentage: e.target.value })
+                    }
+                  />
+                  <Input
+                    label="Max loan amount (₹)"
+                    type="number"
+                    value={productForm.maxLoanAmount}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, maxLoanAmount: e.target.value })
+                    }
+                  />
+                </div>
+                <Input
+                  label="Other charges"
+                  value={productForm.otherCharges}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, otherCharges: e.target.value })
+                  }
+                  placeholder="e.g. Legal fee, stamp duty, GST on fees"
+                />
+                <Input
+                  label="Max tenure (years)"
+                  type="number"
+                  value={productForm.maxTenureYears}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, maxTenureYears: e.target.value })
+                  }
+                />
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">
+                    Key features (one per line)
+                  </label>
+                  <textarea
+                    className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={productForm.featuresText}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, featuresText: e.target.value })
+                    }
+                    placeholder="Quick disbursal&#10;No collateral"
+                  />
+                </div>
+              </div>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <Button type="button" variant="outline" onClick={handleCloseModal}>
                   Cancel
