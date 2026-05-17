@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Icon from '../../components/AppIcon';
+import OAuthProviderButtons from '../customer-registration-portal/components/OAuthProviderButtons';
 
 const CustomerLogin = () => {
   const navigate = useNavigate();
@@ -107,6 +108,14 @@ const CustomerLogin = () => {
             <Icon name="AlertCircle" size={20} color="#dc2626" />
             <p className="text-sm text-red-800">{error}</p>
           </div>
+        )}
+
+        {!isSignUp && (
+          <OAuthProviderButtons
+            onProviderSelect={() => {
+              navigate('/customer-assessment-portal');
+            }}
+          />
         )}
 
         {/* Login/Signup Form */}

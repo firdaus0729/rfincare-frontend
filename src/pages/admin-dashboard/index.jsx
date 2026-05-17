@@ -25,6 +25,7 @@ import { adminService } from '../../services/adminService';
 import { getLoanProductBySlug } from '../../constants/loanProducts';
 import BankManagementTab from './components/BankManagementTab';
 import HomepageCmsTab from './components/HomepageCmsTab';
+import LeadsTab from './components/LeadsTab';
 
 
 const AdminDashboard = () => {
@@ -101,6 +102,7 @@ const AdminDashboard = () => {
     { id: 'reports', label: 'Reports', icon: 'BarChart' },
     { id: 'audit-logs', label: 'Audit Logs', icon: 'Shield' },
     { id: 'homepage-cms', label: 'Homepage CMS', icon: 'Layout' },
+    { id: 'leads', label: 'Leads', icon: 'UserCheck' },
   ];
 
   useEffect(() => {
@@ -544,6 +546,8 @@ const AdminDashboard = () => {
                 {activeTab === 'bank-management' && <BankManagementTab />}
 
                 {activeTab === 'homepage-cms' && <HomepageCmsTab />}
+
+                {activeTab === 'leads' && <LeadsTab />}
 
                 {/* System Configuration Tab */}
                 {activeTab === 'system' && (

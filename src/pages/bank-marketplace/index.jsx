@@ -16,6 +16,7 @@ import {
   applyComparisonOverrides,
   mapBankForMarketplace,
 } from '../../utils/bankMarketplace';
+import { getBankProbabilityMap, loadEligibilityResults } from '../../services/leadService';
 
 function isAllFilterValue(value) {
   return value == null || value === '' || value === 'all';
@@ -73,7 +74,11 @@ const BankMarketplace = () => {
       });
       const list = Array.isArray(data) ? data : [];
 
-      const transformedBanks = list.map((bank) => mapBankForMarketplace(bank, loanTypeSlug));
+      const eligibility = loadEligibilityResults();
+      const probabilityMap = getBankProbabilityMap(eligibility);
+      const transformedBanks = list.map((bank) =>
+        mapBankForMarketplace(bank, loanTypeSlug, probabilityMap),
+      );
       setBanks(transformedBanks || []);
       setComparisonOverrides({});
     } catch (err) {
@@ -166,11 +171,13 @@ const BankMarketplace = () => {
 
   const handleApply = (bank) => {
     const qs = activeProduct ? `?loanType=${activeProduct.slug}` : '';
-    if (user) {
-      navigate('/bank-selection-and-consent', { state: { selectedBank: bank, loanType: activeProduct?.apiKey } });
-      return;
-    }
-    navigate(`/customer-assessment-portal${qs}`, { state: { selectedBank: bank } });
+    navigate(`/customer-assessment-portal${qs}`, {
+      state: {
+        selectedBank: bank,
+        loanType: activeProduct?.apiKey,
+        eligibilityData: loadEligibilityResults()?.formData,
+      },
+    });
   };
 
   const filteredAndSortedBanks = useMemo(() => {

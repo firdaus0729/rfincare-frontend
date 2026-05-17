@@ -63,7 +63,7 @@ function formatProcessingFee(productData) {
 /**
  * Map API bank + products into marketplace / comparison card shape.
  */
-export function mapBankForMarketplace(bank, loanTypeSlug) {
+export function mapBankForMarketplace(bank, loanTypeSlug, probabilityMap = null) {
   const products = bank?.bankProducts || bank?.bank_products || [];
   const primaryProduct = pickProductForLoanType(products, loanTypeSlug) || {};
   const productData = parseProductData(primaryProduct);
@@ -102,8 +102,14 @@ export function mapBankForMarketplace(bank, loanTypeSlug) {
     logoAlt: bank?.logoAlt || bank?.logo_alt || `${bank?.name} logo`,
     rating: bank?.rating || 4.5,
     reviews: `${bank?.reviewsCount ?? bank?.reviews_count ?? 0} reviews`,
-    probability: 75,
-    probabilityReason: 'Based on your profile and eligibility criteria',
+    probability:
+      probabilityMap?.get?.(bank?.id) ??
+      probabilityMap?.[bank?.id] ??
+      75,
+    probabilityReason:
+      probabilityMap?.get?.(bank?.id) != null || probabilityMap?.[bank?.id] != null
+        ? 'Based on your eligibility profile'
+        : 'Complete eligibility check to see your personalized match',
     interestRate,
     interestRateMin: interestMin != null ? Number(interestMin) : interestRate,
     interestRateMax: interestMax != null ? Number(interestMax) : interestRate,

@@ -16,8 +16,10 @@ import ReviewSubmitForm from './components/ReviewSubmitForm';
 import DocumentUploadStep from './components/DocumentUploadStep';
 import ConsentSignatureForm from './components/ConsentSignatureForm';
 import AutoSaveIndicator from './components/AutoSaveIndicator';
+import BankPreferencesStep from './components/BankPreferencesStep';
 import Icon from '../../components/AppIcon';
 import { normalizeLoanApiKey } from '../../constants/loanProducts';
+import { leadService } from '../../services/leadService';
 
 const SESSION_KEY = 'loan_assessment_session';
 const CREDENTIALS_KEY = 'loan_assessment_credentials';
@@ -72,6 +74,7 @@ const CustomerAssessmentPortal = () => {
     { id: 'address', label: 'Address', description: 'Where do you live?' },
     { id: 'employment', label: 'Employment', description: 'Your work and income details' },
     { id: 'financial', label: 'Financial', description: 'Your loan requirements' },
+    { id: 'preferences', label: 'Bank & priority', description: 'Preferred lender & goals' },
     { id: 'review', label: 'Review', description: 'Verify your information' },
     { id: 'documents', label: 'Documents', description: 'Upload required documents' },
     { id: 'signature', label: 'Submit', description: 'Sign and submit your application' },
@@ -90,6 +93,7 @@ const CustomerAssessmentPortal = () => {
     hasBankruptcy: false, hasForeclosure: false, hasTaxLiens: false, hasCoSignedLoans: false,
     certifyAccuracy: false, authorizeCredit: false, agreeTerms: false, consentCommunications: false,
     consentSignatureAgreed: false, customerSignature: '',
+    preferredBankId: '', preferredBankName: '', loanPriority: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -97,8 +101,9 @@ const CustomerAssessmentPortal = () => {
   // Prefill from eligibility quick check / product links
   useEffect(() => {
     const quick = location.state?.quickCheck || location.state?.eligibilityData;
+    const selectedBank = location.state?.selectedBank;
     const loanTypeParam = searchParams.get('loanType');
-    if (quick || loanTypeParam) {
+    if (quick || loanTypeParam || selectedBank) {
       setFormData((prev) => ({
         ...prev,
         loanAmount: quick?.loanAmount || prev.loanAmount,
@@ -106,6 +111,8 @@ const CustomerAssessmentPortal = () => {
         creditScoreRange: quick?.creditScore || quick?.creditScoreRange || prev.creditScoreRange,
         loanPurpose: normalizeLoanApiKey(quick?.loanType || loanTypeParam) || prev.loanPurpose,
         employmentType: quick?.employmentType || prev.employmentType,
+        preferredBankId: selectedBank?.id || prev.preferredBankId,
+        preferredBankName: selectedBank?.name || prev.preferredBankName,
       }));
     }
   }, [location.state, searchParams]);
@@ -125,6 +132,16 @@ const CustomerAssessmentPortal = () => {
         }
         if (savedAppId) {
           setApplicationId(savedAppId);
+        }
+        try {
+          const serverDraft = await leadService.getDraft(sessionKey.current);
+          if (serverDraft?.formData) {
+            setFormData((prev) => ({ ...prev, ...serverDraft.formData }));
+            if (serverDraft.currentStep != null) setCurrentStep(serverDraft.currentStep);
+            if (serverDraft.applicationId) setApplicationId(serverDraft.applicationId);
+          }
+        } catch {
+          /* server draft optional */
         }
         const storedCreds = getStoredCredentials(
           localData ? JSON.parse(localData) : formData,
@@ -146,6 +163,17 @@ const CustomerAssessmentPortal = () => {
       localStorage.setItem('loan_assessment_form_data', JSON.stringify(data));
       localStorage.setItem('loan_assessment_step', String(step));
       setLastSaved(new Date());
+      leadService
+        .saveDraft({
+          sessionKey: sessionKey.current,
+          formData: data,
+          currentStep: step,
+          loanType: data.loanPurpose,
+          preferredBankId: data.preferredBankId,
+          loanPriority: data.loanPriority,
+          applicationId: applicationId || undefined,
+        })
+        .catch(() => {});
 
     } catch (err) {
       // localStorage save still succeeded
@@ -229,12 +257,16 @@ const CustomerAssessmentPortal = () => {
         break;
 
       case 4:
+        if (!formData?.loanPriority) newErrors.loanPriority = 'Please select your loan priority';
+        break;
+
+      case 5:
         if (!formData?.certifyAccuracy) newErrors.certifyAccuracy = 'You must certify the accuracy of information';
         if (!formData?.authorizeCredit) newErrors.authorizeCredit = 'Credit authorization is required';
         if (!formData?.agreeTerms) newErrors.agreeTerms = 'You must agree to terms and conditions';
         break;
 
-      case 5: {
+      case 6: {
         const required = ['pan_card', 'aadhaar_card', 'income_proof'];
         required.forEach((type) => {
           if (!uploadedDocs?.[type]) {
@@ -244,7 +276,7 @@ const CustomerAssessmentPortal = () => {
         break;
       }
 
-      case 6:
+      case 7:
         if (!formData?.consentSignatureAgreed) {
           newErrors.consentSignatureAgreed = 'You must agree to submit with your electronic signature';
         }
@@ -299,6 +331,9 @@ const CustomerAssessmentPortal = () => {
     has_foreclosure: formData?.hasForeclosure || false,
     has_tax_liens: formData?.hasTaxLiens || false,
     has_co_signed_loans: formData?.hasCoSignedLoans || false,
+    preferred_bank_id: formData?.preferredBankId || null,
+    loan_priority: formData?.loanPriority || null,
+    preferred_bank_name: formData?.preferredBankName || null,
     status,
     application_number: `RFC${Date.now()}`,
     customer_id: customerId || null,
@@ -360,12 +395,12 @@ const CustomerAssessmentPortal = () => {
 
     setSubmitError('');
 
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       setIsSubmitting(true);
       try {
         await ensureAuthAndDraftApplication();
-        saveProgress(formData, 5);
-        setCurrentStep(5);
+        saveProgress(formData, 6);
+        setCurrentStep(6);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (err) {
         const msg = err?.response?.data?.error || err?.message || 'Could not create your account. Please try again.';
@@ -470,8 +505,10 @@ const CustomerAssessmentPortal = () => {
       case 3:
         return <FinancialInfoForm formData={formData} errors={errors} onChange={handleChange} />;
       case 4:
-        return <ReviewSubmitForm formData={formData} errors={errors} onChange={handleChange} />;
+        return <BankPreferencesStep formData={formData} errors={errors} onChange={handleChange} />;
       case 5:
+        return <ReviewSubmitForm formData={formData} errors={errors} onChange={handleChange} />;
+      case 6:
         return (
           <DocumentUploadStep
             applicationId={applicationId}
@@ -480,7 +517,7 @@ const CustomerAssessmentPortal = () => {
             errors={errors}
           />
         );
-      case 6:
+      case 7:
         return (
           <ConsentSignatureForm
             formData={formData}
@@ -540,7 +577,7 @@ const CustomerAssessmentPortal = () => {
             onSave={handleSaveProgress}
             isValid={true}
             isSaving={isSaving || isSubmitting || isPreparingAccount}
-            nextLabel={currentStep === 4 ? 'Continue to Documents' : undefined}
+            nextLabel={currentStep === 5 ? 'Continue to Documents' : undefined}
             submitLabel="Submit Application"
           />
         </div>

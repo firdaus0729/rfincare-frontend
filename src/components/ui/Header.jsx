@@ -71,7 +71,6 @@ const Header = ({ children }) => {
     () => [
       { label: t('header.applyForLoan'), path: '/customer-assessment-portal', icon: 'FileText' },
       { label: t('header.bankMarketplace'), path: '/bank-marketplace', icon: 'Building2' },
-      { label: 'Customer Login', path: '/customer-login', icon: 'LogIn' },
     ],
     [t],
   );
@@ -149,6 +148,11 @@ const Header = ({ children }) => {
 
             <div className="header-actions">
               <LanguageSwitcher />
+              {showGuestNav && (
+                <Button variant="outline" size="sm" onClick={() => handleNavigation('/customer-login')}>
+                  {t('header.login', 'Login')}
+                </Button>
+              )}
               {!isGuest && <span className={`role-badge ${currentRole}`}>{roleLabel}</span>}
               {children}
               {/* Menu icon — visible only below md (when menu bar is hidden) */}

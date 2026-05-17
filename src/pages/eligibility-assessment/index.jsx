@@ -10,6 +10,9 @@ import Select from '../../components/ui/Select';
 import { customerJourneyService } from '../../services/customerJourneyService';
 import { homepageService } from '../../services/homepageService';
 import { useAuth } from '../../contexts/AuthContext';
+import EligibilityLeadGate from './components/EligibilityLeadGate';
+import { leadService, saveEligibilityResults } from '../../services/leadService';
+import { apiClient } from '../../lib/apiClient';
 
 const EligibilityAssessment = () => {
   const navigate = useNavigate();
@@ -27,6 +30,8 @@ const EligibilityAssessment = () => {
   });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [leadVerified, setLeadVerified] = useState(!!user);
+  const [leadMeta, setLeadMeta] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -67,6 +72,10 @@ const EligibilityAssessment = () => {
 
   const calculateEligibility = async (e) => {
     e?.preventDefault();
+    if (!user && !leadVerified) {
+      setResult({ score: 0, status: 'low', message: 'Please verify your mobile number above first.' });
+      return;
+    }
     setLoading(true);
     try {
       const apiResult = await homepageService.calculateEligibility({
@@ -93,20 +102,54 @@ const EligibilityAssessment = () => {
         overallProbability: probability,
       };
       setResult(calculatedResult);
+      saveEligibilityResults(calculatedResult, formData);
 
-      if (user) {
-        await customerJourneyService?.createEligibilityAssessment({
-          loanType: formData?.loanType,
-          loanAmount: parseFloat(formData?.loanAmount),
-          monthlyIncome: parseFloat(formData?.monthlyIncome),
-          employmentType: formData?.employmentType,
-          creditScoreRange: formData?.creditScore,
-          existingLoans: parseFloat(formData?.existingLoans) || 0,
-          eligibilityScore: probability,
-          eligibilityStatus: status,
-          eligibleAmount: apiResult.eligibleAmount,
-          message: apiResult.message,
-        });
+      if (leadMeta?.leadId) {
+        try {
+          await leadService.updateLead(leadMeta.leadId, {
+            status: 'eligible_calculated',
+            eligibilityScore: probability,
+            eligibilityData: { ...calculatedResult, formData },
+          });
+        } catch {
+          /* optional */
+        }
+      }
+
+      const assessmentPayload = {
+        loanType: formData?.loanType,
+        loanAmount: parseFloat(formData?.loanAmount),
+        monthlyIncome: parseFloat(formData?.monthlyIncome),
+        employmentType: formData?.employmentType,
+        creditScoreRange: formData?.creditScore,
+        existingLoans: parseFloat(formData?.existingLoans) || 0,
+        eligibilityScore: probability,
+        eligibilityStatus: status,
+        eligibleAmount: apiResult.eligibleAmount,
+        message: apiResult.message,
+        leadId: leadMeta?.leadId,
+        bankResults: apiResult.banks,
+      };
+      try {
+        if (user) {
+          await customerJourneyService?.createEligibilityAssessment(assessmentPayload);
+        } else {
+          await apiClient.post('/eligibility-assessments', {
+            loan_type: assessmentPayload.loanType,
+            loan_amount: assessmentPayload.loanAmount,
+            monthly_income: assessmentPayload.monthlyIncome,
+            employment_type: assessmentPayload.employmentType,
+            credit_score_range: assessmentPayload.creditScoreRange,
+            existing_loans: assessmentPayload.existingLoans,
+            eligibility_score: assessmentPayload.eligibilityScore,
+            eligibility_status: assessmentPayload.eligibilityStatus,
+            eligible_amount: assessmentPayload.eligibleAmount,
+            lead_id: assessmentPayload.leadId,
+            bank_results: assessmentPayload.bankResults,
+          });
+        }
+      } catch {
+        /* optional until migration / auth */
       }
     } catch {
       setResult({ score: 0, status: 'low', message: 'Could not calculate eligibility. Please try again.' });
@@ -144,6 +187,19 @@ const EligibilityAssessment = () => {
         <section className="py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-card rounded-2xl shadow-lg p-6 md:p-8 border border-border">
+              {!user && (
+                <EligibilityLeadGate
+                  loanType={formData.loanType}
+                  onVerified={(meta) => {
+                    setLeadMeta(meta);
+                    setLeadVerified(true);
+                    setFormData((prev) => ({
+                      ...prev,
+                      ...(meta.email ? {} : {}),
+                    }));
+                  }}
+                />
+              )}
               <form onSubmit={calculateEligibility} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Select
@@ -274,7 +330,10 @@ const EligibilityAssessment = () => {
                         className="flex-1"
                         iconName="GitCompare"
                         iconPosition="left"
-                        onClick={() => navigate('/bank-marketplace')}
+                        onClick={() => {
+                          const slug = LOAN_PRODUCTS.find((p) => p.apiKey === formData.loanType)?.slug;
+                          navigate(slug ? `/bank-marketplace?loanType=${slug}` : '/bank-marketplace');
+                        }}
                       >
                         Compare Banks
                       </Button>
