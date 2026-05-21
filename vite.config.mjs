@@ -15,6 +15,12 @@ export default defineConfig({
     port: "4028",
     host: "0.0.0.0",
     strictPort: true,
-    allowedHosts: ['.amazonaws.com', '.builtwithrocket.new']
+    allowedHosts: ['.amazonaws.com', '.builtwithrocket.new'],
+    proxy: {
+      '/auth/oauth': {
+        target: process.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+    },
   }
 });

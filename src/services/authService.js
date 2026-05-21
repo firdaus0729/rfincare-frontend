@@ -1,4 +1,7 @@
 import { apiClient } from '../lib/apiClient';
+import { getApiBaseUrl } from '../lib/runtimeConfig';
+
+export const OAUTH_RETURN_PATH_KEY = 'rfincare_oauth_return_path';
 
 // Helper function to convert snake_case to camelCase
 const toCamelCase = (obj) => {
@@ -193,10 +196,30 @@ export const authService = {
     return { data: [], error: null }; // Stubbed for now
   },
 
-  async signInWithOAuth(provider) {
+  /**
+   * Redirect to backend OAuth (Google / Microsoft / Apple).
+   * @param {string} provider
+   * @param {string} [returnPath] SPA path after success, e.g. /customer-dashboard
+   */
+  signInWithOAuth(provider, returnPath = '/customer-dashboard') {
     const map = { google: 'google', microsoft: 'microsoft', outlook: 'microsoft', apple: 'apple' };
     const p = map[provider] || provider;
-    window.location.href = `/auth/oauth/${p}`;
+    const apiBase = getApiBaseUrl().replace(/\/$/, '');
+    if (!apiBase) {
+      return {
+        data: null,
+        error: { message: 'API URL is not configured (VITE_API_BASE_URL).' },
+      };
+    }
+    try {
+      sessionStorage.setItem(OAUTH_RETURN_PATH_KEY, returnPath);
+    } catch {
+      /* ignore */
+    }
+    const returnOrigin =
+      typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
+    const qs = returnOrigin ? `?return_origin=${returnOrigin}` : '';
+    window.location.href = `${apiBase}/auth/oauth/${p}${qs}`;
     return { data: { redirecting: true }, error: null };
   },
 };

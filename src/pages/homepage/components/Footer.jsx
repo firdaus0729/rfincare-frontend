@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/AppIcon';
+import BrandLogo from '../../../components/ui/BrandLogo';
 import { LOAN_PRODUCTS } from '../../../constants/loanProducts';
 
 const Footer = () => {
@@ -46,11 +47,8 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 md:gap-10 mb-8 md:mb-10">
           <div className="lg:col-span-2">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary">
-                <span className="text-primary-foreground font-bold text-lg">R</span>
-              </div>
-              <span className="text-xl font-bold text-foreground">Rfincare</span>
+            <div className="mb-4">
+              <BrandLogo size="md" />
             </div>
             <p className="text-sm md:text-base text-muted-foreground mb-4 max-w-sm">
               {t('footer.tagline')}

@@ -1,8 +1,9 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 
-const ProgressIndicator = ({ currentStep, totalSteps, steps }) => {
-  const progressPercentage = ((currentStep + 1) / totalSteps) * 100;
+const ProgressIndicator = ({ currentStep, totalSteps, steps, onStepClick }) => {
+  const safeStep = Math.min(Math.max(0, currentStep), Math.max(0, totalSteps - 1));
+  const progressPercentage = ((safeStep + 1) / totalSteps) * 100;
 
   return (
     <div className="w-full mb-8 md:mb-10 lg:mb-12">
@@ -16,12 +17,25 @@ const ProgressIndicator = ({ currentStep, totalSteps, steps }) => {
       {/* Step Indicators */}
       <div className="flex justify-between items-start">
         {steps?.map((step, index) => {
-          const isCompleted = index < currentStep;
-          const isCurrent = index === currentStep;
-          const isPending = index > currentStep;
+          const isCompleted = index < safeStep;
+          const isCurrent = index === safeStep;
+          const isPending = index > safeStep;
+          const canGoBack = isCompleted && typeof onStepClick === 'function';
 
           return (
-            <div key={step?.id} className="flex flex-col items-center flex-1 relative">
+            <div
+              key={step?.id}
+              className={`flex flex-col items-center flex-1 relative ${canGoBack ? 'cursor-pointer' : ''}`}
+              role={canGoBack ? 'button' : undefined}
+              tabIndex={canGoBack ? 0 : undefined}
+              onClick={() => canGoBack && onStepClick(index)}
+              onKeyDown={(e) => {
+                if (canGoBack && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  onStepClick(index);
+                }
+              }}
+            >
               {/* Connector Line */}
               {index < steps?.length - 1 && (
                 <div
@@ -59,7 +73,7 @@ const ProgressIndicator = ({ currentStep, totalSteps, steps }) => {
       {/* Current Step Description */}
       <div className="mt-6 md:mt-8 text-center">
         <p className="text-sm md:text-base lg:text-lg text-muted-foreground">
-          {steps?.[currentStep]?.description}
+          {steps?.[safeStep]?.description}
         </p>
       </div>
     </div>

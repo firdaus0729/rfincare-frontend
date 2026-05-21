@@ -4,7 +4,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
-import { LOAN_PRODUCTS } from '../../../constants/loanProducts';
+import { LOAN_PRODUCTS, getLoanProductBySlug } from '../../../constants/loanProducts';
 
 const QuickEligibilityCheck = () => {
   const navigate = useNavigate();
@@ -104,7 +104,18 @@ const QuickEligibilityCheck = () => {
                 className="flex-1"
                 iconName="FileText"
                 iconPosition="left"
-                onClick={() => navigate('/customer-assessment-portal')}
+                onClick={() => {
+                  const product = formData.loanType ? getLoanProductBySlug(formData.loanType) : null;
+                  const qs = product ? `?loanType=${product.slug}` : '';
+                  navigate(`/customer-assessment-portal${qs}`, {
+                    state: {
+                      quickCheck: {
+                        ...formData,
+                        loanType: product?.apiKey || formData.loanType,
+                      },
+                    },
+                  });
+                }}
               >
                 Full Application
               </Button>

@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Icon from '../AppIcon';
 import Button from './Button';
 import LanguageSwitcher from './LanguageSwitcher';
+import BrandLogo from './BrandLogo';
 
 const PUBLIC_GUEST_PATHS = new Set([
   '/',
@@ -109,11 +110,8 @@ const Header = ({ children }) => {
       <header className={`header-container ${isScrolled ? 'shadow-lg' : ''}`}>
         <div className="header-content">
           <div className="header-inner">
-            <div className="header-logo" onClick={() => handleNavigation('/homepage')} role="button" tabIndex={0}>
-              <div className="header-logo-icon bg-primary rounded-lg flex items-center justify-center w-10 h-10">
-                <span className="text-primary-foreground font-bold text-lg">R</span>
-              </div>
-              <span className="header-logo-text">Rfincare</span>
+            <div className="header-logo cursor-pointer" onClick={() => handleNavigation('/homepage')} role="button" tabIndex={0}>
+              <BrandLogo size="md" />
             </div>
 
             {/* Desktop menu bar — hidden below md */}

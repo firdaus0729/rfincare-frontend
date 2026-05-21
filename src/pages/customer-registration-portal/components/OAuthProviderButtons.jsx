@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { authService } from '../../../services/authService';
 import { Mail } from 'lucide-react';
 
-const OAuthProviderButtons = ({ onProviderSelect, onEmailSignup }) => {
+const OAuthProviderButtons = ({ onProviderSelect, onEmailSignup, oauthReturnPath = '/customer-dashboard' }) => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
 
@@ -35,7 +35,7 @@ const OAuthProviderButtons = ({ onProviderSelect, onEmailSignup }) => {
     setError('');
 
     try {
-      const { data, error } = await authService?.signInWithOAuth(provider?.id);
+      const { data, error } = await authService?.signInWithOAuth(provider?.id, oauthReturnPath);
       
       if (error) {
         setError(error?.message);
@@ -43,13 +43,15 @@ const OAuthProviderButtons = ({ onProviderSelect, onEmailSignup }) => {
         return;
       }
 
-      // OAuth redirect will happen automatically
-      // After redirect, user data will be available
+      if (data?.redirecting) {
+        return;
+      }
+
       if (data?.user) {
         onProviderSelect?.(provider?.id, {
           id: data?.user?.id,
           email: data?.user?.email,
-          name: data?.user?.user_metadata?.full_name || data?.user?.email?.split('@')?.[0]
+          name: data?.user?.user_metadata?.full_name || data?.user?.email?.split('@')?.[0],
         });
       }
     } catch (err) {

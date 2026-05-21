@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -8,6 +8,7 @@ import OAuthProviderButtons from '../customer-registration-portal/components/OAu
 
 const CustomerLogin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn, user, userProfile, loading: authLoading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -19,7 +20,12 @@ const CustomerLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // Redirect if already logged in as customer
+    if (location.state?.error) {
+      setError(location.state.error);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
     if (user && userProfile?.role === 'customer') {
       navigate('/customer-dashboard');
     }
@@ -111,11 +117,7 @@ const CustomerLogin = () => {
         )}
 
         {!isSignUp && (
-          <OAuthProviderButtons
-            onProviderSelect={() => {
-              navigate('/customer-assessment-portal');
-            }}
-          />
+          <OAuthProviderButtons oauthReturnPath="/customer-dashboard" />
         )}
 
         {/* Login/Signup Form */}
@@ -227,11 +229,22 @@ const CustomerLogin = () => {
         {/* Footer Links */}
         <div className="text-center space-y-2">
           <button
+            type="button"
             onClick={() => navigate('/homepage')}
             className="text-sm text-gray-600 hover:text-gray-900 underline"
           >
             Back to Home
           </button>
+          <p className="text-xs text-gray-500">
+            Staff or admin?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/login-page')}
+              className="text-purple-600 hover:underline font-medium"
+            >
+              Go to portal login
+            </button>
+          </p>
         </div>
       </div>
     </div>

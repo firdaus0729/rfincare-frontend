@@ -24,13 +24,56 @@ import { leadService } from '../../services/leadService';
 const SESSION_KEY = 'loan_assessment_session';
 const CREDENTIALS_KEY = 'loan_assessment_credentials';
 
-const getOrCreateSessionKey = () => {
-  let key = localStorage.getItem(SESSION_KEY);
-  if (!key) {
-    key = 'session_' + Date.now() + '_' + Math.random()?.toString(36)?.substring(2, 9);
-    localStorage.setItem(SESSION_KEY, key);
+const INITIAL_FORM_DATA = {
+  title: '', firstName: '', middleName: '', lastName: '',
+  dateOfBirth: '', gender: '', maritalStatus: '',
+  email: '', phone: '', aadhaar: '', pan: '',
+  addressLine1: '', addressLine2: '', city: '', district: '',
+  state: '', pinCode: '', residenceType: '', yearsAtAddress: '', monthlyRent: '',
+  employmentType: '', employerName: '', jobTitle: '', industry: '',
+  yearsEmployed: '', annualIncome: '', monthlyIncome: '', employerPhone: '', retirementIncome: '',
+  loanPurpose: '', loanAmount: '', creditScoreRange: '',
+  monthlyDebtPayments: '', totalAssets: '',
+  hasBankruptcy: false, hasForeclosure: false, hasTaxLiens: false, hasCoSignedLoans: false,
+  certifyAccuracy: false, authorizeCredit: false, agreeTerms: false, consentCommunications: false,
+  consentSignatureAgreed: false, customerSignature: '',
+  submitAuthMethod: 'signature',
+  signatureMode: 'draw',
+  otpVerified: false,
+  preferredBankId: '', preferredBankName: '', loanPriority: '',
+};
+
+const clampStep = (step, totalSteps) => {
+  const n = Number.parseInt(String(step), 10);
+  if (Number.isNaN(n)) return 0;
+  return Math.min(Math.max(0, n), Math.max(0, totalSteps - 1));
+};
+
+/** Older 7-step builds used index 4=review; 8-step uses 4=preferences. */
+const migrateLegacyStep = (step, formData) => {
+  const n = Number.parseInt(String(step), 10);
+  if (Number.isNaN(n)) return 0;
+  if (n >= 4 && !formData?.loanPriority) {
+    return n + 1;
   }
+  return n;
+};
+
+const createNewSessionKey = () => {
+  const key = `session_${Date.now()}_${Math.random()?.toString(36)?.substring(2, 9)}`;
+  localStorage.setItem(SESSION_KEY, key);
   return key;
+};
+
+const getOrCreateSessionKey = () => {
+  return localStorage.getItem(SESSION_KEY) || createNewSessionKey();
+};
+
+const clearAssessmentDraft = () => {
+  localStorage.removeItem('loan_assessment_form_data');
+  localStorage.removeItem('loan_assessment_step');
+  localStorage.removeItem('loan_assessment_application_id');
+  localStorage.removeItem(SESSION_KEY);
 };
 
 /** Stable credentials per applicant so re-submit can log in after 409. */
@@ -57,6 +100,9 @@ const CustomerAssessmentPortal = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const sessionKey = useRef(getOrCreateSessionKey());
+  const draftHydrated = useRef(false);
+  const shouldResume =
+    searchParams.get('resume') === '1' || location.state?.resumeDraft === true;
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -66,6 +112,7 @@ const CustomerAssessmentPortal = () => {
   const [generatedCredentials, setGeneratedCredentials] = useState(null);
   const [submitError, setSubmitError] = useState('');
   const [applicationId, setApplicationId] = useState(null);
+  const [otpAuthenticatedUserId, setOtpAuthenticatedUserId] = useState(null);
   const [uploadedDocs, setUploadedDocs] = useState({});
   const autoSaveTimer = useRef(null);
 
@@ -80,81 +127,90 @@ const CustomerAssessmentPortal = () => {
     { id: 'signature', label: 'Submit', description: 'Sign and submit your application' },
   ];
 
-  const [formData, setFormData] = useState({
-    title: '', firstName: '', middleName: '', lastName: '',
-    dateOfBirth: '', gender: '', maritalStatus: '',
-    email: '', phone: '', aadhaar: '', pan: '',
-    addressLine1: '', addressLine2: '', city: '', district: '',
-    state: '', pinCode: '', residenceType: '', yearsAtAddress: '', monthlyRent: '',
-    employmentType: '', employerName: '', jobTitle: '', industry: '',
-    yearsEmployed: '', annualIncome: '', monthlyIncome: '', employerPhone: '', retirementIncome: '',
-    loanPurpose: '', loanAmount: '', creditScoreRange: '',
-    monthlyDebtPayments: '', totalAssets: '',
-    hasBankruptcy: false, hasForeclosure: false, hasTaxLiens: false, hasCoSignedLoans: false,
-    certifyAccuracy: false, authorizeCredit: false, agreeTerms: false, consentCommunications: false,
-    consentSignatureAgreed: false, customerSignature: '',
-    preferredBankId: '', preferredBankName: '', loanPriority: '',
-  });
+  const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA });
 
   const [errors, setErrors] = useState({});
 
-  // Prefill from eligibility quick check / product links
-  useEffect(() => {
+  const applyEntryPrefill = useCallback((base) => {
     const quick = location.state?.quickCheck || location.state?.eligibilityData;
     const selectedBank = location.state?.selectedBank;
     const loanTypeParam = searchParams.get('loanType');
-    if (quick || loanTypeParam || selectedBank) {
-      setFormData((prev) => ({
-        ...prev,
-        loanAmount: quick?.loanAmount || prev.loanAmount,
-        monthlyIncome: quick?.monthlyIncome || prev.monthlyIncome,
-        creditScoreRange: quick?.creditScore || quick?.creditScoreRange || prev.creditScoreRange,
-        loanPurpose: normalizeLoanApiKey(quick?.loanType || loanTypeParam) || prev.loanPurpose,
-        employmentType: quick?.employmentType || prev.employmentType,
-        preferredBankId: selectedBank?.id || prev.preferredBankId,
-        preferredBankName: selectedBank?.name || prev.preferredBankName,
-      }));
-    }
+    if (!quick && !loanTypeParam && !selectedBank) return base;
+    return {
+      ...base,
+      loanAmount: quick?.loanAmount || base.loanAmount,
+      monthlyIncome: quick?.monthlyIncome || base.monthlyIncome,
+      creditScoreRange: quick?.creditScore || quick?.creditScoreRange || base.creditScoreRange,
+      loanPurpose: normalizeLoanApiKey(quick?.loanType || loanTypeParam) || base.loanPurpose,
+      employmentType: quick?.employmentType || base.employmentType,
+      preferredBankId: selectedBank?.id || base.preferredBankId,
+      preferredBankName: selectedBank?.name || base.preferredBankName,
+    };
   }, [location.state, searchParams]);
 
-  // Load saved progress on mount
+  // Fresh application by default; only restore draft when ?resume=1 or resumeDraft state
   useEffect(() => {
-    const loadSavedProgress = async () => {
+    const init = async () => {
+      if (!shouldResume) {
+        clearAssessmentDraft();
+        sessionKey.current = createNewSessionKey();
+        setFormData(applyEntryPrefill({ ...INITIAL_FORM_DATA }));
+        setCurrentStep(0);
+        setApplicationId(null);
+        setUploadedDocs({});
+        setErrors({});
+        draftHydrated.current = true;
+        return;
+      }
+
+      sessionKey.current = getOrCreateSessionKey();
       try {
+        let merged = { ...INITIAL_FORM_DATA };
+        let step = 0;
+        let appId = null;
+
         const localData = localStorage.getItem('loan_assessment_form_data');
         const localStep = localStorage.getItem('loan_assessment_step');
         const savedAppId = localStorage.getItem('loan_assessment_application_id');
         if (localData) {
-          setFormData((prev) => ({ ...prev, ...JSON.parse(localData) }));
+          merged = { ...merged, ...JSON.parse(localData) };
         }
-        if (localStep) {
-          setCurrentStep(parseInt(localStep, 10));
+        if (localStep != null) {
+          step = migrateLegacyStep(localStep, merged);
         }
         if (savedAppId) {
-          setApplicationId(savedAppId);
+          appId = savedAppId;
         }
         try {
           const serverDraft = await leadService.getDraft(sessionKey.current);
           if (serverDraft?.formData) {
-            setFormData((prev) => ({ ...prev, ...serverDraft.formData }));
-            if (serverDraft.currentStep != null) setCurrentStep(serverDraft.currentStep);
-            if (serverDraft.applicationId) setApplicationId(serverDraft.applicationId);
+            merged = { ...merged, ...serverDraft.formData };
+          }
+          if (serverDraft?.currentStep != null) {
+            step = migrateLegacyStep(serverDraft.currentStep, merged);
+          }
+          if (serverDraft?.applicationId) {
+            appId = serverDraft.applicationId;
           }
         } catch {
           /* server draft optional */
         }
-        const storedCreds = getStoredCredentials(
-          localData ? JSON.parse(localData) : formData,
-        );
-        if (storedCreds) {
-          setGeneratedCredentials(storedCreds);
-        }
+
+        setFormData(merged);
+        setCurrentStep(clampStep(step, steps.length));
+        if (appId) setApplicationId(appId);
+
+        const storedCreds = getStoredCredentials(merged);
+        if (storedCreds) setGeneratedCredentials(storedCreds);
       } catch {
-        // use defaults
+        setFormData({ ...INITIAL_FORM_DATA });
+        setCurrentStep(0);
+      } finally {
+        draftHydrated.current = true;
       }
     };
-    loadSavedProgress();
-  }, []);
+    init();
+  }, [shouldResume, applyEntryPrefill]);
 
   const saveProgress = useCallback(async (data, step) => {
     setIsSaving(true);
@@ -183,8 +239,9 @@ const CustomerAssessmentPortal = () => {
     }
   }, []);
 
-  // Auto-save on form data change (debounced 3 seconds)
+  // Auto-save on form data change (debounced 3 seconds) — after initial load
   useEffect(() => {
+    if (!draftHydrated.current) return undefined;
     if (autoSaveTimer?.current) clearTimeout(autoSaveTimer?.current);
     autoSaveTimer.current = setTimeout(() => {
       saveProgress(formData, currentStep);
@@ -278,10 +335,17 @@ const CustomerAssessmentPortal = () => {
 
       case 7:
         if (!formData?.consentSignatureAgreed) {
-          newErrors.consentSignatureAgreed = 'You must agree to submit with your electronic signature';
+          newErrors.consentSignatureAgreed = 'You must agree to submit your application';
         }
-        if (!formData?.customerSignature) {
-          newErrors.customerSignature = 'Please draw your signature in the box above';
+        if (formData?.submitAuthMethod === 'otp') {
+          if (!formData?.otpVerified) {
+            newErrors.otpVerified = 'Please verify OTP before submitting';
+          }
+        } else if (!formData?.customerSignature) {
+          newErrors.customerSignature =
+            formData?.signatureMode === 'upload'
+              ? 'Please upload your signature image'
+              : 'Please draw your signature in the box above';
         }
         break;
 
@@ -341,9 +405,23 @@ const CustomerAssessmentPortal = () => {
 
   const authenticateApplicant = async () => {
     if (user?.id) return user.id;
+    if (otpAuthenticatedUserId) return otpAuthenticatedUserId;
+
+    if (formData?.submitAuthMethod === 'otp') {
+      const err = new Error('Please verify OTP on this step before submitting.');
+      err.displayMessage = err.message;
+      throw err;
+    }
+
+    const email = formData?.email?.trim();
+    if (!email) {
+      throw new Error('Email is required. Go back to Personal details and enter your email.');
+    }
 
     const stored = getStoredCredentials(formData);
-    const credentials = stored || generateCredentials(formData);
+    const generated = generateCredentials(formData);
+    const password = stored?.password || generated.password;
+    const credentials = { email, password, username: generated.username };
     setGeneratedCredentials(credentials);
 
     const persistAndSetToken = (accessToken, userId) => {
@@ -354,8 +432,8 @@ const CustomerAssessmentPortal = () => {
 
     try {
       const res = await apiClient.post('/auth/signup', {
-        email: credentials.email,
-        password: credentials.password,
+        email,
+        password,
         fullName: `${formData?.firstName || ''} ${formData?.lastName || ''}`.trim(),
         phone: formData?.phone || '',
         role: 'customer',
@@ -363,11 +441,15 @@ const CustomerAssessmentPortal = () => {
       return persistAndSetToken(res?.data?.accessToken, res?.data?.user?.id);
     } catch (signupErr) {
       if (signupErr?.response?.status !== 409) throw signupErr;
-      const loginRes = await apiClient.post('/auth/login', {
-        email: credentials.email,
-        password: credentials.password,
-      });
-      return persistAndSetToken(loginRes?.data?.accessToken, loginRes?.data?.user?.id);
+      try {
+        const loginRes = await apiClient.post('/auth/login', { email, password });
+        return persistAndSetToken(loginRes?.data?.accessToken, loginRes?.data?.user?.id);
+      } catch {
+        const err = new Error(
+          'An account already exists for this email. Use OTP verification on this step, or log in from the Login page.',
+        );
+        throw err;
+      }
     }
   };
 
@@ -416,14 +498,26 @@ const CustomerAssessmentPortal = () => {
       return;
     }
 
-    saveProgress(formData, currentStep + 1);
-    setCurrentStep((prev) => prev + 1);
+    const nextStep = Math.min(steps.length - 1, currentStep + 1);
+    saveProgress(formData, nextStep);
+    setCurrentStep(nextStep);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePrevious = () => {
-    saveProgress(formData, currentStep - 1);
-    setCurrentStep(prev => prev - 1);
+    const nextStep = Math.max(0, currentStep - 1);
+    if (nextStep === currentStep) return;
+    setErrors({});
+    setCurrentStep(nextStep);
+    saveProgress(formData, nextStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStepClick = (index) => {
+    if (index >= currentStep) return;
+    setErrors({});
+    setCurrentStep(index);
+    saveProgress(formData, index);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -440,11 +534,21 @@ const CustomerAssessmentPortal = () => {
         appId = await ensureAuthAndDraftApplication();
       }
 
-      const signaturePayload = {
-        customer_signature: formData.customerSignature,
-        signature_signed_at: new Date().toISOString(),
-        signature_name: [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(' '),
-      };
+      const signatureName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(' ');
+      const signaturePayload =
+        formData.submitAuthMethod === 'otp'
+          ? {
+              customer_signature: 'OTP_VERIFIED',
+              signature_method: 'otp',
+              signature_signed_at: new Date().toISOString(),
+              signature_name: signatureName,
+            }
+          : {
+              customer_signature: formData.customerSignature,
+              signature_method: formData.signatureMode || 'draw',
+              signature_signed_at: new Date().toISOString(),
+              signature_name: signatureName,
+            };
 
       await applicationService.updateApplication(appId, {
         ...buildApplicationPayload(user?.id, 'documents_pending'),
@@ -469,7 +573,7 @@ const CustomerAssessmentPortal = () => {
       setShowSuccessModal(true);
     } catch (err) {
       console.error('Submit error:', err);
-      const msg = err?.response?.data?.error || err?.message || 'Submission failed. Please try again.';
+      const msg = err?.response?.data?.error || err?.displayMessage || err?.message || 'Submission failed. Please try again.';
       setSubmitError(msg);
     } finally {
       setIsSubmitting(false);
@@ -490,12 +594,22 @@ const CustomerAssessmentPortal = () => {
     }
   };
 
+  const handleOtpVerified = (res) => {
+    if (res?.accessToken) setAccessToken(res.accessToken);
+    if (res?.user?.id) setOtpAuthenticatedUserId(res.user.id);
+    setFormData((prev) => ({ ...prev, otpVerified: true }));
+    if (errors?.otpVerified) {
+      setErrors((prev) => ({ ...prev, otpVerified: '' }));
+    }
+  };
+
   const handleSuccessRedirect = () => {
     navigate('/customer-dashboard');
   };
 
   const renderStepContent = () => {
-    switch (currentStep) {
+    const activeStep = clampStep(currentStep, steps.length);
+    switch (activeStep) {
       case 0:
         return <PersonalInfoForm formData={formData} errors={errors} onChange={handleChange} />;
       case 1:
@@ -524,6 +638,7 @@ const CustomerAssessmentPortal = () => {
             errors={errors}
             onChange={handleChange}
             onSignatureChange={handleSignatureChange}
+            onOtpVerified={handleOtpVerified}
           />
         );
       default:
@@ -553,9 +668,10 @@ const CustomerAssessmentPortal = () => {
 
         {/* Progress Indicator */}
         <ProgressIndicator
-          currentStep={currentStep}
+          currentStep={clampStep(currentStep, steps.length)}
           totalSteps={steps?.length}
           steps={steps}
+          onStepClick={handleStepClick}
         />
 
         {/* Form Content */}
@@ -570,7 +686,7 @@ const CustomerAssessmentPortal = () => {
 
           {/* Navigation */}
           <FormNavigation
-            currentStep={currentStep}
+            currentStep={clampStep(currentStep, steps.length)}
             totalSteps={steps?.length}
             onPrevious={handlePrevious}
             onNext={handleNext}

@@ -3,7 +3,6 @@ import { apiClient } from '../lib/apiClient';
 const toCamelCase = (obj) => {
   if (!obj || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj.map(toCamelCase);
-
   return Object.keys(obj).reduce((acc, key) => {
     const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
     acc[camelKey] = toCamelCase(obj[key]);
@@ -11,26 +10,17 @@ const toCamelCase = (obj) => {
   }, {});
 };
 
-export const adminService = {
-  async createAgentOnboarding(agentData) {
-    return { data: null, error: { message: 'Agent creation migrated to manual seeding for security.' } };
-  },
-  async getAgentOnboardingList() {
-    return { data: [], error: null };
-  },
-  async createEmployeeOnboarding(employeeData) {
-    return { data: null, error: { message: 'Employee creation migrated to manual seeding.' } };
-  },
-  async getEmployeeOnboardingList() {
-    return { data: [], error: null };
-  },
+function apiError(error, fallback) {
+  return { message: error?.response?.data?.error || error?.message || fallback };
+}
 
+export const adminService = {
   async getAllApplications(filters = {}) {
     try {
       const res = await apiClient.get('/loan-applications', { params: filters });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: [], error: { message: error.response?.data?.error || 'Failed to fetch applications' } };
+      return { data: null, error: apiError(error, 'Failed to fetch applications') };
     }
   },
 
@@ -42,7 +32,7 @@ export const adminService = {
       });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: null, error: { message: error.response?.data?.error || 'Approval failed' } };
+      return { data: null, error: apiError(error, 'Approval failed') };
     }
   },
 
@@ -54,7 +44,7 @@ export const adminService = {
       });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: null, error: { message: error.response?.data?.error || 'Rejection failed' } };
+      return { data: null, error: apiError(error, 'Rejection failed') };
     }
   },
 
@@ -72,7 +62,7 @@ export const adminService = {
         error: null,
       };
     } catch (error) {
-      return { data: null, error: { message: error.response?.data?.error || 'Failed to fetch dashboard stats' } };
+      return { data: null, error: apiError(error, 'Failed to fetch dashboard stats') };
     }
   },
 
@@ -81,7 +71,7 @@ export const adminService = {
       const res = await apiClient.get('/admin/agents');
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: [], error: { message: error.response?.data?.error || 'Failed to fetch agents' } };
+      return { data: [], error: apiError(error, 'Failed to fetch agents') };
     }
   },
 
@@ -90,7 +80,7 @@ export const adminService = {
       const res = await apiClient.get('/admin/employees');
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: [], error: { message: error.response?.data?.error || 'Failed to fetch employees' } };
+      return { data: [], error: apiError(error, 'Failed to fetch employees') };
     }
   },
 
@@ -102,7 +92,7 @@ export const adminService = {
       });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: null, error: { message: error.response?.data?.error || 'Failed to approve agent' } };
+      return { data: null, error: apiError(error, 'Failed to approve agent') };
     }
   },
 
@@ -115,7 +105,7 @@ export const adminService = {
       });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: null, error: { message: error.response?.data?.error || 'Failed to reject agent' } };
+      return { data: null, error: apiError(error, 'Failed to reject agent') };
     }
   },
 
@@ -123,25 +113,70 @@ export const adminService = {
     return { error: { message: 'Commission configuration is not available in this release.' } };
   },
 
+  async updateEmployeeAccessControls() {
+    return { error: null };
+  },
+
+  async createAgentOnboarding() {
+    return { data: null, error: { message: 'Agent creation migrated to manual seeding for security.' } };
+  },
+
+  async getAgentOnboardingList() {
+    return { data: [], error: null };
+  },
+
+  async createEmployeeOnboarding() {
+    return { data: null, error: { message: 'Employee creation migrated to manual seeding.' } };
+  },
+
+  async getEmployeeOnboardingList() {
+    return { data: [], error: null };
+  },
+
   async getAllDocuments(filters = {}) {
     try {
       const res = await apiClient.get('/documents', { params: filters });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
-      return { data: null, error: { message: 'Failed to fetch documents' } };
+      return { data: null, error: apiError(error, 'Failed to fetch documents') };
     }
   },
 
   async getAuditLogs() {
     return { data: [], error: null };
   },
+
   async getSystemConfigurations() {
     return { data: [], error: null };
   },
+
   async updateSystemConfiguration() {
     return { error: null };
   },
+
   async generateReport() {
     return { data: null, error: { message: 'Reporting service unavailable' } };
+  },
+
+  async lookupApplications({ email, applicationNumber }) {
+    const res = await apiClient.get('/admin/status-check/lookup', {
+      params: { email, applicationNumber },
+    });
+    return res.data;
+  },
+
+  async getStatusCheckOtpLog() {
+    const res = await apiClient.get('/admin/status-check/otp-log');
+    return res.data;
+  },
+
+  async sendStatusCheckOtp(payload) {
+    const res = await apiClient.post('/admin/status-check/send-otp', payload);
+    return res.data;
+  },
+
+  async verifyStatusCheck(payload) {
+    const res = await apiClient.post('/admin/status-check/verify', payload);
+    return res.data;
   },
 };

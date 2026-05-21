@@ -26,6 +26,7 @@ import { getLoanProductBySlug } from '../../constants/loanProducts';
 import BankManagementTab from './components/BankManagementTab';
 import HomepageCmsTab from './components/HomepageCmsTab';
 import LeadsTab from './components/LeadsTab';
+import StatusCheckAdminTab from './components/StatusCheckAdminTab';
 
 
 const AdminDashboard = () => {
@@ -102,6 +103,7 @@ const AdminDashboard = () => {
     { id: 'reports', label: 'Reports', icon: 'BarChart' },
     { id: 'audit-logs', label: 'Audit Logs', icon: 'Shield' },
     { id: 'homepage-cms', label: 'Homepage CMS', icon: 'Layout' },
+    { id: 'status-check', label: 'Status Check', icon: 'Search' },
     { id: 'leads', label: 'Leads', icon: 'UserCheck' },
   ];
 
@@ -546,6 +548,8 @@ const AdminDashboard = () => {
                 {activeTab === 'bank-management' && <BankManagementTab />}
 
                 {activeTab === 'homepage-cms' && <HomepageCmsTab />}
+
+                {activeTab === 'status-check' && <StatusCheckAdminTab />}
 
                 {activeTab === 'leads' && <LeadsTab />}
 
