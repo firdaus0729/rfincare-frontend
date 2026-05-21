@@ -40,6 +40,21 @@ export const leadService = {
     const res = await apiClient.patch(`/leads/${leadId}/assign`, { assignedTo });
     return res.data;
   },
+
+  async createResumeLink(payload) {
+    const res = await apiClient.post('/leads/drafts/resume-link', payload);
+    return res.data;
+  },
+
+  async createLeadResumeLink(leadId, payload) {
+    const res = await apiClient.post(`/leads/${leadId}/resume-link`, payload);
+    return res.data;
+  },
+
+  async resolveResumeToken(token) {
+    const res = await apiClient.get(`/public/resume-application/${encodeURIComponent(token)}`);
+    return res.data;
+  },
 };
 
 export const ELIGIBILITY_SESSION_KEY = 'rfincare_eligibility_results';

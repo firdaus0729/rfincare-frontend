@@ -110,8 +110,15 @@ const Header = ({ children }) => {
       <header className={`header-container ${isScrolled ? 'shadow-lg' : ''}`}>
         <div className="header-content">
           <div className="header-inner">
-            <div className="header-logo cursor-pointer" onClick={() => handleNavigation('/homepage')} role="button" tabIndex={0}>
-              <BrandLogo size="md" />
+            <div className="flex items-center gap-3 md:gap-4 shrink-0">
+              <div className="header-logo cursor-pointer" onClick={() => handleNavigation('/homepage')} role="button" tabIndex={0}>
+                <BrandLogo size="md" />
+              </div>
+              {showGuestNav && (
+                <Button variant="outline" size="sm" onClick={() => handleNavigation('/customer-login')}>
+                  {t('header.login', 'Login')}
+                </Button>
+              )}
             </div>
 
             {/* Desktop menu bar — hidden below md */}
@@ -146,11 +153,6 @@ const Header = ({ children }) => {
 
             <div className="header-actions">
               <LanguageSwitcher />
-              {showGuestNav && (
-                <Button variant="outline" size="sm" onClick={() => handleNavigation('/customer-login')}>
-                  {t('header.login', 'Login')}
-                </Button>
-              )}
               {!isGuest && <span className={`role-badge ${currentRole}`}>{roleLabel}</span>}
               {children}
               {/* Menu icon — visible only below md (when menu bar is hidden) */}

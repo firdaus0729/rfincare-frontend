@@ -128,5 +128,27 @@
     "confirm": "पुष्टि करें",
     "yes": "हाँ",
     "no": "नहीं"
+  },
+  "marketplace": {
+    "eligibilityLoaded": "आपकी पात्रता जांच से अनुमोदन अनुमान दिखाए जा रहे हैं",
+    "recheck": "पात्रता पुनः जांचें",
+    "noEligibilityTitle": "व्यक्तिगत बैंक अनुमोदन स्कोर प्राप्त करें",
+    "noEligibilityHint": "पहले मुफ्त पात्रता कैलकुलेटर चलाएं। बैंक कार्ड वास्तविक मैच प्रतिशत दिखाएंगे।",
+    "checkEligibility": "पात्रता जांचें",
+    "applyNow": "अभी आवेदन करें",
+    "compareBanks": "बैंक तुलना करें"
+  },
+  "assessment": {
+    "title": "ऋण मूल्यांकन पोर्टल",
+    "saveProgress": "प्रगति सहेजें",
+    "previousStep": "पिछला चरण",
+    "nextStep": "अगला चरण",
+    "submitApplication": "आवेदन जमा करें"
+  },
+  "eligibility": {
+    "title": "अपनी पात्रता जांचें",
+    "calculate": "पात्रता जांचें",
+    "applyNow": "अभी आवेदन करें",
+    "compareBanks": "बैंक तुलना करें"
   }
 }

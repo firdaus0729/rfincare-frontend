@@ -20,6 +20,7 @@ import BankPreferencesStep from './components/BankPreferencesStep';
 import Icon from '../../components/AppIcon';
 import { normalizeLoanApiKey } from '../../constants/loanProducts';
 import { leadService } from '../../services/leadService';
+import { downloadConsentRecord } from '../../utils/consentRecord';
 
 const SESSION_KEY = 'loan_assessment_session';
 const CREDENTIALS_KEY = 'loan_assessment_credentials';
@@ -564,6 +565,12 @@ const CustomerAssessmentPortal = () => {
       });
 
       await appService.submitApplication(appId);
+
+      downloadConsentRecord({
+        formData,
+        applicationId: appId,
+        authMethod: formData.submitAuthMethod,
+      });
 
       localStorage.removeItem('loan_assessment_form_data');
       localStorage.removeItem('loan_assessment_step');

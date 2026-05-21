@@ -16,6 +16,7 @@ import EligibilityAssessment from './pages/eligibility-assessment';
 import LegalPage from './pages/legal-page';
 import ShareYourStory from './pages/share-your-story';
 import OAuthCallback from './pages/oauth-callback';
+import ResumeApplicationPage from './pages/resume-application';
 import DevelopmentPanel from './pages/development';
 
 // Login Pages (Separate for each role)
@@ -87,6 +88,7 @@ function Routes() {
           <Route path="/customer-login" element={<CustomerLogin />} />
           
           {/* ==================== CUSTOMER JOURNEY (Public - Pre-Registration) ==================== */}
+          <Route path="/resume-application/:token" element={<ResumeApplicationPage />} />
           <Route path="/customer-assessment-portal" element={<CustomerAssessmentPortal />} />
           <Route path="/bank-marketplace" element={<BankMarketplace />} />
           

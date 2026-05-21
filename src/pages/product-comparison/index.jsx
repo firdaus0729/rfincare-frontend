@@ -5,6 +5,7 @@ import Footer from '../homepage/components/Footer';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import { LOAN_PRODUCTS, getLoanProductBySlug } from '../../constants/loanProducts';
+import BankEligibilityPreview from './components/BankEligibilityPreview';
 
 const ProductComparison = () => {
   const navigate = useNavigate();
@@ -92,6 +93,13 @@ const ProductComparison = () => {
             ))}
           </div>
         </section>
+
+        {filterSlug && (
+          <BankEligibilityPreview
+            loanTypeSlug={filterSlug}
+            productLabel={getLoanProductBySlug(filterSlug)?.label}
+          />
+        )}
 
         <section className="py-12 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

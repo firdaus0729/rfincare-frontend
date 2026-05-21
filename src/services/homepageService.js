@@ -40,6 +40,14 @@ export const homepageService = {
     const res = await apiClient.post('/public/status-check/verify', payload);
     return res.data;
   },
+  async requestDraftRecoveryOtp(payload) {
+    const res = await apiClient.post('/public/draft-recovery/request-otp', payload);
+    return res.data;
+  },
+  async verifyDraftRecovery(payload) {
+    const res = await apiClient.post('/public/draft-recovery/verify', payload);
+    return res.data;
+  },
   async getLegalPage(slug) {
     const res = await apiClient.get(`/public/legal/${slug}`);
     return res.data;

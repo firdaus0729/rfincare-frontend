@@ -128,5 +128,27 @@
     "confirm": "Confirm",
     "yes": "Yes",
     "no": "No"
+  },
+  "marketplace": {
+    "eligibilityLoaded": "Showing approval estimates from your eligibility check",
+    "recheck": "Recheck eligibility",
+    "noEligibilityTitle": "Get personalised bank approval scores",
+    "noEligibilityHint": "Run the free eligibility calculator first. Bank cards will show real match percentages instead of estimates.",
+    "checkEligibility": "Check eligibility",
+    "applyNow": "Apply now",
+    "compareBanks": "Compare banks"
+  },
+  "assessment": {
+    "title": "Loan Assessment Portal",
+    "saveProgress": "Save progress",
+    "previousStep": "Previous step",
+    "nextStep": "Next step",
+    "submitApplication": "Submit application"
+  },
+  "eligibility": {
+    "title": "Check Your Eligibility",
+    "calculate": "Check eligibility",
+    "applyNow": "Apply now",
+    "compareBanks": "Compare banks"
   }
 }

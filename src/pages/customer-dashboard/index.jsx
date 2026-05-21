@@ -301,9 +301,26 @@ const CustomerDashboard = () => {
               </div>
 
               <div className="space-y-6">
-                <QuickActionCard 
-                  action="navigate" 
-                  onClick={() => navigate('/customer-assessment-portal')} 
+                {localStorage.getItem('loan_assessment_form_data') && (
+                  <QuickActionCard
+                    action={{
+                      type: 'apply',
+                      icon: 'PlayCircle',
+                      title: 'Continue application',
+                      description: 'Resume your saved loan assessment where you left off',
+                      badge: 'Draft saved',
+                    }}
+                    onClick={() => navigate('/customer-assessment-portal?resume=1')}
+                  />
+                )}
+                <QuickActionCard
+                  action={{
+                    type: 'apply',
+                    icon: 'FileText',
+                    title: 'New application',
+                    description: 'Start a fresh loan assessment',
+                  }}
+                  onClick={() => navigate('/customer-assessment-portal')}
                 />
                 <SupportCard />
               </div>

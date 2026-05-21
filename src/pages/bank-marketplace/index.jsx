@@ -17,6 +17,7 @@ import {
   mapBankForMarketplace,
 } from '../../utils/bankMarketplace';
 import { getBankProbabilityMap, loadEligibilityResults } from '../../services/leadService';
+import MarketplaceEligibilityBanner from './components/MarketplaceEligibilityBanner';
 
 function isAllFilterValue(value) {
   return value == null || value === '' || value === 'all';
@@ -239,6 +240,7 @@ const BankMarketplace = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 lg:py-12">
+        <MarketplaceEligibilityBanner loanTypeSlug={loanTypeSlug} />
         {/* Page Header */}
         <div className="mb-6 md:mb-8 lg:mb-12">
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-3 md:mb-4">

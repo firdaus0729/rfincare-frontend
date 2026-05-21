@@ -128,5 +128,27 @@
     "confirm": "पुष्टी करा",
     "yes": "होय",
     "no": "नाही"
+  },
+  "marketplace": {
+    "eligibilityLoaded": "तुमच्या पात्रता तपासणीतील मंजुरी अंदाज दाखवले आहेत",
+    "recheck": "पात्रता पुन्हा तपासा",
+    "noEligibilityTitle": "वैयक्तिक बँक मंजुरी स्कोअर मिळवा",
+    "noEligibilityHint": "प्रथम मोफत पात्रता कॅल्क्युलेटर चालवा. बँक कार्डे खरे जुळणी टक्के दाखवतील.",
+    "checkEligibility": "पात्रता तपासा",
+    "applyNow": "आता अर्ज करा",
+    "compareBanks": "बँका तुलना करा"
+  },
+  "assessment": {
+    "title": "कर्ज मूल्यांकन पोर्टल",
+    "saveProgress": "प्रगती जतन करा",
+    "previousStep": "मागील पायरी",
+    "nextStep": "पुढील पायरी",
+    "submitApplication": "अर्ज सादर करा"
+  },
+  "eligibility": {
+    "title": "तुमची पात्रता तपासा",
+    "calculate": "पात्रता तपासा",
+    "applyNow": "आता अर्ज करा",
+    "compareBanks": "बँका तुलना करा"
   }
 }
