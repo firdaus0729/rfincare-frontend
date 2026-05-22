@@ -17,6 +17,7 @@ import DocumentUploadStep from './components/DocumentUploadStep';
 import ConsentSignatureForm from './components/ConsentSignatureForm';
 import AutoSaveIndicator from './components/AutoSaveIndicator';
 import BankPreferencesStep from './components/BankPreferencesStep';
+import { getLoanPriorities, serializeLoanPriorities } from '../../utils/loanPriorities';
 import Icon from '../../components/AppIcon';
 import { normalizeLoanApiKey } from '../../constants/loanProducts';
 import { leadService } from '../../services/leadService';
@@ -41,7 +42,7 @@ const INITIAL_FORM_DATA = {
   submitAuthMethod: 'signature',
   signatureMode: 'draw',
   otpVerified: false,
-  preferredBankId: '', preferredBankName: '', loanPriority: '',
+  preferredBankId: '', preferredBankName: '', loanPriorities: [], loanPriority: '',
 };
 
 const clampStep = (step, totalSteps) => {
@@ -54,7 +55,7 @@ const clampStep = (step, totalSteps) => {
 const migrateLegacyStep = (step, formData) => {
   const n = Number.parseInt(String(step), 10);
   if (Number.isNaN(n)) return 0;
-  if (n >= 4 && !formData?.loanPriority) {
+  if (n >= 4 && getLoanPriorities(formData).length === 0) {
     return n + 1;
   }
   return n;
@@ -197,6 +198,10 @@ const CustomerAssessmentPortal = () => {
           /* server draft optional */
         }
 
+        const priorities = getLoanPriorities(merged);
+        merged.loanPriorities = priorities;
+        merged.loanPriority = serializeLoanPriorities(priorities);
+
         setFormData(merged);
         setCurrentStep(clampStep(step, steps.length));
         if (appId) setApplicationId(appId);
@@ -227,7 +232,7 @@ const CustomerAssessmentPortal = () => {
           currentStep: step,
           loanType: data.loanPurpose,
           preferredBankId: data.preferredBankId,
-          loanPriority: data.loanPriority,
+          loanPriority: serializeLoanPriorities(getLoanPriorities(data)),
           applicationId: applicationId || undefined,
         })
         .catch(() => {});
@@ -254,6 +259,9 @@ const CustomerAssessmentPortal = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors?.[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    if ((field === 'loanPriorities' || field === 'loanPriority') && errors?.loanPriority) {
+      setErrors((prev) => ({ ...prev, loanPriority: '' }));
     }
   };
 
@@ -314,9 +322,15 @@ const CustomerAssessmentPortal = () => {
         if (!formData?.totalAssets && formData?.totalAssets !== 0) newErrors.totalAssets = 'Total assets is required';
         break;
 
-      case 4:
-        if (!formData?.loanPriority) newErrors.loanPriority = 'Please select your loan priority';
+      case 4: {
+        const priorities = getLoanPriorities(formData);
+        if (priorities.length < 1) {
+          newErrors.loanPriority = 'Please select at least one priority (up to 2)';
+        } else if (priorities.length > 2) {
+          newErrors.loanPriority = 'You can select at most 2 priorities';
+        }
         break;
+      }
 
       case 5:
         if (!formData?.certifyAccuracy) newErrors.certifyAccuracy = 'You must certify the accuracy of information';
@@ -397,7 +411,8 @@ const CustomerAssessmentPortal = () => {
     has_tax_liens: formData?.hasTaxLiens || false,
     has_co_signed_loans: formData?.hasCoSignedLoans || false,
     preferred_bank_id: formData?.preferredBankId || null,
-    loan_priority: formData?.loanPriority || null,
+    loan_priority: serializeLoanPriorities(getLoanPriorities(formData)) || null,
+    loan_priorities: getLoanPriorities(formData),
     preferred_bank_name: formData?.preferredBankName || null,
     status,
     application_number: `RFC${Date.now()}`,

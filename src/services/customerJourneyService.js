@@ -219,7 +219,16 @@ export const customerJourneyService = {
   async downloadDocument(documentId) {
     try {
       const res = await apiClient.get(`/documents/${documentId}/download`, { responseType: 'blob' });
-      return { data: { blob: res.data, fileName: 'document' }, error: null };
+      const disposition = res.headers?.['content-disposition'] || '';
+      const match = disposition.match(/filename="?([^"]+)"?/i);
+      return {
+        data: {
+          blob: res.data,
+          fileName: match?.[1] || 'document',
+          mimeType: res.data?.type || '',
+        },
+        error: null,
+      };
     } catch (error) {
       return { data: null, error: { message: 'Download failed' } };
     }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getLoanProductBySlug } from '../../constants/loanProducts';
 
@@ -9,7 +9,7 @@ import BankCard from './components/BankCard';
 import BankListItem from './components/BankListItem';
 import FilterPanel from './components/FilterPanel';
 import SortBar from './components/SortBar';
-import ComparisonModal from './components/ComparisonModal';
+import BankComparisonPanel from '../../components/bank-comparison/BankComparisonPanel';
 import { bankService } from '../../services/apiServices';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -47,7 +47,7 @@ const BankMarketplace = () => {
   const [sortBy, setSortBy] = useState('probability-desc');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [compareList, setCompareList] = useState([]);
-  const [showComparison, setShowComparison] = useState(false);
+  const comparisonSectionRef = useRef(null);
   const [banks, setBanks] = useState([]);
   const [comparisonOverrides, setComparisonOverrides] = useState({});
   const [loading, setLoading] = useState(true);
@@ -158,17 +158,32 @@ const BankMarketplace = () => {
     };
   };
 
+  const scrollToComparison = () => {
+    comparisonSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const handleCompareToggle = (bankId) => {
     setCompareList((prev) => {
+      let next;
       if (prev?.includes(bankId)) {
-        return prev?.filter((id) => id !== bankId);
-      }
-      if (prev?.length >= 3) {
+        next = prev.filter((id) => id !== bankId);
+      } else if (prev?.length >= 3) {
         return prev;
+      } else {
+        next = [...prev, bankId];
       }
-      return [...prev, bankId];
+      if (next.length >= 2) {
+        setTimeout(scrollToComparison, 100);
+      }
+      return next;
     });
   };
+
+  const handleRemoveFromCompare = (bankId) => {
+    setCompareList((prev) => prev.filter((id) => id !== bankId));
+  };
+
+  const handleClearCompare = () => setCompareList([]);
 
   const handleApply = (bank) => {
     const qs = activeProduct ? `?loanType=${activeProduct.slug}` : '';
@@ -285,17 +300,17 @@ const BankMarketplace = () => {
               )}
             </div>
 
-            {compareList?.length > 0 &&
-            <Button
-              variant="default"
-              onClick={() => setShowComparison(true)}
-              iconName="GitCompare"
-              iconPosition="left"
-              className="w-full md:w-auto">
-
-                Compare Selected ({compareList?.length})
+            {compareList?.length > 0 && (
+              <Button
+                variant="default"
+                onClick={scrollToComparison}
+                iconName="GitCompare"
+                iconPosition="left"
+                className="w-full md:w-auto"
+              >
+                View comparison ({compareList.length})
               </Button>
-            }
+            )}
           </div>
         </div>
 
@@ -351,8 +366,22 @@ const BankMarketplace = () => {
               onSortChange={setSortBy}
               resultCount={filteredAndSortedBanks?.length}
               viewMode={viewMode}
-              onViewModeChange={setViewMode} />
+              onViewModeChange={setViewMode}
+            />
 
+            <div ref={comparisonSectionRef}>
+              <BankComparisonPanel
+                productLabel={activeProduct?.label}
+                banks={comparedBanks}
+                rawBanks={banks.filter((b) => compareList.includes(b.id))}
+                comparisonOverrides={comparisonOverrides}
+                onComparisonChange={handleComparisonChange}
+                onApply={handleApply}
+                onRemoveBank={handleRemoveFromCompare}
+                onClearAll={handleClearCompare}
+                compareCount={compareList.length}
+              />
+            </div>
 
             {loading ? (
             <section className="bg-card rounded-lg border border-border p-8 md:p-12 text-center">
@@ -426,19 +455,8 @@ const BankMarketplace = () => {
           </div>
         </div>
       </main>
-      {/* Comparison Modal */}
-      {showComparison &&
-      <ComparisonModal
-        banks={comparedBanks}
-        rawBanks={banks.filter((b) => compareList.includes(b.id))}
-        comparisonOverrides={comparisonOverrides}
-        onComparisonChange={handleComparisonChange}
-        onClose={() => setShowComparison(false)}
-        onApply={handleApply}
-      />
-
-      }
-    </div>);
+    </div>
+  );
 
 };
 

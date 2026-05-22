@@ -2,36 +2,18 @@ import React, { useEffect, useState } from 'react';
 import Select from '../../../components/ui/Select';
 import Icon from '../../../components/AppIcon';
 import { bankService } from '../../../services/apiServices';
+import {
+  LOAN_PRIORITY_OPTIONS,
+  getLoanPriorities,
+  serializeLoanPriorities,
+} from '../../../utils/loanPriorities';
 
-const PRIORITY_OPTIONS = [
-  {
-    id: 'low_interest',
-    label: 'Lowest interest rate',
-    description: 'Minimize EMI and total interest paid',
-    icon: 'TrendingDown',
-  },
-  {
-    id: 'low_charges',
-    label: 'Low processing & other charges',
-    description: 'Focus on fees, legal, and stamp duty costs',
-    icon: 'IndianRupee',
-  },
-  {
-    id: 'urgent',
-    label: 'Fast disbursal',
-    description: 'Get funds quickly even if rate is slightly higher',
-    icon: 'Zap',
-  },
-  {
-    id: 'best_deal',
-    label: 'Best overall deal',
-    description: 'Balance rate, charges, and lender reputation',
-    icon: 'Award',
-  },
-];
+const MAX_PRIORITIES = 2;
+const MIN_PRIORITIES = 1;
 
 const BankPreferencesStep = ({ formData, onChange, errors = {} }) => {
   const [banks, setBanks] = useState([]);
+  const selected = getLoanPriorities(formData);
 
   useEffect(() => {
     bankService
@@ -44,6 +26,21 @@ const BankPreferencesStep = ({ formData, onChange, errors = {} }) => {
     { value: '', label: 'Select preferred bank (optional)' },
     ...banks.map((b) => ({ value: b.id, label: b.name })),
   ];
+
+  const togglePriority = (id) => {
+    let next;
+    if (selected.includes(id)) {
+      next = selected.filter((x) => x !== id);
+    } else if (selected.length >= MAX_PRIORITIES) {
+      return;
+    } else {
+      next = [...selected, id];
+    }
+    onChange('loanPriorities', next);
+    onChange('loanPriority', serializeLoanPriorities(next));
+  };
+
+  const atMax = selected.length >= MAX_PRIORITIES;
 
   return (
     <div className="space-y-6">
@@ -76,29 +73,62 @@ const BankPreferencesStep = ({ formData, onChange, errors = {} }) => {
       )}
 
       <div>
-        <p className="text-sm font-semibold text-foreground mb-3">Your top priority</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {PRIORITY_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onChange('loanPriority', opt.id)}
-              className={`text-left p-4 rounded-lg border-2 transition-all ${
-                formData.loanPriority === opt.id
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/40'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <Icon name={opt.icon} size={20} className="text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-foreground text-sm">{opt.label}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{opt.description}</p>
-                </div>
-              </div>
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <p className="text-sm font-semibold text-foreground">
+            Your top priorities <span className="font-normal text-muted-foreground">(select {MIN_PRIORITIES}–{MAX_PRIORITIES})</span>
+          </p>
+          <span
+            className={`text-xs font-medium px-2 py-1 rounded-full ${
+              selected.length >= MIN_PRIORITIES
+                ? 'bg-success/10 text-success'
+                : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            {selected.length} / {MAX_PRIORITIES} selected
+          </span>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {LOAN_PRIORITY_OPTIONS.map((opt) => {
+            const isSelected = selected.includes(opt.id);
+            const isDisabled = !isSelected && atMax;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => togglePriority(opt.id)}
+                className={`text-left p-4 rounded-lg border-2 transition-all ${
+                  isSelected
+                    ? 'border-primary bg-primary/5'
+                    : isDisabled
+                      ? 'border-border opacity-50 cursor-not-allowed'
+                      : 'border-border hover:border-primary/40'
+                }`}
+                aria-pressed={isSelected}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Icon
+                      name={isSelected ? 'CheckSquare' : 'Square'}
+                      size={18}
+                      className={isSelected ? 'text-primary' : 'text-muted-foreground'}
+                    />
+                    <Icon name={opt.icon} size={20} className="text-primary flex-shrink-0" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground text-sm">{opt.label}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{opt.description}</p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {atMax && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Maximum {MAX_PRIORITIES} priorities selected. Deselect one to choose a different option.
+          </p>
+        )}
         {errors.loanPriority && (
           <p className="text-xs text-destructive mt-2">{errors.loanPriority}</p>
         )}

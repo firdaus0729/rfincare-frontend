@@ -23,8 +23,10 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/login-page" state={{ from: location }} replace />;
   }
 
+  const effectiveRole = userProfile?.role || user?.role;
+
   // Check if user has required role
-  if (allowedRoles?.length > 0 && !allowedRoles?.includes(userProfile?.role)) {
+  if (allowedRoles?.length > 0 && !allowedRoles?.includes(effectiveRole)) {
     // Redirect to appropriate dashboard based on user's actual role
     const roleRoutes = {
       'customer': '/customer-dashboard',
@@ -34,7 +36,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       'agent': '/agent-dashboard'
     };
     
-    const redirectPath = roleRoutes?.[userProfile?.role] || '/login-page';
+    const redirectPath = roleRoutes?.[effectiveRole] || '/login-page';
     return <Navigate to={redirectPath} replace />;
   }
 

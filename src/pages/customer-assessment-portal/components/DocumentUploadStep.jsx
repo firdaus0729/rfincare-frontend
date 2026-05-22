@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { customerJourneyService } from '../../../services/customerJourneyService';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 const REQUIRED_DOCS = [
   { type: 'pan_card', label: 'PAN Card', description: 'Clear photo or PDF of your PAN card', icon: 'CreditCard' },
@@ -11,8 +12,44 @@ const REQUIRED_DOCS = [
 
 const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors }) => {
   const fileRefs = useRef({});
+  const localPreviewUrls = useRef({});
   const [uploading, setUploading] = useState(null);
   const [uploadError, setUploadError] = useState('');
+  const [previewDoc, setPreviewDoc] = useState(null);
+
+  const serverDocsSynced = useRef(false);
+
+  useEffect(() => {
+    serverDocsSynced.current = false;
+  }, [applicationId]);
+
+  useEffect(() => {
+    if (!applicationId || serverDocsSynced.current) return;
+    let cancelled = false;
+    (async () => {
+      const { data: docs } = await customerJourneyService.getMyDocuments(applicationId);
+      if (cancelled) return;
+      serverDocsSynced.current = true;
+      if (!docs?.length) return;
+      docs.forEach((doc) => {
+        const docType = doc.documentType;
+        if (!docType) return;
+        onUploaded(docType, {
+          id: doc.id,
+          documentName: doc.documentName,
+          documentType: docType,
+          mimeType: doc.mimeType,
+        });
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [applicationId, onUploaded]);
+
+  useEffect(() => () => {
+    Object.values(localPreviewUrls.current).forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+  }, []);
 
   const handleFileSelect = async (docType, event) => {
     const file = event.target.files?.[0];
@@ -41,11 +78,23 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
       return;
     }
 
+    if (localPreviewUrls.current[docType]) {
+      URL.revokeObjectURL(localPreviewUrls.current[docType]);
+    }
+    const localPreviewUrl = URL.createObjectURL(file);
+    localPreviewUrls.current[docType] = localPreviewUrl;
+
     onUploaded(docType, {
       id: data?.id,
       documentName: data?.documentName || file.name,
       documentType: docType,
+      mimeType: data?.mimeType || file.type,
+      localPreviewUrl,
     });
+  };
+
+  const openPreview = (doc, label) => {
+    setPreviewDoc({ ...doc, label });
   };
 
   return (
@@ -101,17 +150,31 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
                   className="hidden"
                   onChange={(e) => handleFileSelect(doc.type, e)}
                 />
-                <Button
-                  type="button"
-                  variant={uploaded ? 'outline' : 'default'}
-                  size="sm"
-                  loading={isUploading}
-                  iconName={uploaded ? 'RefreshCw' : 'Upload'}
-                  onClick={() => fileRefs.current[doc.type]?.click()}
-                  className="sm:w-auto w-full"
-                >
-                  {isUploading ? 'Uploading...' : uploaded ? 'Replace' : 'Upload'}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 sm:w-auto w-full">
+                  {uploaded && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      iconName="Eye"
+                      onClick={() => openPreview(uploaded, doc.label)}
+                      className="sm:flex-1"
+                    >
+                      View
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant={uploaded ? 'outline' : 'default'}
+                    size="sm"
+                    loading={isUploading}
+                    iconName={uploaded ? 'RefreshCw' : 'Upload'}
+                    onClick={() => fileRefs.current[doc.type]?.click()}
+                    className="sm:flex-1"
+                  >
+                    {isUploading ? 'Uploading...' : uploaded ? 'Replace' : 'Upload'}
+                  </Button>
+                </div>
               </div>
             </div>
           );
@@ -123,6 +186,12 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
           {uploadError}
         </p>
       )}
+
+      <DocumentPreviewModal
+        isOpen={Boolean(previewDoc)}
+        document={previewDoc}
+        onClose={() => setPreviewDoc(null)}
+      />
     </div>
   );
 };

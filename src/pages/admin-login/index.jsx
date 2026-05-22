@@ -16,7 +16,8 @@ const AdminLogin = () => {
 
   useEffect(() => {
     // Redirect if already logged in as admin
-    if (user && userProfile?.role === 'super_admin' || userProfile?.role === 'admin') {
+    const role = userProfile?.role || user?.role;
+    if (user && (role === 'super_admin' || role === 'admin')) {
       navigate('/admin-dashboard');
     }
   }, [user, userProfile, navigate]);

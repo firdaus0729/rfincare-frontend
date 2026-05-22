@@ -89,7 +89,17 @@ export const AuthProvider = ({ children }) => {
       const res = await apiClient.post('/auth/login', { email, password })
       const token = res?.data?.accessToken
       if (token) setAccessToken(token)
-      authStateHandlers?.setAuthenticated(res?.data?.user)
+      const loginUser = res?.data?.user
+      authStateHandlers?.setAuthenticated(loginUser)
+      if (loginUser?.role) {
+        setUserProfile({
+          id: loginUser.id,
+          email: loginUser.email,
+          role: loginUser.role,
+          isActive: true,
+          accountStatus: 'active',
+        })
+      }
       return { data: res?.data, error: null }
     } catch (error) {
       return { error: { message: error?.response?.data?.error || 'Network error. Please try again.' } }

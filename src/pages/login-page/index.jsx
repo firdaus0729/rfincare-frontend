@@ -112,22 +112,6 @@ const LoginPage = () => {
               ))}
             </div>
 
-            <div className="mt-12 max-w-2xl mx-auto rounded-xl border border-gray-200 bg-gray-50 p-6">
-              <h3 className="text-lg font-semibold text-center mb-4">Direct login links</h3>
-              <ul className="space-y-3">
-                {staffLoginLinks.map((link) => (
-                  <li key={link.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
-                    <span className="font-medium text-foreground">{link.title}</span>
-                    <a
-                      href={link.route}
-                      className="font-mono text-primary hover:underline break-all"
-                    >
-                      {link.href}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
         </section>
 

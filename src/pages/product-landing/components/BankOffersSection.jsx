@@ -1,16 +1,25 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Image from '../../../components/AppImage';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import BankComparisonPanel from '../../../components/bank-comparison/BankComparisonPanel';
 import { bankService } from '../../../services/apiServices';
 import { buildBankOffers, formatLoanAmount } from '../../../utils/bankOffers';
+import {
+  applyComparisonOverrides,
+  mapBankForMarketplace,
+} from '../../../utils/bankMarketplace';
+import { getBankProbabilityMap, loadEligibilityResults } from '../../../services/leadService';
 
 const BankOffersSection = ({ product }) => {
   const navigate = useNavigate();
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [compareList, setCompareList] = useState([]);
+  const [comparisonOverrides, setComparisonOverrides] = useState({});
+  const comparisonSectionRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +30,8 @@ const BankOffersSection = ({ product }) => {
         const data = await bankService.getActiveBanks({ loanType: product.slug });
         if (!cancelled) {
           setBanks(Array.isArray(data) ? data : []);
+          setCompareList([]);
+          setComparisonOverrides({});
         }
       } catch {
         if (!cancelled) setError('Unable to load bank offers right now.');
@@ -33,7 +44,76 @@ const BankOffersSection = ({ product }) => {
     };
   }, [product.slug]);
 
+  const eligibility = loadEligibilityResults();
+  const probabilityMap = getBankProbabilityMap(eligibility);
+
+  const marketplaceBanks = useMemo(
+    () => banks.map((bank) => mapBankForMarketplace(bank, product.slug, probabilityMap)),
+    [banks, product.slug, probabilityMap],
+  );
+
   const offers = useMemo(() => buildBankOffers(banks, product), [banks, product]);
+
+  const comparedBanks = marketplaceBanks
+    .filter((b) => compareList.includes(b.id))
+    .map((b) => {
+      const overrides = comparisonOverrides[b.id];
+      return overrides ? applyComparisonOverrides(b, overrides) : b;
+    });
+
+  const scrollToComparison = () => {
+    comparisonSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleCompareToggle = (bankId) => {
+    setCompareList((prev) => {
+      let next;
+      if (prev.includes(bankId)) {
+        next = prev.filter((id) => id !== bankId);
+      } else if (prev.length >= 3) {
+        return prev;
+      } else {
+        next = [...prev, bankId];
+      }
+      if (next.length >= 2) {
+        setTimeout(scrollToComparison, 100);
+      }
+      return next;
+    });
+  };
+
+  const handleComparisonChange = (bankId, patch) => {
+    setComparisonOverrides((prev) => {
+      const base = prev[bankId] || {};
+      const bank = marketplaceBanks.find((b) => b.id === bankId);
+      const next = { ...base, ...patch };
+      if (patch.featuresText !== undefined) {
+        next.features = patch.featuresText
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+      if (!prev[bankId] && bank) {
+        if (next.interestRate === undefined) next.interestRate = bank.interestRate;
+        if (next.processingFee === undefined) next.processingFee = bank.processingFee;
+        if (next.otherCharges === undefined) next.otherCharges = bank.otherCharges;
+        if (next.featuresText === undefined) {
+          next.featuresText = (bank.features || []).join('\n');
+        }
+      }
+      return { ...prev, [bankId]: next };
+    });
+  };
+
+  const handleApply = (bank) => {
+    navigate(`/customer-assessment-portal?loanType=${product.slug}`, {
+      state: {
+        selectedBank: bank,
+        loanType: product.apiKey,
+        eligibilityData: eligibility?.formData,
+      },
+    });
+  };
 
   const qs = `loanType=${product.slug}`;
 
@@ -49,18 +129,38 @@ const BankOffersSection = ({ product }) => {
               {product.label} offers from leading banks
             </h2>
             <p className="mt-2 text-muted-foreground max-w-2xl">
-              Compare {product.shortLabel.toLowerCase()} loan products from HDFC, ICICI, SBI, Axis,
-              and other RBI-registered partners. Rates and limits vary by bank and profile.
+              Select up to 3 banks and compare rates, fees, and features on this page — no need to
+              open a separate screen.
             </p>
           </div>
-          <Button
-            variant="outline"
-            iconName="Building2"
-            onClick={() => navigate(`/bank-marketplace?${qs}`)}
-            className="shrink-0"
-          >
-            View all in marketplace
-          </Button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            {compareList.length > 0 && (
+              <Button variant="default" iconName="GitCompare" onClick={scrollToComparison}>
+                View comparison ({compareList.length})
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              iconName="Building2"
+              onClick={() => navigate(`/bank-marketplace?${qs}`)}
+            >
+              Full marketplace
+            </Button>
+          </div>
+        </div>
+
+        <div ref={comparisonSectionRef} className="mb-8">
+          <BankComparisonPanel
+            productLabel={product.label}
+            banks={comparedBanks}
+            rawBanks={marketplaceBanks.filter((b) => compareList.includes(b.id))}
+            comparisonOverrides={comparisonOverrides}
+            onComparisonChange={handleComparisonChange}
+            onApply={handleApply}
+            onRemoveBank={(id) => setCompareList((p) => p.filter((x) => x !== id))}
+            onClearAll={() => setCompareList([])}
+            compareCount={compareList.length}
+          />
         </div>
 
         {loading && (
@@ -92,106 +192,116 @@ const BankOffersSection = ({ product }) => {
 
         {!loading && !error && offers.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {offers.map((offer) => (
-              <article
-                key={`${offer.bankId}-${offer.productId || 'default'}`}
-                className="group relative flex flex-col rounded-2xl border border-border bg-card shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 overflow-hidden"
-              >
-                {offer.isFeatured && (
-                  <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-bl-lg">
-                    Popular
-                  </span>
-                )}
-                <div className="p-5 md:p-6 flex flex-col flex-1">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                      {offer.logoUrl ? (
-                        <Image
-                          src={offer.logoUrl}
-                          alt={offer.logoAlt || offer.bankName}
-                          className="w-full h-full object-contain p-2"
-                        />
-                      ) : (
-                        <Icon name="Building2" size={28} className="text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-foreground truncate">{offer.bankName}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{offer.productName}</p>
-                    </div>
-                  </div>
-
-                  <div
-                    className="rounded-xl p-4 mb-4"
-                    style={{ backgroundColor: `${product.color}14` }}
+            {offers.map((offer) => {
+              const isComparing = compareList.includes(offer.bankId);
+              return (
+                <article
+                  key={`${offer.bankId}-${offer.productId || 'default'}`}
+                  className={`group relative flex flex-col rounded-2xl border bg-card shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden ${
+                    isComparing ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/30'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleCompareToggle(offer.bankId)}
+                    className={`absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border transition-colors ${
+                      isComparing
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card border-border text-muted-foreground hover:border-primary'
+                    }`}
+                    aria-pressed={isComparing}
                   >
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Interest rate</p>
-                    <p className="text-xl font-bold" style={{ color: product.color }}>
-                      {offer.interestLabel}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                    <div>
-                      <p className="text-muted-foreground text-xs flex items-center gap-1">
-                        <Icon name="IndianRupee" size={12} className="text-primary shrink-0" />
-                        Max amount
-                      </p>
-                      <p className="font-semibold text-foreground">
-                        {formatLoanAmount(offer.maxAmount)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Tenure</p>
-                      <p className="font-semibold text-foreground">
-                        {offer.maxTenure ? `Up to ${offer.maxTenure} yrs` : 'Flexible'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {offer.features?.length > 0 && (
-                    <ul className="space-y-1.5 mb-5 flex-1">
-                      {offer.features.map((feature) => (
-                        <li
-                          key={feature}
-                          className="flex items-start gap-2 text-xs text-muted-foreground"
-                        >
-                          <Icon
-                            name="Check"
-                            size={14}
-                            className="mt-0.5 shrink-0"
-                            style={{ color: product.color }}
-                          />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <Icon name={isComparing ? 'CheckSquare' : 'Square'} size={14} />
+                    Compare
+                  </button>
+                  {offer.isFeatured && (
+                    <span className="absolute top-0 left-0 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-br-lg">
+                      Popular
+                    </span>
                   )}
+                  <div className="p-5 md:p-6 flex flex-col flex-1">
+                    <div className="flex items-center gap-4 mb-4 pr-16">
+                      <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                        {offer.logoUrl ? (
+                          <Image
+                            src={offer.logoUrl}
+                            alt={offer.logoAlt || offer.bankName}
+                            className="w-full h-full object-contain p-2"
+                          />
+                        ) : (
+                          <Icon name="Building2" size={28} className="text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-foreground truncate">{offer.bankName}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{offer.productName}</p>
+                      </div>
+                    </div>
 
-                  <div className="flex gap-2 mt-auto pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => navigate(`/bank-marketplace?${qs}`)}
+                    <div
+                      className="rounded-xl p-4 mb-4"
+                      style={{ backgroundColor: `${product.color}14` }}
                     >
-                      Compare
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={() =>
-                        navigate(`/customer-assessment-portal?${qs}`, {
-                          state: { selectedBank: { id: offer.bankId, name: offer.bankName } },
-                        })
-                      }
-                    >
-                      Apply
-                    </Button>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Interest rate</p>
+                      <p className="text-xl font-bold" style={{ color: product.color }}>
+                        {offer.interestLabel}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                      <div>
+                        <p className="text-muted-foreground text-xs flex items-center gap-1">
+                          <Icon name="IndianRupee" size={12} className="text-primary shrink-0" />
+                          Max amount
+                        </p>
+                        <p className="font-semibold text-foreground">
+                          {formatLoanAmount(offer.maxAmount)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Tenure</p>
+                        <p className="font-semibold text-foreground">
+                          {offer.maxTenure ? `Up to ${offer.maxTenure} yrs` : 'Flexible'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {offer.features?.length > 0 && (
+                      <ul className="space-y-1.5 mb-5 flex-1">
+                        {offer.features.map((feature) => (
+                          <li
+                            key={feature}
+                            className="flex items-start gap-2 text-xs text-muted-foreground"
+                          >
+                            <Icon
+                              name="Check"
+                              size={14}
+                              className="mt-0.5 shrink-0"
+                              style={{ color: product.color }}
+                            />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <div className="flex gap-2 mt-auto pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleCompareToggle(offer.bankId)}
+                      >
+                        {isComparing ? 'In comparison' : 'Add to compare'}
+                      </Button>
+                      <Button size="sm" className="flex-1" onClick={() => handleApply({ id: offer.bankId, name: offer.bankName })}>
+                        Apply
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

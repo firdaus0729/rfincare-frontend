@@ -11,21 +11,47 @@ export function getRuntimeEnv(key) {
   return runtime[key] ?? buildTime[key] ?? '';
 }
 
+const PRODUCTION_API_BASE = 'https://rfincare-backend.onrender.com';
+
+function inferApiBaseFromHost() {
+  if (typeof window === 'undefined') return '';
+  const host = window.location.hostname;
+  if (
+    host === 'rfincare-frontend.vercel.app'
+    || host.endsWith('.vercel.app')
+    || host === 'rfincare.com'
+    || host === 'www.rfincare.com'
+  ) {
+    return PRODUCTION_API_BASE;
+  }
+  return '';
+}
+
 export function getApiBaseUrl() {
-  return getRuntimeEnv('VITE_API_BASE_URL') || '';
+  return getRuntimeEnv('VITE_API_BASE_URL') || inferApiBaseFromHost() || '';
 }
 
 export async function loadRuntimeConfig() {
-  const base = buildTime.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
-  const configUrl = base ? `${base}/public/runtime-config` : '/public/runtime-config';
+  const buildBase = buildTime.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
+  const inferredBase = inferApiBaseFromHost();
+  const fetchBase = buildBase || inferredBase;
+  const configUrl = fetchBase
+    ? `${fetchBase}/public/runtime-config`
+    : '/public/runtime-config';
   try {
     const res = await fetch(configUrl, { credentials: 'omit' });
     if (res.ok) {
-      const data = await res.json();
-      runtime = { ...buildTime, ...(data?.vite || {}) };
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        runtime = { ...buildTime, ...(data?.vite || {}) };
+      }
     }
   } catch {
     runtime = { ...buildTime };
+  }
+  if (!runtime.VITE_API_BASE_URL && inferredBase) {
+    runtime.VITE_API_BASE_URL = inferredBase;
   }
   loaded = true;
   return runtime;

@@ -11,6 +11,7 @@ import EmployeeCard from './components/EmployeeCard';
 import ActivityLog from './components/ActivityLog';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { getApiBaseUrl } from '../../lib/runtimeConfig';
 
 
 import FilterPanel from './components/FilterPanel';
@@ -31,7 +32,7 @@ import StatusCheckAdminTab from './components/StatusCheckAdminTab';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('applications');
   const [registrationSubTab, setRegistrationSubTab] = useState('customers');
   const [showAgentModal, setShowAgentModal] = useState(false);
@@ -84,6 +85,7 @@ const AdminDashboard = () => {
     }
   ]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -108,8 +110,9 @@ const AdminDashboard = () => {
   ];
 
   useEffect(() => {
+    if (authLoading || !user) return;
     loadDashboardData();
-  }, [activeTab]);
+  }, [activeTab, authLoading, user]);
 
   const resolveLoanTypeLabel = (app) => {
     if (app?.loanTypeLabel) return app.loanTypeLabel;
@@ -151,18 +154,32 @@ const AdminDashboard = () => {
   });
 
   const loadApplications = async (filterState = filters) => {
-    const { data: apps } = await adminService?.getAllApplications(filterState);
-    if (apps) {
-      setApplicationsData(apps.map(mapApplicationRow));
+    const { data: apps, error } = await adminService.getAllApplications(filterState);
+    if (error) {
+      setApplicationsData([]);
+      return { error };
     }
+    setApplicationsData(Array.isArray(apps) ? apps.map(mapApplicationRow) : []);
+    return { error: null };
   };
 
   const loadDashboardData = async () => {
     setLoading(true);
+    setLoadError('');
+
+    if (!getApiBaseUrl()) {
+      setLoadError('API is not configured. Set VITE_API_BASE_URL or redeploy with runtime config.');
+      setLoading(false);
+      return;
+    }
+
+    const errors = [];
+
     try {
-      // Load dashboard stats
-      const { data: stats } = await adminService?.getDashboardStats();
-      if (stats) {
+      const { data: stats, error: statsError } = await adminService.getDashboardStats();
+      if (statsError) {
+        errors.push(statsError.message);
+      } else if (stats) {
         setStatsData([
           {
             title: 'Total Applications',
@@ -204,54 +221,69 @@ const AdminDashboard = () => {
       }
 
       if (activeTab === 'applications') {
-        await loadApplications(filters);
+        const { error: appsError } = await loadApplications(filters);
+        if (appsError) errors.push(appsError.message);
       }
 
-      // Load agents if on agents tab
       if (activeTab === 'agents') {
-        const { data: agents } = await adminService?.getAllAgents();
-        if (agents) {
-          setAgentsData(agents?.map(agent => ({
-            id: agent?.id,
-            agentId: agent?.agentCode || 'N/A',
-            name: agent?.agentName || 'Unknown',
-            email: agent?.email || '',
-            profileImage: "https://img.rocket.new/generatedImages/rocket_gen_img_14760cf8e-1763296171419.png",
-            profileImageAlt: `Profile picture of ${agent?.agentName}`,
-            status: agent?.onboardingStatus || 'pending',
-            totalClients: agent?.agent?.totalClients || 0,
-            totalCommission: agent?.agent?.totalCommission || 0,
-            successRate: agent?.agent?.successRate || 0,
-            joinedDate: new Date(agent?.createdAt)?.toISOString()?.split('T')?.[0] || ''
-          })));
+        if (typeof adminService.getAllAgents !== 'function') {
+          errors.push('Agent list is unavailable. Redeploy the frontend to load the latest admin API.');
+        } else {
+          const { data: agents, error: agentsError } = await adminService.getAllAgents();
+          if (agentsError) {
+            errors.push(agentsError.message);
+          } else if (agents) {
+            setAgentsData(agents.map(agent => ({
+              id: agent?.id,
+              agentId: agent?.agentCode || 'N/A',
+              name: agent?.agentName || 'Unknown',
+              email: agent?.email || '',
+              profileImage: "https://img.rocket.new/generatedImages/rocket_gen_img_14760cf8e-1763296171419.png",
+              profileImageAlt: `Profile picture of ${agent?.agentName}`,
+              status: agent?.onboardingStatus || 'pending',
+              totalClients: agent?.agent?.totalClients || 0,
+              totalCommission: agent?.agent?.totalCommission || 0,
+              successRate: agent?.agent?.successRate || 0,
+              joinedDate: new Date(agent?.createdAt)?.toISOString()?.split('T')?.[0] || ''
+            })));
+          }
         }
       }
 
-      // Load employees if on employees tab
       if (activeTab === 'employees') {
-        const { data: employees } = await adminService?.getAllEmployees();
-        if (employees) {
-          setEmployeesData(employees?.map(emp => ({
-            id: emp?.id,
-            name: emp?.employeeName || 'Unknown',
-            email: emp?.email || '',
-            profileImage: "https://img.rocket.new/generatedImages/rocket_gen_img_1b80e6770-1763297889591.png",
-            profileImageAlt: `Profile picture of ${emp?.employeeName}`,
-            role: emp?.userProfile?.role || 'employee',
-            department: 'Operations',
-            tasksCompleted: 0,
-            tasksTotal: 0,
-            lastActive: '5 min ago',
-            isOnline: emp?.userProfile?.isActive || false,
-            permissions: emp?.accessControls?.map(ac => ac?.moduleName) || []
-          })));
+        if (typeof adminService.getAllEmployees !== 'function') {
+          errors.push('Employee list is unavailable. Redeploy the frontend to load the latest admin API.');
+        } else {
+          const { data: employees, error: employeesError } = await adminService.getAllEmployees();
+          if (employeesError) {
+            errors.push(employeesError.message);
+          } else if (employees) {
+            setEmployeesData(employees.map(emp => ({
+              id: emp?.id,
+              name: emp?.employeeName || 'Unknown',
+              email: emp?.email || '',
+              profileImage: "https://img.rocket.new/generatedImages/rocket_gen_img_1b80e6770-1763297889591.png",
+              profileImageAlt: `Profile picture of ${emp?.employeeName}`,
+              role: emp?.userProfile?.role || 'employee',
+              department: 'Operations',
+              tasksCompleted: 0,
+              tasksTotal: 0,
+              lastActive: '5 min ago',
+              isOnline: emp?.userProfile?.isActive || false,
+              permissions: emp?.accessControls?.map(ac => ac?.moduleName) || []
+            })));
+          }
         }
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
+      errors.push(error?.message || 'Failed to load dashboard data');
     }
+
+    if (errors.length) {
+      setLoadError(errors.join(' '));
+    }
+    setLoading(false);
   };
 
   const handleTabClick = (tabId) => {
@@ -438,6 +470,12 @@ const AdminDashboard = () => {
             Manage applications, agents, employees, and system configuration
           </p>
         </div>
+
+        {loadError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+            {loadError}
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
