@@ -2,27 +2,99 @@ import React, { useEffect, useRef, useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { customerJourneyService } from '../../../services/customerJourneyService';
+import {
+  APPLICANT_DOCUMENTS,
+  coApplicantDocType,
+  requiresCoApplicant,
+} from '../../../constants/assessmentDocuments';
 import DocumentPreviewModal from './DocumentPreviewModal';
 
-const REQUIRED_DOCS = [
-  {
-    type: 'customer_photo',
-    label: 'Customer photo',
-    description: 'Recent passport-size photo (JPG or PNG, face clearly visible)',
-    icon: 'User',
-  },
-  { type: 'pan_card', label: 'PAN Card', description: 'Clear photo or PDF of your PAN card', icon: 'CreditCard' },
-  { type: 'aadhaar_card', label: 'Aadhaar Card', description: 'Front side of Aadhaar (mask last 4 digits if preferred)', icon: 'Contact' },
-  { type: 'income_proof', label: 'Income Proof', description: 'Salary slip, ITR, or last 3 months bank statement', icon: 'FileText' },
-];
+const DocumentUploadCard = ({
+  doc,
+  personLabel,
+  docType,
+  uploaded,
+  isUploading,
+  error,
+  fileInputRef,
+  onSelectFile,
+  onUploadClick,
+  onView,
+}) => {
+  const imageOnly = docType === 'customer_photo' || docType === coApplicantDocType('customer_photo');
 
-const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors }) => {
+  return (
+    <div
+      className={`feature-card border-2 transition-colors h-full ${
+        uploaded ? 'border-success/40 bg-success/5' : error ? 'border-destructive/40' : 'border-border'
+      }`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-primary mb-3">{personLabel}</p>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Icon name={doc.icon} size={20} className="text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-semibold text-foreground text-sm">{doc.label}</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
+            {uploaded && (
+              <p className="text-xs text-success mt-2 flex items-center gap-1">
+                <Icon name="CheckCircle2" size={14} />
+                <span className="truncate">{uploaded.documentName}</span>
+              </p>
+            )}
+            {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+          </div>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={
+            imageOnly
+              ? '.jpg,.jpeg,.png,image/jpeg,image/png,image/webp'
+              : '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf'
+          }
+          className="hidden"
+          onChange={onSelectFile}
+        />
+        <div className="flex gap-2">
+          {uploaded && (
+            <Button type="button" variant="outline" size="sm" iconName="Eye" onClick={onView} className="flex-1">
+              View
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant={uploaded ? 'outline' : 'default'}
+            size="sm"
+            loading={isUploading}
+            iconName={uploaded ? 'RefreshCw' : 'Upload'}
+            onClick={onUploadClick}
+            className="flex-1"
+          >
+            {isUploading ? 'Uploading...' : uploaded ? 'Replace' : 'Upload'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DocumentUploadStep = ({
+  applicationId,
+  uploadedDocs,
+  onUploaded,
+  errors,
+  employmentType,
+}) => {
   const fileRefs = useRef({});
   const localPreviewUrls = useRef({});
   const [uploading, setUploading] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [previewDoc, setPreviewDoc] = useState(null);
 
+  const dualUpload = requiresCoApplicant(employmentType);
   const serverDocsSynced = useRef(false);
 
   useEffect(() => {
@@ -49,27 +121,33 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
         });
       });
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [applicationId, onUploaded]);
 
-  useEffect(() => () => {
-    Object.values(localPreviewUrls.current).forEach((url) => {
-      if (url) URL.revokeObjectURL(url);
-    });
-  }, []);
+  useEffect(
+    () => () => {
+      Object.values(localPreviewUrls.current).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    },
+    [],
+  );
 
   const handleFileSelect = async (docType, event) => {
     const file = event.target.files?.[0];
     if (!file || !applicationId) return;
 
-    const imageOnly = docType === 'customer_photo';
+    const imageOnly =
+      docType === 'customer_photo' || docType === coApplicantDocType('customer_photo');
     const allowed = imageOnly
       ? ['image/jpeg', 'image/png', 'image/webp']
       : ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!allowed.includes(file.type)) {
       setUploadError(
         imageOnly
-          ? 'Customer photo must be a JPG or PNG image.'
+          ? 'Photo must be a JPG or PNG image.'
           : 'Please upload JPG, PNG, or PDF files only.',
       );
       return;
@@ -108,10 +186,6 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
     });
   };
 
-  const openPreview = (doc, label) => {
-    setPreviewDoc({ ...doc, label });
-  };
-
   return (
     <div className="space-y-6">
       <div className="p-4 md:p-6 bg-primary/5 border border-primary/20 rounded-lg">
@@ -120,80 +194,60 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
           <div>
             <h3 className="text-base md:text-lg font-semibold text-foreground mb-1">Upload Required Documents</h3>
             <p className="text-sm text-muted-foreground">
-              Upload clear copies of the documents below. Customer photo: JPG or PNG only. Other documents: JPG, PNG, or PDF (max 10 MB each).
+              {dualUpload
+                ? 'Upload the same documents for you and your co-applicant side by side. Photos: JPG or PNG only. Other files: JPG, PNG, or PDF (max 10 MB each).'
+                : 'Customer photo: JPG or PNG only. Other documents: JPG, PNG, or PDF (max 10 MB each).'}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {REQUIRED_DOCS.map((doc) => {
-          const uploaded = uploadedDocs?.[doc.type];
-          const isUploading = uploading === doc.type;
+      <div className="space-y-6">
+        {APPLICANT_DOCUMENTS.map((doc) => {
+          const applicantType = doc.type;
+          const coType = coApplicantDocType(doc.type);
 
           return (
-            <div
-              key={doc.type}
-              className={`feature-card border-2 transition-colors ${
-                uploaded ? 'border-success/40 bg-success/5' : errors?.[doc.type] ? 'border-destructive/40' : 'border-border'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Icon name={doc.icon} size={20} className="text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">{doc.label}</h4>
-                    <p className="text-xs md:text-sm text-muted-foreground mt-0.5">{doc.description}</p>
-                    {uploaded && (
-                      <p className="text-xs text-success mt-2 flex items-center gap-1">
-                        <Icon name="CheckCircle2" size={14} />
-                        {uploaded.documentName}
-                      </p>
-                    )}
-                    {errors?.[doc.type] && (
-                      <p className="text-xs text-destructive mt-1">{errors[doc.type]}</p>
-                    )}
-                  </div>
-                </div>
-
-                <input
-                  ref={(el) => { fileRefs.current[doc.type] = el; }}
-                  type="file"
-                  accept={
-                    doc.type === 'customer_photo'
-                      ? '.jpg,.jpeg,.png,image/jpeg,image/png,image/webp'
-                      : '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf'
+            <div key={doc.type} className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Icon name={doc.icon} size={16} className="text-primary" />
+                {doc.label}
+              </h4>
+              <div className={`grid grid-cols-1 ${dualUpload ? 'md:grid-cols-2' : ''} gap-4`}>
+                <DocumentUploadCard
+                  doc={doc}
+                  personLabel="Applicant (you)"
+                  docType={applicantType}
+                  uploaded={uploadedDocs?.[applicantType]}
+                  isUploading={uploading === applicantType}
+                  error={errors?.[applicantType]}
+                  fileInputRef={(el) => {
+                    fileRefs.current[applicantType] = el;
+                  }}
+                  onSelectFile={(e) => handleFileSelect(applicantType, e)}
+                  onUploadClick={() => fileRefs.current[applicantType]?.click()}
+                  onView={() =>
+                    setPreviewDoc({ ...uploadedDocs[applicantType], label: `${doc.label} — Applicant` })
                   }
-                  className="hidden"
-                  onChange={(e) => handleFileSelect(doc.type, e)}
                 />
-                <div className="flex flex-col sm:flex-row gap-2 sm:w-auto w-full">
-                  {uploaded && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      iconName="Eye"
-                      onClick={() => openPreview(uploaded, doc.label)}
-                      className="sm:flex-1"
-                    >
-                      View
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant={uploaded ? 'outline' : 'default'}
-                    size="sm"
-                    loading={isUploading}
-                    iconName={uploaded ? 'RefreshCw' : 'Upload'}
-                    onClick={() => fileRefs.current[doc.type]?.click()}
-                    className="sm:flex-1"
-                  >
-                    {isUploading ? 'Uploading...' : uploaded ? 'Replace' : 'Upload'}
-                  </Button>
-                </div>
+                {dualUpload && (
+                  <DocumentUploadCard
+                    doc={doc}
+                    personLabel="Co-applicant"
+                    docType={coType}
+                    uploaded={uploadedDocs?.[coType]}
+                    isUploading={uploading === coType}
+                    error={errors?.[coType]}
+                    fileInputRef={(el) => {
+                      fileRefs.current[coType] = el;
+                    }}
+                    onSelectFile={(e) => handleFileSelect(coType, e)}
+                    onUploadClick={() => fileRefs.current[coType]?.click()}
+                    onView={() =>
+                      setPreviewDoc({ ...uploadedDocs[coType], label: `${doc.label} — Co-applicant` })
+                    }
+                  />
+                )}
               </div>
             </div>
           );

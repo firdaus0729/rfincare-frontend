@@ -22,8 +22,27 @@ import Icon from '../../components/AppIcon';
 import { normalizeLoanApiKey } from '../../constants/loanProducts';
 import { leadService } from '../../services/leadService';
 import { downloadConsentRecord } from '../../utils/consentRecord';
+import { getRequiredDocumentTypes, requiresCoApplicant } from '../../constants/assessmentDocuments';
 
 const SESSION_KEY = 'loan_assessment_session';
+
+const INITIAL_CO_APPLICANT = {
+  firstName: '',
+  lastName: '',
+  relationship: '',
+  phone: '',
+  email: '',
+  pan: '',
+  aadhaar: '',
+  employmentType: '',
+  employerName: '',
+  jobTitle: '',
+  industry: '',
+  yearsEmployed: '',
+  annualIncome: '',
+  monthlyIncome: '',
+  employerPhone: '',
+};
 const CREDENTIALS_KEY = 'loan_assessment_credentials';
 
 const INITIAL_FORM_DATA = {
@@ -34,6 +53,7 @@ const INITIAL_FORM_DATA = {
   state: '', pinCode: '', residenceType: '', yearsAtAddress: '', monthlyRent: '',
   employmentType: '', employerName: '', jobTitle: '', industry: '',
   yearsEmployed: '', annualIncome: '', monthlyIncome: '', employerPhone: '', retirementIncome: '',
+  coApplicant: { ...INITIAL_CO_APPLICANT },
   loanPurpose: '', loanAmount: '', creditScoreRange: '',
   monthlyDebtPayments: '', totalAssets: '',
   hasBankruptcy: false, hasForeclosure: false, hasTaxLiens: false, hasCoSignedLoans: false,
@@ -175,7 +195,12 @@ const CustomerAssessmentPortal = () => {
         const localStep = localStorage.getItem('loan_assessment_step');
         const savedAppId = localStorage.getItem('loan_assessment_application_id');
         if (localData) {
-          merged = { ...merged, ...JSON.parse(localData) };
+          const parsed = JSON.parse(localData);
+          merged = {
+            ...merged,
+            ...parsed,
+            coApplicant: { ...INITIAL_CO_APPLICANT, ...(parsed.coApplicant || {}) },
+          };
         }
         if (localStep != null) {
           step = migrateLegacyStep(localStep, merged);
@@ -256,12 +281,38 @@ const CustomerAssessmentPortal = () => {
   }, [formData, currentStep, saveProgress]);
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === 'employmentType' && value !== 'retired') {
+        next.coApplicant = { ...INITIAL_CO_APPLICANT };
+      }
+      return next;
+    });
+    if (field === 'employmentType' && value !== 'retired') {
+      setUploadedDocs((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((key) => {
+          if (key.startsWith('co_applicant_')) delete next[key];
+        });
+        return next;
+      });
+    }
     if (errors?.[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
     if ((field === 'loanPriorities' || field === 'loanPriority') && errors?.loanPriority) {
       setErrors((prev) => ({ ...prev, loanPriority: '' }));
+    }
+  };
+
+  const handleCoApplicantChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      coApplicant: { ...(prev.coApplicant || INITIAL_CO_APPLICANT), [field]: value },
+    }));
+    const errKey = `coApplicant_${field}`;
+    if (errors?.[errKey]) {
+      setErrors((prev) => ({ ...prev, [errKey]: '' }));
     }
   };
 
@@ -312,6 +363,46 @@ const CustomerAssessmentPortal = () => {
         if (formData?.employmentType === 'retired' && !formData?.retirementIncome) {
           newErrors.retirementIncome = 'Retirement income is required';
         }
+        if (requiresCoApplicant(formData?.employmentType)) {
+          const ca = formData?.coApplicant || {};
+          if (!ca.firstName) newErrors.coApplicant_firstName = 'Co-applicant first name is required';
+          if (!ca.lastName) newErrors.coApplicant_lastName = 'Co-applicant last name is required';
+          if (!ca.relationship) newErrors.coApplicant_relationship = 'Relationship is required';
+          if (!ca.phone) newErrors.coApplicant_phone = 'Co-applicant phone is required';
+          else if (!/^[6-9]\d{9}$/.test(ca.phone)) {
+            newErrors.coApplicant_phone = 'Enter valid 10-digit mobile number';
+          }
+          if (ca.email && !/\S+@\S+\.\S+/.test(ca.email)) {
+            newErrors.coApplicant_email = 'Invalid email format';
+          }
+          if (!ca.pan) newErrors.coApplicant_pan = 'Co-applicant PAN is required';
+          else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(ca.pan)) {
+            newErrors.coApplicant_pan = 'Enter valid PAN (e.g. ABCDE1234F)';
+          }
+          if (!ca.aadhaar) newErrors.coApplicant_aadhaar = 'Co-applicant Aadhaar is required';
+          else if (!/^\d{12}$/.test(String(ca.aadhaar).replace(/[-\s]/g, ''))) {
+            newErrors.coApplicant_aadhaar = 'Enter valid 12-digit Aadhaar number';
+          }
+          if (!ca.employmentType) {
+            newErrors.coApplicant_employmentType = 'Co-applicant employment status is required';
+          }
+          if (['salaried', 'business_owner', 'professional', 'self_employed'].includes(ca.employmentType)) {
+            if (!ca.employerName) newErrors.coApplicant_employerName = 'Employer/Business name is required';
+            if (!ca.jobTitle) newErrors.coApplicant_jobTitle = 'Job title is required';
+            if (!ca.industry) newErrors.coApplicant_industry = 'Industry is required';
+            if (!ca.yearsEmployed && ca.yearsEmployed !== 0) {
+              newErrors.coApplicant_yearsEmployed = 'Years employed is required';
+            }
+            if (!ca.annualIncome) newErrors.coApplicant_annualIncome = 'Annual income is required';
+            if (!ca.monthlyIncome) newErrors.coApplicant_monthlyIncome = 'Monthly income is required';
+            if (
+              ['salaried', 'business_owner', 'professional'].includes(ca.employmentType) &&
+              !ca.employerPhone
+            ) {
+              newErrors.coApplicant_employerPhone = 'Employer phone is required';
+            }
+          }
+        }
         break;
 
       case 3:
@@ -339,8 +430,7 @@ const CustomerAssessmentPortal = () => {
         break;
 
       case 6: {
-        const required = ['customer_photo', 'pan_card', 'aadhaar_card', 'income_proof'];
-        required.forEach((type) => {
+        getRequiredDocumentTypes(formData?.employmentType).forEach((type) => {
           if (!uploadedDocs?.[type]) {
             newErrors[type] = 'This document is required';
           }
@@ -401,6 +491,32 @@ const CustomerAssessmentPortal = () => {
     annual_income: formData?.annualIncome ? parseFloat(formData?.annualIncome) : 0,
     monthly_income: formData?.monthlyIncome ? parseFloat(formData?.monthlyIncome) : 0,
     employer_phone: formData?.employerPhone || null,
+    retirement_income: formData?.retirementIncome ? parseFloat(formData?.retirementIncome) : null,
+    co_applicant: requiresCoApplicant(formData?.employmentType)
+      ? {
+          first_name: formData?.coApplicant?.firstName,
+          last_name: formData?.coApplicant?.lastName,
+          relationship: formData?.coApplicant?.relationship,
+          phone: formData?.coApplicant?.phone,
+          email: formData?.coApplicant?.email || null,
+          pan_number: formData?.coApplicant?.pan,
+          aadhaar_number: formData?.coApplicant?.aadhaar,
+          employment_type: formData?.coApplicant?.employmentType,
+          employer_name: formData?.coApplicant?.employerName || null,
+          job_title: formData?.coApplicant?.jobTitle || null,
+          industry: formData?.coApplicant?.industry || null,
+          years_employed: formData?.coApplicant?.yearsEmployed
+            ? parseInt(formData?.coApplicant?.yearsEmployed, 10)
+            : null,
+          annual_income: formData?.coApplicant?.annualIncome
+            ? parseFloat(formData?.coApplicant?.annualIncome)
+            : null,
+          monthly_income: formData?.coApplicant?.monthlyIncome
+            ? parseFloat(formData?.coApplicant?.monthlyIncome)
+            : null,
+          employer_phone: formData?.coApplicant?.employerPhone || null,
+        }
+      : null,
     loan_purpose: formData?.loanPurpose,
     requested_loan_amount: formData?.loanAmount ? parseFloat(formData?.loanAmount) : 0,
     credit_score_range: formData?.creditScoreRange || null,
@@ -637,7 +753,14 @@ const CustomerAssessmentPortal = () => {
       case 1:
         return <AddressInfoForm formData={formData} errors={errors} onChange={handleChange} />;
       case 2:
-        return <EmploymentInfoForm formData={formData} errors={errors} onChange={handleChange} />;
+        return (
+          <EmploymentInfoForm
+            formData={formData}
+            errors={errors}
+            onChange={handleChange}
+            onCoApplicantChange={handleCoApplicantChange}
+          />
+        );
       case 3:
         return <FinancialInfoForm formData={formData} errors={errors} onChange={handleChange} />;
       case 4:
@@ -651,6 +774,7 @@ const CustomerAssessmentPortal = () => {
             uploadedDocs={uploadedDocs}
             onUploaded={handleDocUploaded}
             errors={errors}
+            employmentType={formData?.employmentType}
           />
         );
       case 7:

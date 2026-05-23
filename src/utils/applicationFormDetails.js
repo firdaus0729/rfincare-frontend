@@ -34,6 +34,25 @@ const LABELS = {
   monthlyDebtPayments: 'Monthly debt payments',
   totalAssets: 'Total assets',
   preferredBankName: 'Preferred bank',
+  relationship: 'Relationship',
+};
+
+const CO_APPLICANT_LABELS = {
+  firstName: 'First name',
+  lastName: 'Last name',
+  relationship: 'Relationship',
+  phone: 'Phone',
+  email: 'Email',
+  pan: 'PAN',
+  aadhaar: 'Aadhaar',
+  employmentType: 'Employment type',
+  employerName: 'Employer name',
+  jobTitle: 'Job title',
+  industry: 'Industry',
+  yearsEmployed: 'Years employed',
+  annualIncome: 'Annual income',
+  monthlyIncome: 'Monthly income',
+  employerPhone: 'Employer phone',
 };
 
 function formatValue(key, value) {
@@ -46,14 +65,36 @@ function formatValue(key, value) {
   return String(value);
 }
 
-function pickFields(source, keys) {
+function pickFields(source, keys, labelMap = LABELS) {
   return keys
     .filter((key) => source[key] != null && source[key] !== '')
     .map((key) => ({
       key,
-      label: LABELS[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()),
+      label: labelMap[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()),
       value: formatValue(key, source[key]),
     }));
+}
+
+function normalizeCoApplicant(data) {
+  const raw = data?.coApplicant ?? data?.co_applicant;
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    firstName: field(raw, 'firstName', 'first_name'),
+    lastName: field(raw, 'lastName', 'last_name'),
+    relationship: field(raw, 'relationship', 'relationship'),
+    phone: field(raw, 'phone', 'phone'),
+    email: field(raw, 'email', 'email'),
+    pan: field(raw, 'pan', 'pan_number') || field(raw, 'panNumber', 'pan_number'),
+    aadhaar: field(raw, 'aadhaar', 'aadhaar_number') || field(raw, 'aadhaarNumber', 'aadhaar_number'),
+    employmentType: field(raw, 'employmentType', 'employment_type'),
+    employerName: field(raw, 'employerName', 'employer_name'),
+    jobTitle: field(raw, 'jobTitle', 'job_title'),
+    industry: field(raw, 'industry', 'industry'),
+    yearsEmployed: field(raw, 'yearsEmployed', 'years_employed'),
+    annualIncome: field(raw, 'annualIncome', 'annual_income'),
+    monthlyIncome: field(raw, 'monthlyIncome', 'monthly_income'),
+    employerPhone: field(raw, 'employerPhone', 'employer_phone'),
+  };
 }
 
 function field(data, camel, snake) {
@@ -107,7 +148,8 @@ export function buildApplicationDetailSections(application) {
     preferredBankName: field(data, 'preferredBankName', 'preferred_bank_name'),
   };
 
-  return [
+  const coApplicant = normalizeCoApplicant(data);
+  const sections = [
     {
       title: 'Personal information',
       icon: 'User',
@@ -140,7 +182,25 @@ export function buildApplicationDetailSections(application) {
         'preferredBankName',
       ]),
     },
-  ].filter((section) => section.fields.length > 0);
+  ];
+
+  if (coApplicant) {
+    sections.push({
+      title: 'Co-applicant',
+      icon: 'Users',
+      fields: pickFields(
+        coApplicant,
+        [
+          'firstName', 'lastName', 'relationship', 'phone', 'email', 'pan', 'aadhaar',
+          'employmentType', 'employerName', 'jobTitle', 'industry', 'yearsEmployed',
+          'annualIncome', 'monthlyIncome', 'employerPhone',
+        ],
+        CO_APPLICANT_LABELS,
+      ),
+    });
+  }
+
+  return sections.filter((section) => section.fields.length > 0);
 }
 
 export function pickCustomerPhotoDocument(documents = []) {

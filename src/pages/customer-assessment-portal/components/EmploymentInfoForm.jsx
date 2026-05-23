@@ -1,8 +1,9 @@
 import React from 'react';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
+import CoApplicantForm from './CoApplicantForm';
 
-const EmploymentInfoForm = ({ formData, errors, onChange }) => {
+const EmploymentInfoForm = ({ formData, errors, onChange, onCoApplicantChange }) => {
   const employmentTypeOptions = [
     { value: 'salaried', label: 'Salaried Employee' },
     { value: 'self_employed', label: 'Self-Employed' },
@@ -128,17 +129,24 @@ const EmploymentInfoForm = ({ formData, errors, onChange }) => {
         </>
       )}
       {formData?.employmentType === 'retired' && (
-        <Input
-          label="Monthly Retirement Income"
-          type="number"
-          placeholder="30000"
-          description="Enter your monthly retirement income in INR (₹)"
-          value={formData?.retirementIncome}
-          onChange={(e) => onChange('retirementIncome', e?.target?.value)}
-          error={errors?.retirementIncome}
-          required
-          min={0}
-        />
+        <>
+          <Input
+            label="Monthly Retirement Income"
+            type="number"
+            placeholder="30000"
+            description="Enter your monthly retirement income in INR (₹)"
+            value={formData?.retirementIncome}
+            onChange={(e) => onChange('retirementIncome', e?.target?.value)}
+            error={errors?.retirementIncome}
+            required
+            min={0}
+          />
+          <CoApplicantForm
+            coApplicant={formData?.coApplicant}
+            errors={errors}
+            onChange={onCoApplicantChange}
+          />
+        </>
       )}
     </div>
   );

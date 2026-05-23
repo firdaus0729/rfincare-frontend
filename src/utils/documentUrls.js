@@ -28,5 +28,11 @@ export const DOCUMENT_TYPE_LABELS = {
 };
 
 export function documentTypeLabel(type) {
-  return DOCUMENT_TYPE_LABELS[type] || String(type || 'Document').replace(/_/g, ' ');
+  if (!type) return 'Document';
+  if (type.startsWith('co_applicant_')) {
+    const base = type.replace('co_applicant_', '');
+    const label = DOCUMENT_TYPE_LABELS[base] || base.replace(/_/g, ' ');
+    return `Co-applicant — ${label}`;
+  }
+  return DOCUMENT_TYPE_LABELS[type] || String(type).replace(/_/g, ' ');
 }

@@ -1,9 +1,12 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 import { Checkbox } from '../../../components/ui/Checkbox';
+import { requiresCoApplicant } from '../../../constants/assessmentDocuments';
 
 const ReviewSubmitForm = ({ formData, errors, onChange }) => {
   const formatCurrency = (val) => val ? `₹${parseInt(val)?.toLocaleString('en-IN')}` : '';
+  const showCoApplicant = requiresCoApplicant(formData?.employmentType);
+  const ca = formData?.coApplicant || {};
 
   const sections = [
     {
@@ -41,9 +44,31 @@ const ReviewSubmitForm = ({ formData, errors, onChange }) => {
         { label: 'Job Title', value: formData?.jobTitle },
         { label: 'Industry', value: formData?.industry },
         { label: 'Annual Income', value: formatCurrency(formData?.annualIncome) },
-        { label: 'Monthly Income', value: formatCurrency(formData?.monthlyIncome) }
+        { label: 'Monthly Income', value: formatCurrency(formData?.monthlyIncome) },
+        { label: 'Retirement Income', value: formatCurrency(formData?.retirementIncome) },
       ]
     },
+    ...(showCoApplicant
+      ? [{
+          title: 'Co-applicant Information',
+          icon: 'Users',
+          items: [
+            {
+              label: 'Name',
+              value: [ca.firstName, ca.lastName].filter(Boolean).join(' '),
+            },
+            { label: 'Relationship', value: ca.relationship },
+            { label: 'Mobile', value: ca.phone },
+            { label: 'Email', value: ca.email },
+            { label: 'PAN', value: ca.pan },
+            { label: 'Employment Status', value: ca.employmentType },
+            { label: 'Employer / Business', value: ca.employerName },
+            { label: 'Job Title', value: ca.jobTitle },
+            { label: 'Annual Income', value: formatCurrency(ca.annualIncome) },
+            { label: 'Monthly Income', value: formatCurrency(ca.monthlyIncome) },
+          ],
+        }]
+      : []),
     {
       title: 'Financial Information',
       icon: 'IndianRupee',
