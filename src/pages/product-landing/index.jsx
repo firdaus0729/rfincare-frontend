@@ -72,8 +72,12 @@ const ProductLanding = () => {
                 <Button className="w-full" onClick={() => navigate(`/eligibility-assessment?${qs}`)}>
                   Check eligibility
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => navigate(`/bank-marketplace?${qs}`)}>
-                  Compare banks
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate(`/product-comparison?loanType=${product.slug}#bank-comparison`)}
+                >
+                  Compare bank offers
                 </Button>
                 <Button variant="outline" className="w-full" onClick={() => navigate(`/product-comparison?${qs}`)}>
                   Compare product types

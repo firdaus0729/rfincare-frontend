@@ -1,17 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import Header from '../../components/ui/Header';
 import Footer from '../homepage/components/Footer';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import { LOAN_PRODUCTS, getLoanProductBySlug } from '../../constants/loanProducts';
-import BankEligibilityPreview from './components/BankEligibilityPreview';
+import BankOffersSection from '../product-landing/components/BankOffersSection';
 
 const ProductComparison = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const filterSlug = searchParams.get('loanType');
+  const activeProduct = filterSlug ? getLoanProductBySlug(filterSlug) : null;
   const [selectedSlugs, setSelectedSlugs] = useState([]);
+
+  const scrollToBankComparison = () => {
+    document.getElementById('bank-comparison')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const openBankCompareForProduct = (slug) => {
+    if (filterSlug === slug) {
+      scrollToBankComparison();
+      return;
+    }
+    navigate(`/product-comparison?loanType=${slug}#bank-comparison`);
+  };
 
   const catalog = useMemo(
     () =>
@@ -37,8 +51,18 @@ const ProductComparison = () => {
   }, [catalog, filterSlug]);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+    if (!location.hash) {
+      window.scrollTo(0, 0);
+    }
+  }, [filterSlug, location.hash]);
+
+  useEffect(() => {
+    if (location.hash === '#bank-comparison') {
+      const t = setTimeout(scrollToBankComparison, 300);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [filterSlug, location.hash, activeProduct]);
 
   useEffect(() => {
     if (filterSlug && visibleProducts.length === 1) {
@@ -65,10 +89,23 @@ const ProductComparison = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Compare Loan Products</h1>
             <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto">
-              Select up to 3 loan types to compare, then check bank offers for your chosen product
+              Compare loan types side by side, then compare bank offers for the same product on this page
             </p>
           </div>
         </section>
+
+        {activeProduct && (
+          <section className="py-3 bg-card border-b border-border">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <Link to="/product-comparison" className="hover:text-primary">
+                Product comparison
+              </Link>
+              <Icon name="ChevronRight" size={14} />
+              <span className="text-foreground font-medium">{activeProduct.label}</span>
+              <span className="text-xs text-muted-foreground">— compare bank offers below</span>
+            </div>
+          </section>
+        )}
 
         <section className="py-6 bg-muted border-b border-border">
           <div className="max-w-7xl mx-auto px-4 flex flex-wrap gap-2 justify-center">
@@ -83,7 +120,7 @@ const ProductComparison = () => {
             {LOAN_PRODUCTS.map((p) => (
               <Link
                 key={p.slug}
-                to={`/product-comparison?loanType=${p.slug}`}
+                to={`/product-comparison?loanType=${p.slug}#bank-comparison`}
                 className={`px-4 py-2 rounded-full text-sm border ${
                   filterSlug === p.slug ? 'bg-primary text-primary-foreground border-primary' : 'border-border bg-card'
                 }`}
@@ -94,16 +131,21 @@ const ProductComparison = () => {
           </div>
         </section>
 
-        {filterSlug && (
-          <BankEligibilityPreview
-            loanTypeSlug={filterSlug}
-            productLabel={getLoanProductBySlug(filterSlug)?.label}
-          />
+        {activeProduct && (
+          <BankOffersSection product={activeProduct} />
         )}
 
-        <section className="py-12 bg-gray-50">
+        <section className={`py-12 bg-gray-50 ${activeProduct ? 'border-t border-border' : ''}`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Select products to compare</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">
+              {activeProduct ? 'Compare loan product types' : 'Select products to compare'}
+            </h2>
+            {activeProduct && (
+              <p className="text-center text-muted-foreground text-sm mb-6 max-w-2xl mx-auto">
+                Bank offers for {activeProduct.label} are above. Use this section to compare different loan
+                categories, or pick another product tab.
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {visibleProducts.map((product) => (
                 <div
@@ -187,8 +229,13 @@ const ProductComparison = () => {
                       <td className="p-4 font-medium">Actions</td>
                       {selectedProductDetails.map((product) => (
                         <td key={product.slug} className="p-4 space-y-2">
-                          <Button size="sm" className="w-full" onClick={() => navigate(`/bank-marketplace?loanType=${product.slug}`)}>
-                            Compare banks
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            iconName="GitCompare"
+                            onClick={() => openBankCompareForProduct(product.slug)}
+                          >
+                            Compare bank offers
                           </Button>
                           <Button
                             size="sm"

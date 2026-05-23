@@ -332,10 +332,14 @@ const EligibilityAssessment = () => {
                         iconPosition="left"
                         onClick={() => {
                           const slug = LOAN_PRODUCTS.find((p) => p.apiKey === formData.loanType)?.slug;
-                          navigate(slug ? `/bank-marketplace?loanType=${slug}` : '/bank-marketplace');
+                          navigate(
+                            slug
+                              ? `/product-comparison?loanType=${slug}#bank-comparison`
+                              : '/product-comparison',
+                          );
                         }}
                       >
-                        Compare Banks
+                        Compare bank offers
                       </Button>
                     </div>
                   </div>
