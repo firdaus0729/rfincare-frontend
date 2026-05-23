@@ -3,6 +3,8 @@ import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
 import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
 import ProtectedRoute from "components/ProtectedRoute";
+import AdminRouteShell from "./components/layout/AdminRouteShell";
+import { LoanProductsProvider } from "./contexts/LoanProductsContext";
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 import NotFound from "pages/NotFound";
 
@@ -63,6 +65,7 @@ const GoogleAnalyticsTracker = () => {
 function Routes() {
   return (
     <BrowserRouter>
+      <LoanProductsProvider>
       <ErrorBoundary>
         <GoogleAnalyticsTracker />
         <ScrollToTop />
@@ -92,55 +95,16 @@ function Routes() {
           <Route path="/customer-assessment-portal" element={<CustomerAssessmentPortal />} />
           <Route path="/bank-marketplace" element={<BankMarketplace />} />
           
-          {/* ==================== ADMIN PROTECTED ROUTES ==================== */}
-          <Route 
-            path="/admin-dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin-security-dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                <AdminSecurityDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/reports-and-analytics" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                <ReportsAndAnalytics />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/bank-marketplace-management" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                <BankMarketplaceManagement />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/approval-matrix-management" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                <ApprovalMatrixManagement />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/interest-matrix-management" 
-            element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                <InterestMatrixManagement />
-              </ProtectedRoute>
-            } 
-          />
+          {/* ==================== ADMIN PROTECTED ROUTES (shared top nav) ==================== */}
+          <Route element={<AdminRouteShell />}>
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin-security-dashboard" element={<AdminSecurityDashboard />} />
+            <Route path="/reports-and-analytics" element={<ReportsAndAnalytics />} />
+            <Route path="/bank-marketplace-management" element={<BankMarketplaceManagement />} />
+            <Route path="/approval-matrix-management" element={<ApprovalMatrixManagement />} />
+            <Route path="/interest-matrix-management" element={<InterestMatrixManagement />} />
+            <Route path="/admin/documents" element={<DocumentManagementCenter />} />
+          </Route>
           
           {/* ==================== EMPLOYEE PROTECTED ROUTES ==================== */}
           <Route 
@@ -179,13 +143,13 @@ function Routes() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/document-management-center" 
+          <Route
+            path="/document-management-center"
             element={
-              <ProtectedRoute allowedRoles={['customer', 'employee', 'admin', 'super_admin']}>
+              <ProtectedRoute allowedRoles={['customer', 'employee', 'agent']}>
                 <DocumentManagementCenter />
               </ProtectedRoute>
-            } 
+            }
           />
           <Route 
             path="/additional-questionnaire" 
@@ -213,6 +177,7 @@ function Routes() {
           <Route path="*" element={<NotFound />} />
         </RouterRoutes>
       </ErrorBoundary>
+      </LoanProductsProvider>
     </BrowserRouter>
   );
 }

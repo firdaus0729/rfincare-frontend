@@ -63,6 +63,7 @@ function mapApplicationForDashboard(app) {
   const interestRate = data.interestRate ?? data.interest_rate ?? null;
   return {
     id: app.id,
+    applicationNumber: app.applicationNumber || app.application_number,
     status,
     bankName: app.bank?.name || app.bankName || 'Rfincare Partner',
     loanType:
@@ -126,9 +127,16 @@ export const customerJourneyService = {
     }
   },
 
-  async getDocumentUrl(filePath) {
-    // API provides direct download links or we can return the path if it's already a URL
-    return { data: filePath, error: null };
+  async getApplicationById(applicationId) {
+    try {
+      const res = await apiClient.get(`/loan-applications/${applicationId}`);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return {
+        data: null,
+        error: { message: error?.response?.data?.error || 'Failed to fetch application' },
+      };
+    }
   },
 
   async deleteDocument(documentId) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { LOAN_PRODUCTS, getLoanProductBySlug, normalizeLoanApiKey } from '../../constants/loanProducts';
+import { getLoanProductBySlug, normalizeLoanApiKey } from '../../constants/loanProducts';
+import { useLoanProducts } from '../../contexts/LoanProductsContext';
 import Header from '../../components/ui/Header';
 import Footer from '../homepage/components/Footer';
 
@@ -19,6 +20,7 @@ const EligibilityAssessment = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { user } = useAuth();
+  const { products: loanProducts } = useLoanProducts();
   const prefillProduct = getLoanProductBySlug(searchParams.get('loanType'));
   const [formData, setFormData] = useState({
     loanType: prefillProduct?.apiKey || '',
@@ -49,7 +51,7 @@ const EligibilityAssessment = () => {
     }));
   }, [location.state]);
 
-  const loanTypes = LOAN_PRODUCTS.map((p) => ({ value: p.apiKey, label: p.label }));
+  const loanTypes = loanProducts.map((p) => ({ value: p.apiKey, label: p.label }));
 
   const employmentTypes = [
     { value: 'salaried', label: 'Salaried' },
@@ -158,7 +160,7 @@ const EligibilityAssessment = () => {
   };
 
   const handleApplyNow = () => {
-    const slug = LOAN_PRODUCTS.find((p) => p.apiKey === formData.loanType)?.slug;
+    const slug = loanProducts.find((p) => p.apiKey === formData.loanType)?.slug;
     const qs = slug ? `?loanType=${slug}` : '';
     if (user) {
       navigate(`/customer-assessment-portal${qs}`, { state: { eligibilityData: { ...formData, ...result } } });
@@ -331,7 +333,7 @@ const EligibilityAssessment = () => {
                         iconName="GitCompare"
                         iconPosition="left"
                         onClick={() => {
-                          const slug = LOAN_PRODUCTS.find((p) => p.apiKey === formData.loanType)?.slug;
+                          const slug = loanProducts.find((p) => p.apiKey === formData.loanType)?.slug;
                           navigate(
                             slug
                               ? `/product-comparison?loanType=${slug}#bank-comparison`

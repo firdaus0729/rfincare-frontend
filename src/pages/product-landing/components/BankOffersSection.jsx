@@ -11,6 +11,7 @@ import {
   mapBankForMarketplace,
 } from '../../../utils/bankMarketplace';
 import { getBankProbabilityMap, loadEligibilityResults } from '../../../services/leadService';
+import { MAX_BANK_COMPARE } from '../../../constants/bankComparison';
 
 const BankOffersSection = ({ product }) => {
   const navigate = useNavigate();
@@ -70,7 +71,7 @@ const BankOffersSection = ({ product }) => {
       let next;
       if (prev.includes(bankId)) {
         next = prev.filter((id) => id !== bankId);
-      } else if (prev.length >= 3) {
+      } else if (prev.length >= MAX_BANK_COMPARE) {
         return prev;
       } else {
         next = [...prev, bankId];
@@ -160,6 +161,7 @@ const BankOffersSection = ({ product }) => {
             onRemoveBank={(id) => setCompareList((p) => p.filter((x) => x !== id))}
             onClearAll={() => setCompareList([])}
             compareCount={compareList.length}
+            maxCompare={MAX_BANK_COMPARE}
           />
         </div>
 
@@ -194,6 +196,7 @@ const BankOffersSection = ({ product }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {offers.map((offer) => {
               const isComparing = compareList.includes(offer.bankId);
+              const compareFull = compareList.length >= MAX_BANK_COMPARE && !isComparing;
               return (
                 <article
                   key={`${offer.bankId}-${offer.productId || 'default'}`}
@@ -203,11 +206,15 @@ const BankOffersSection = ({ product }) => {
                 >
                   <button
                     type="button"
-                    onClick={() => handleCompareToggle(offer.bankId)}
+                    onClick={() => !compareFull && handleCompareToggle(offer.bankId)}
+                    disabled={compareFull}
+                    title={compareFull ? `Maximum ${MAX_BANK_COMPARE} banks in comparison` : undefined}
                     className={`absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border transition-colors ${
                       isComparing
                         ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-card border-border text-muted-foreground hover:border-primary'
+                        : compareFull
+                          ? 'bg-muted border-border text-muted-foreground opacity-60 cursor-not-allowed'
+                          : 'bg-card border-border text-muted-foreground hover:border-primary'
                     }`}
                     aria-pressed={isComparing}
                   >
@@ -290,9 +297,10 @@ const BankOffersSection = ({ product }) => {
                         variant="outline"
                         size="sm"
                         className="flex-1"
+                        disabled={compareFull}
                         onClick={() => handleCompareToggle(offer.bankId)}
                       >
-                        {isComparing ? 'In comparison' : 'Add to compare'}
+                        {isComparing ? 'In comparison' : compareFull ? 'Compare full' : 'Add to compare'}
                       </Button>
                       <Button size="sm" className="flex-1" onClick={() => handleApply({ id: offer.bankId, name: offer.bankName })}>
                         Apply

@@ -112,7 +112,7 @@ const BankComparisonTable = ({
 
   return (
     <div className="overflow-x-auto -mx-1 px-1">
-      <table className="w-full min-w-[640px] border-collapse">
+      <table className="w-full min-w-[900px] border-collapse">
         <thead>
           <tr>
             <th className="text-left p-3 bg-muted rounded-tl-lg w-36 md:w-44 sticky left-0 z-10">
@@ -121,7 +121,7 @@ const BankComparisonTable = ({
             {bankIds.map((bankId) => {
               const bank = displayBank(bankId);
               return (
-                <th key={bankId} className="p-3 bg-muted align-top min-w-[140px]">
+                <th key={bankId} className="p-3 bg-muted align-top min-w-[120px] max-w-[160px]">
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-12 h-12 md:w-14 md:h-14 rounded-lg overflow-hidden bg-background border border-border">
                       <Image

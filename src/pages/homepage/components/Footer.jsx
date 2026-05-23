@@ -3,15 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/AppIcon';
 import BrandLogo from '../../../components/ui/BrandLogo';
-import { LOAN_PRODUCTS } from '../../../constants/loanProducts';
+import { useLoanProducts } from '../../../contexts/LoanProductsContext';
 
 const Footer = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { products: loanProducts } = useLoanProducts();
   const currentYear = new Date()?.getFullYear();
 
   const footerLinks = {
-    products: LOAN_PRODUCTS.map((p) => ({
+    products: loanProducts.map((p) => ({
       label: p.label,
       path: `/products/${p.slug}`,
     })),

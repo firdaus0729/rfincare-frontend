@@ -4,10 +4,12 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
-import { LOAN_PRODUCTS, getLoanProductBySlug } from '../../../constants/loanProducts';
+import { getLoanProductBySlug } from '../../../constants/loanProducts';
+import { useLoanProducts } from '../../../contexts/LoanProductsContext';
 
 const QuickEligibilityCheck = () => {
   const navigate = useNavigate();
+  const { products: loanProducts } = useLoanProducts();
   const [formData, setFormData] = useState({
     loanAmount: '',
     loanType: '',
@@ -15,7 +17,7 @@ const QuickEligibilityCheck = () => {
     creditScore: ''
   });
 
-  const loanTypes = LOAN_PRODUCTS.map((p) => ({ value: p.slug, label: p.label }));
+  const loanTypes = loanProducts.map((p) => ({ value: p.slug, label: p.label }));
 
   const creditScoreRanges = [
     { value: 'excellent', label: 'Excellent (750+)' },

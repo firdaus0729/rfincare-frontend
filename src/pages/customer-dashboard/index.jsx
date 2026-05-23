@@ -11,6 +11,7 @@ import ProfileSummaryCard from './components/ProfileSummaryCard';
 
 import SupportCard from './components/SupportCard';
 import DocumentUploadModal from './components/DocumentUploadModal';
+import ApplicationDetailModal from './components/ApplicationDetailModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { customerJourneyService } from '../../services/customerJourneyService';
 
@@ -22,6 +23,8 @@ const CustomerDashboard = () => {
   const [showAllNotifications, setShowAllNotifications] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+  const [detailApplication, setDetailApplication] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isMenuDropdownOpen, setIsMenuDropdownOpen] = useState(false);
   
   // State for real data
@@ -120,8 +123,14 @@ const CustomerDashboard = () => {
   }, [isMenuDropdownOpen]);
 
   const handleViewDetails = (application) => {
-    setSelectedApplicationId(application?.id);
-    setActiveTab('applications');
+    if (!application?.id) return;
+    setSelectedApplicationId(application.id);
+    setDetailApplication(application);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleDocumentDeleted = (documentId) => {
+    setDocuments((prev) => prev.filter((d) => d.id !== documentId));
   };
 
   const profileData = {
@@ -278,10 +287,10 @@ const CustomerDashboard = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {documents?.slice(0, 4)?.map((doc) => (
-                      <DocumentCard 
-                        key={doc?.id} 
-                        document={doc} 
-                        onDelete={() => {}} 
+                      <DocumentCard
+                        key={doc?.id}
+                        document={doc}
+                        onDelete={handleDocumentDeleted}
                       />
                     ))}
                     {documents?.length === 0 && (
@@ -384,10 +393,10 @@ const CustomerDashboard = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {documents?.map((doc) => (
-                <DocumentCard 
-                  key={doc?.id} 
-                  document={doc} 
-                  onDelete={() => {}} 
+                <DocumentCard
+                  key={doc?.id}
+                  document={doc}
+                  onDelete={handleDocumentDeleted}
                 />
               ))}
               {documents?.length === 0 && (
@@ -457,6 +466,16 @@ const CustomerDashboard = () => {
         onClose={() => setIsUploadModalOpen(false)}
         onUploadSuccess={handleUploadSuccess}
         applicationId={selectedApplicationId}
+      />
+
+      <ApplicationDetailModal
+        applicationId={detailApplication?.id}
+        summary={detailApplication}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setDetailApplication(null);
+        }}
       />
     </div>
   );

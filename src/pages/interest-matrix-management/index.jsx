@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 
-import Header from '../../components/ui/Header';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import MatrixFilters from './components/MatrixFilters';
@@ -358,9 +357,8 @@ const InterestMatrixManagement = () => {
         <title>Interest Matrix Management - Rfincare</title>
         <meta name="description" content="Configure and manage dynamic interest rates across multiple loan products and customer segments" />
       </Helmet>
-      <Header />
-      <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+      <div>
+        <div>
           <div className="mb-6 md:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>

@@ -4,13 +4,15 @@ import Header from '../../components/ui/Header';
 import Footer from '../homepage/components/Footer';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
-import { LOAN_PRODUCTS, getLoanProductBySlug } from '../../constants/loanProducts';
+import { getLoanProductBySlug } from '../../constants/loanProducts';
+import { useLoanProducts } from '../../contexts/LoanProductsContext';
 import BankOffersSection from '../product-landing/components/BankOffersSection';
 
 const ProductComparison = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { products: loanProducts } = useLoanProducts();
   const filterSlug = searchParams.get('loanType');
   const activeProduct = filterSlug ? getLoanProductBySlug(filterSlug) : null;
   const [selectedSlugs, setSelectedSlugs] = useState([]);
@@ -29,7 +31,7 @@ const ProductComparison = () => {
 
   const catalog = useMemo(
     () =>
-      LOAN_PRODUCTS.map((p, index) => ({
+      loanProducts.map((p, index) => ({
         id: index + 1,
         slug: p.slug,
         name: p.label,
@@ -40,7 +42,7 @@ const ProductComparison = () => {
         processingFee: 'Varies by lender',
         features: p.features,
       })),
-    [],
+    [loanProducts],
   );
 
   const visibleProducts = useMemo(() => {
@@ -117,7 +119,7 @@ const ProductComparison = () => {
             >
               All products
             </Link>
-            {LOAN_PRODUCTS.map((p) => (
+            {loanProducts.map((p) => (
               <Link
                 key={p.slug}
                 to={`/product-comparison?loanType=${p.slug}#bank-comparison`}

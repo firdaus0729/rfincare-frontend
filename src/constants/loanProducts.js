@@ -1,5 +1,5 @@
 /**
- * Single source of truth for loan product slugs used in URLs and navigation.
+ * Loan product catalog — static defaults + runtime registry from API.
  * slug: URL segment (/products/personal)
  * apiKey: backend / form values (personal_loan)
  */
@@ -62,8 +62,32 @@ export const LOAN_PRODUCTS = [
   },
 ];
 
-const slugToProduct = new Map(LOAN_PRODUCTS.map((p) => [p.slug, p]));
-const apiKeyToProduct = new Map(LOAN_PRODUCTS.map((p) => [p.apiKey, p]));
+let registry = [...LOAN_PRODUCTS];
+let slugToProduct = buildMaps(registry).slugMap;
+let apiKeyToProduct = buildMaps(registry).apiMap;
+
+function buildMaps(products) {
+  return {
+    slugMap: new Map(products.map((p) => [p.slug, p])),
+    apiMap: new Map(products.map((p) => [p.apiKey, p])),
+  };
+}
+
+/** Called by LoanProductsProvider after API load */
+export function setLoanProductRegistry(products) {
+  if (!Array.isArray(products) || products.length === 0) {
+    registry = [...LOAN_PRODUCTS];
+  } else {
+    registry = products;
+  }
+  const maps = buildMaps(registry);
+  slugToProduct = maps.slugMap;
+  apiKeyToProduct = maps.apiMap;
+}
+
+export function getLoanProducts() {
+  return registry;
+}
 
 export function getLoanProductBySlug(slug) {
   if (!slug) return null;
@@ -72,6 +96,7 @@ export function getLoanProductBySlug(slug) {
     slugToProduct.get(normalized)
     || apiKeyToProduct.get(normalized)
     || apiKeyToProduct.get(`${normalized}_loan`)
+    || slugToProduct.get(normalized.replace(/_loan$/, ''))
     || null
   );
 }
@@ -81,14 +106,8 @@ export function normalizeLoanApiKey(input) {
   if (product) return product.apiKey;
   const s = String(input || '').toLowerCase();
   if (s.endsWith('_loan')) return s;
-  const slugMap = {
-    personal: 'personal_loan',
-    home: 'home_loan',
-    business: 'business_loan',
-    auto: 'auto_loan',
-    education: 'education_loan',
-  };
-  if (slugMap[s]) return slugMap[s];
+  const fromRegistry = registry.find((p) => p.slug === s);
+  if (fromRegistry) return fromRegistry.apiKey;
   return s || null;
 }
 

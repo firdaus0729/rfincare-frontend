@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { trackEvent } from '../../hooks/useGoogleAnalytics';
-import Header from '../../components/ui/Header';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import StatsCard from './components/StatsCard';
@@ -12,6 +11,7 @@ import ActivityLog from './components/ActivityLog';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { getApiBaseUrl } from '../../lib/runtimeConfig';
+import { getAdminTabFromSearch, ADMIN_NAV_ITEMS } from '../../constants/adminNavigation';
 
 
 import FilterPanel from './components/FilterPanel';
@@ -30,12 +30,14 @@ import BankManagementTab from './components/BankManagementTab';
 import HomepageCmsTab from './components/HomepageCmsTab';
 import LeadsTab from './components/LeadsTab';
 import StatusCheckAdminTab from './components/StatusCheckAdminTab';
+import LoanProductsTab from './components/LoanProductsTab';
 
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { signOut, user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('applications');
+  const [searchParams] = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
+  const activeTab = getAdminTabFromSearch(searchParams);
   const [registrationSubTab, setRegistrationSubTab] = useState('customers');
   const [showAgentModal, setShowAgentModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
@@ -87,6 +89,8 @@ const AdminDashboard = () => {
     }
   ]);
   const [loading, setLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [statsLoaded, setStatsLoaded] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [filters, setFilters] = useState({
     search: '',
@@ -95,25 +99,22 @@ const AdminDashboard = () => {
     loanType: 'all'
   });
 
-  const tabs = [
-    { id: 'applications', label: 'Applications', icon: 'FileText' },
-    { id: 'registrations', label: 'Registrations', icon: 'UserPlus' },
-    { id: 'agents', label: 'Agents', icon: 'Users' },
-    { id: 'employees', label: 'Employees', icon: 'Briefcase' },
-    { id: 'system', label: 'System Config', icon: 'Settings' },
-    { id: 'activity', label: 'Activity', icon: 'Activity' },
-    { id: 'bank-marketplace', label: 'Bank Marketplace', icon: 'Building' },
-    { id: 'approval-matrix', label: 'Approval Matrix', icon: 'Grid' },
-    { id: 'reports', label: 'Reports', icon: 'BarChart' },
-    { id: 'audit-logs', label: 'Audit Logs', icon: 'Shield' },
-    { id: 'homepage-cms', label: 'Homepage CMS', icon: 'Layout' },
-    { id: 'status-check', label: 'Status Check', icon: 'Search' },
-    { id: 'leads', label: 'Leads', icon: 'UserCheck' },
-  ];
+  const activeTabMeta = ADMIN_NAV_ITEMS.find((i) => i.tab === activeTab);
+
+  useEffect(() => {
+    if (!searchParams.get('tab')) {
+      navigate('/admin-dashboard?tab=applications', { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     if (authLoading || !user) return;
-    loadDashboardData();
+    loadStats();
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    loadTabData(activeTab);
   }, [activeTab, authLoading, user]);
 
   const resolveLoanTypeLabel = (app) => {
@@ -186,7 +187,8 @@ const AdminDashboard = () => {
     return { error: null };
   };
 
-  const loadDashboardData = async () => {
+  const loadStats = async () => {
+    if (statsLoaded) return;
     setLoading(true);
     setLoadError('');
 
@@ -196,13 +198,10 @@ const AdminDashboard = () => {
       return;
     }
 
-    const errors = [];
-
-    try {
-      const { data: stats, error: statsError } = await adminService.getDashboardStats();
-      if (statsError) {
-        errors.push(statsError.message);
-      } else if (stats) {
+    const { data: stats, error: statsError } = await adminService.getDashboardStats();
+    if (statsError) {
+      setLoadError(statsError.message);
+    } else if (stats) {
         setStatsData([
           {
             title: 'Total Applications',
@@ -241,14 +240,22 @@ const AdminDashboard = () => {
             trend: 'down'
           }
         ]);
-      }
+    }
+    setStatsLoaded(true);
+    setLoading(false);
+  };
 
-      if (activeTab === 'applications') {
+  const loadTabData = async (tab) => {
+    setTabLoading(true);
+    const errors = [];
+
+    try {
+      if (tab === 'applications') {
         const { error: appsError } = await loadApplications(filters);
         if (appsError) errors.push(appsError.message);
       }
 
-      if (activeTab === 'agents') {
+      if (tab === 'agents') {
         if (typeof adminService.getAllAgents !== 'function') {
           errors.push('Agent list is unavailable. Redeploy the frontend to load the latest admin API.');
         } else {
@@ -273,7 +280,7 @@ const AdminDashboard = () => {
         }
       }
 
-      if (activeTab === 'employees') {
+      if (tab === 'employees') {
         if (typeof adminService.getAllEmployees !== 'function') {
           errors.push('Employee list is unavailable. Redeploy the frontend to load the latest admin API.');
         } else {
@@ -299,30 +306,17 @@ const AdminDashboard = () => {
         }
       }
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
-      errors.push(error?.message || 'Failed to load dashboard data');
+      console.error('Error loading tab data:', error);
+      errors.push(error?.message || 'Failed to load section');
     }
 
     if (errors.length) {
       setLoadError(errors.join(' '));
     }
-    setLoading(false);
+    setTabLoading(false);
   };
 
-  const handleTabClick = (tabId) => {
-    trackEvent('admin_tab_change', { tab: tabId });
-    if (tabId === 'bank-marketplace') {
-      navigate('/bank-marketplace-management');
-    } else if (tabId === 'approval-matrix') {
-      navigate('/approval-matrix-management');
-    } else if (tabId === 'reports') {
-      navigate('/reports-and-analytics');
-    } else if (tabId === 'audit-logs') {
-      navigate('/admin-security-dashboard');
-    } else {
-      setActiveTab(tabId);
-    }
-  };
+  const refreshCurrentTab = () => loadTabData(activeTab);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => {
@@ -354,7 +348,7 @@ const AdminDashboard = () => {
   const handleApproveApplication = async (applicationId, reviewNotes) => {
     const { error } = await adminService?.approveApplication(applicationId, reviewNotes);
     if (!error) {
-      await loadDashboardData();
+      await refreshCurrentTab();
       alert('Application approved successfully');
     } else {
       alert('Failed to approve application: ' + error?.message);
@@ -364,7 +358,7 @@ const AdminDashboard = () => {
   const handleRejectApplication = async (applicationId, rejectionReason) => {
     const { error } = await adminService?.rejectApplication(applicationId, rejectionReason);
     if (!error) {
-      await loadDashboardData();
+      await refreshCurrentTab();
       alert('Application rejected');
     } else {
       alert('Failed to reject application: ' + error?.message);
@@ -379,7 +373,7 @@ const AdminDashboard = () => {
   const handleApproveAgent = async (agentId) => {
     const { error } = await adminService?.approveAgent(agentId);
     if (!error) {
-      await loadDashboardData();
+      await refreshCurrentTab();
       alert('Agent approved successfully');
     } else {
       alert('Failed to approve agent: ' + error?.message);
@@ -392,7 +386,7 @@ const AdminDashboard = () => {
 
     const { error } = await adminService?.rejectAgent(agentId, reason);
     if (!error) {
-      await loadDashboardData();
+      await refreshCurrentTab();
       alert('Agent rejected');
     } else {
       alert('Failed to reject agent: ' + error?.message);
@@ -427,7 +421,7 @@ const AdminDashboard = () => {
     const { error } = await adminService?.updateEmployeeAccessControls(selectedEmployee?.id, accessControls);
     if (!error) {
       setShowAccessControlModal(false);
-      await loadDashboardData();
+      await refreshCurrentTab();
       alert('Access controls updated successfully');
     } else {
       alert('Failed to update access controls: ' + error?.message);
@@ -445,93 +439,47 @@ const AdminDashboard = () => {
   const handleQuickAction = (actionId) => {
     trackEvent('admin_quick_action', { action: actionId });
     const actionMap = {
-      'approve-applications': () => setActiveTab('applications'),
-      'review-agents': () => setActiveTab('agents'),
-      'manage-employees': () => setActiveTab('employees'),
+      'approve-applications': () => navigate('/admin-dashboard?tab=applications'),
+      'review-agents': () => navigate('/admin-dashboard?tab=agents'),
+      'manage-employees': () => navigate('/admin-dashboard?tab=employees'),
       'update-matrix': () => navigate('/interest-matrix-management'),
       'view-reports': () => navigate('/reports-and-analytics'),
-      'system-settings': () => console.log('Open system settings')
+      'system-settings': () => navigate('/admin-dashboard?tab=system'),
     };
 
     const action = actionMap?.[actionId];
     if (action) action();
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header>
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-br from-primary to-secondary p-3 rounded-lg">
-              <Icon name="Shield" className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Admin Dashboard</h2>
-              <p className="text-sm text-gray-600">Manage applications, agents, and system configuration</p>
-            </div>
-          </div>
-          <Button
-            onClick={async () => {
-              await signOut();
-              navigate('/admin-login');
-            }}
-            variant="outline"
-            className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50"
-          >
-            <Icon name="LogOut" className="w-4 h-4" />
-            Logout
-          </Button>
-        </div>
-      </Header>
-      <div className="container mx-auto px-4 py-6 md:py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Manage applications, agents, employees, and system configuration
-          </p>
-        </div>
+  const showStats = ['applications', 'agents', 'employees', 'registrations', 'leads'].includes(activeTab);
 
+  return (
+    <>
         {loadError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
             {loadError}
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
-          {statsData?.map((stat, index) => (
-            <StatsCard key={index} {...stat} />
-          ))}
+        {showStats && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-5">
+            {statsData?.map((stat, index) => (
+              <StatsCard key={index} {...stat} />
+            ))}
+          </div>
+        )}
+
+        <div className="mb-4">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">
+            {activeTabMeta?.label || 'Dashboard'}
+          </h1>
         </div>
 
-        {/* Tabs */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
-          <div className="border-b border-border overflow-x-auto">
-            <div className="flex space-x-1 p-2 min-w-max">
-              {tabs?.map((tab) => (
-                <button
-                  key={tab?.id}
-                  onClick={() => handleTabClick(tab?.id)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
-                    activeTab === tab?.id
-                      ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  <Icon name={tab?.icon} size={18} />
-                  <span className="text-sm font-medium">{tab?.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-4 md:p-6">
-            {loading ? (
+        <div className="bg-card rounded-lg border border-border p-4 md:p-6">
+            {loading || tabLoading ? (
               <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p className="mt-4 text-muted-foreground">Loading...</p>
+                <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+                <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
               </div>
             ) : (
               <>
@@ -608,6 +556,8 @@ const AdminDashboard = () => {
 
                 {activeTab === 'bank-management' && <BankManagementTab />}
 
+                {activeTab === 'loan-products' && <LoanProductsTab />}
+
                 {activeTab === 'homepage-cms' && <HomepageCmsTab />}
 
                 {activeTab === 'status-check' && <StatusCheckAdminTab />}
@@ -625,20 +575,18 @@ const AdminDashboard = () => {
                 )}
               </>
             )}
-          </div>
         </div>
-      </div>
 
       {/* Modals */}
       <AgentOnboardingModal
         isOpen={showAgentModal}
         onClose={() => setShowAgentModal(false)}
-        onSuccess={loadDashboardData}
+        onSuccess={refreshCurrentTab}
       />
       <EmployeeOnboardingModal
         isOpen={showEmployeeModal}
         onClose={() => setShowEmployeeModal(false)}
-        onSuccess={loadDashboardData}
+        onSuccess={refreshCurrentTab}
       />
       <CommissionConfigModal
         agent={selectedAgent}
@@ -659,7 +607,7 @@ const AdminDashboard = () => {
         onApprove={handleApproveApplication}
         onReject={handleRejectApplication}
       />
-    </div>
+    </>
   );
 };
 

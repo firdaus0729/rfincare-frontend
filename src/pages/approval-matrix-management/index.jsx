@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import Header from '../../components/ui/Header';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -245,8 +244,7 @@ const ApprovalMatrixManagement = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <div>
       <div className="container mx-auto px-4 py-6 md:py-8">
         <div className="flex items-center justify-between mb-6">
           <div>

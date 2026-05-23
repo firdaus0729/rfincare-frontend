@@ -10,6 +10,7 @@ import BankListItem from './components/BankListItem';
 import FilterPanel from './components/FilterPanel';
 import SortBar from './components/SortBar';
 import BankComparisonPanel from '../../components/bank-comparison/BankComparisonPanel';
+import { MAX_BANK_COMPARE } from '../../constants/bankComparison';
 import { bankService } from '../../services/apiServices';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -380,6 +381,7 @@ const BankMarketplace = () => {
                 onRemoveBank={handleRemoveFromCompare}
                 onClearAll={handleClearCompare}
                 compareCount={compareList.length}
+                maxCompare={MAX_BANK_COMPARE}
               />
             </div>
 

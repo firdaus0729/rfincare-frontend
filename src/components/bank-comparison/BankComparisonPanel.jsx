@@ -2,6 +2,7 @@ import React from 'react';
 import Icon from '../AppIcon';
 import Button from '../ui/Button';
 import BankComparisonTable from './BankComparisonTable';
+import { MAX_BANK_COMPARE } from '../../constants/bankComparison';
 
 const BankComparisonPanel = ({
   productLabel,
@@ -13,7 +14,7 @@ const BankComparisonPanel = ({
   onRemoveBank,
   onClearAll,
   compareCount,
-  maxCompare = 3,
+  maxCompare = MAX_BANK_COMPARE,
 }) => {
   if (!compareCount) return null;
 

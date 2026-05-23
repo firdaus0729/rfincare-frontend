@@ -4,25 +4,35 @@ import Header from '../../components/ui/Header';
 import Footer from '../homepage/components/Footer';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
-import { getLoanProductBySlug, LOAN_PRODUCTS } from '../../constants/loanProducts';
+import { getLoanProductBySlug } from '../../constants/loanProducts';
+import { useLoanProducts } from '../../contexts/LoanProductsContext';
 import NotFound from '../NotFound';
 import BankOffersSection from './components/BankOffersSection';
 
 const ProductLanding = () => {
   const { loanType } = useParams();
   const navigate = useNavigate();
-  const product = useMemo(() => getLoanProductBySlug(loanType), [loanType]);
+  const { products, loading } = useLoanProducts();
+  const product = useMemo(() => getLoanProductBySlug(loanType), [loanType, products]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [loanType]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading product…</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return <NotFound />;
   }
 
   const qs = `loanType=${product.slug}`;
-  const otherProducts = LOAN_PRODUCTS.filter((p) => p.slug !== product.slug);
+  const otherProducts = products.filter((p) => p.slug !== product.slug);
 
   return (
     <div className="min-h-screen bg-background">

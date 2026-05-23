@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-
+import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '../../components/ui/Header';
+
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
@@ -15,6 +15,8 @@ import StorageIndicator from './components/StorageIndicator';
 
 const DocumentManagementCenter = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const useAdminChrome = location.pathname.startsWith('/admin/');
   const [documents, setDocuments] = useState([]);
   const [filteredDocuments, setFilteredDocuments] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -311,9 +313,9 @@ const DocumentManagementCenter = () => {
 
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 lg:py-12">
+    <div className={useAdminChrome ? '' : 'min-h-screen bg-background'}>
+      {!useAdminChrome && <Header />}
+      <main className={useAdminChrome ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 lg:py-12'}>
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div>

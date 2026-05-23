@@ -4,7 +4,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { apiClient } from '../../lib/apiClient';
 
 import { trackEvent } from '../../hooks/useGoogleAnalytics';
-import Header from '../../components/ui/Header';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import StatsCard from '../admin-dashboard/components/StatsCard';
@@ -163,9 +162,8 @@ const AdminSecurityDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+      <div>
+        <div className="flex items-center justify-center py-24">
           <div className="text-center">
             <Icon name="Loader" size={48} className="animate-spin text-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Loading security dashboard...</p>
@@ -176,9 +174,8 @@ const AdminSecurityDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-8">
+    <div>
+      <div>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">Security Monitoring</h1>

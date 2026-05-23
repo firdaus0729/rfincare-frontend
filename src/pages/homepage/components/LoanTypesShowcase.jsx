@@ -2,10 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
-import { LOAN_PRODUCTS } from '../../../constants/loanProducts';
+import { useLoanProducts } from '../../../contexts/LoanProductsContext';
 
 const LoanTypesShowcase = () => {
   const navigate = useNavigate();
+  const { products: loanProducts, loading } = useLoanProducts();
 
   return (
     <section className="bg-muted py-12 md:py-16 lg:py-20">
@@ -20,7 +21,10 @@ const LoanTypesShowcase = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {LOAN_PRODUCTS.map((loan) => (
+          {loading && (
+            <p className="col-span-full text-center text-muted-foreground py-8">Loading loan products…</p>
+          )}
+          {!loading && loanProducts.map((loan) => (
             <div key={loan.slug} className="feature-card">
               <div className="flex items-start space-x-4 mb-4">
                 <div

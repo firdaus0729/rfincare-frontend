@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-import Header from '../../components/ui/Header';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 
@@ -216,8 +215,7 @@ const ReportsAndAnalytics = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <div>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0 mb-6">

@@ -2,15 +2,13 @@ import React from 'react';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 import { Checkbox } from '../../../components/ui/Checkbox';
+import { useLoanProducts } from '../../../contexts/LoanProductsContext';
 
 const FinancialInfoForm = ({ formData, errors, onChange }) => {
+  const { products } = useLoanProducts();
   const loanPurposeOptions = [
-    { value: 'home_loan', label: 'Home Loan' },
-    { value: 'personal_loan', label: 'Personal Loan' },
-    { value: 'business_loan', label: 'Business Loan' },
-    { value: 'auto_loan', label: 'Auto Loan' },
-    { value: 'education_loan', label: 'Education Loan' },
-    { value: 'debt_consolidation', label: 'Debt Consolidation' }
+    ...products.map((p) => ({ value: p.apiKey, label: p.label })),
+    { value: 'debt_consolidation', label: 'Debt Consolidation' },
   ];
 
   const creditScoreRangeOptions = [
