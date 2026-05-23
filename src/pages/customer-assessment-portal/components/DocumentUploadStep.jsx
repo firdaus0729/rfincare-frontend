@@ -5,6 +5,12 @@ import { customerJourneyService } from '../../../services/customerJourneyService
 import DocumentPreviewModal from './DocumentPreviewModal';
 
 const REQUIRED_DOCS = [
+  {
+    type: 'customer_photo',
+    label: 'Customer photo',
+    description: 'Recent passport-size photo (JPG or PNG, face clearly visible)',
+    icon: 'User',
+  },
   { type: 'pan_card', label: 'PAN Card', description: 'Clear photo or PDF of your PAN card', icon: 'CreditCard' },
   { type: 'aadhaar_card', label: 'Aadhaar Card', description: 'Front side of Aadhaar (mask last 4 digits if preferred)', icon: 'Contact' },
   { type: 'income_proof', label: 'Income Proof', description: 'Salary slip, ITR, or last 3 months bank statement', icon: 'FileText' },
@@ -39,6 +45,7 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
           documentName: doc.documentName,
           documentType: docType,
           mimeType: doc.mimeType,
+          previewUrl: doc.previewUrl,
         });
       });
     })();
@@ -55,9 +62,16 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
     const file = event.target.files?.[0];
     if (!file || !applicationId) return;
 
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    const imageOnly = docType === 'customer_photo';
+    const allowed = imageOnly
+      ? ['image/jpeg', 'image/png', 'image/webp']
+      : ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!allowed.includes(file.type)) {
-      setUploadError('Please upload JPG, PNG, or PDF files only.');
+      setUploadError(
+        imageOnly
+          ? 'Customer photo must be a JPG or PNG image.'
+          : 'Please upload JPG, PNG, or PDF files only.',
+      );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -89,6 +103,7 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
       documentName: data?.documentName || file.name,
       documentType: docType,
       mimeType: data?.mimeType || file.type,
+      previewUrl: data?.previewUrl,
       localPreviewUrl,
     });
   };
@@ -105,7 +120,7 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
           <div>
             <h3 className="text-base md:text-lg font-semibold text-foreground mb-1">Upload Required Documents</h3>
             <p className="text-sm text-muted-foreground">
-              Upload clear copies of the documents below. Accepted formats: JPG, PNG, PDF (max 10 MB each).
+              Upload clear copies of the documents below. Customer photo: JPG or PNG only. Other documents: JPG, PNG, or PDF (max 10 MB each).
             </p>
           </div>
         </div>
@@ -146,7 +161,11 @@ const DocumentUploadStep = ({ applicationId, uploadedDocs, onUploaded, errors })
                 <input
                   ref={(el) => { fileRefs.current[doc.type] = el; }}
                   type="file"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  accept={
+                    doc.type === 'customer_photo'
+                      ? '.jpg,.jpeg,.png,image/jpeg,image/png,image/webp'
+                      : '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf'
+                  }
                   className="hidden"
                   onChange={(e) => handleFileSelect(doc.type, e)}
                 />

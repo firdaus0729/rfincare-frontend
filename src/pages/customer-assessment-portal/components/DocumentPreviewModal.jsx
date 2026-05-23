@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { customerJourneyService } from '../../../services/customerJourneyService';
+import { getDocumentPreviewUrl } from '../../../utils/documentUrls';
 
 const DocumentPreviewModal = ({ isOpen, document, onClose }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -17,6 +18,14 @@ const DocumentPreviewModal = ({ isOpen, document, onClose }) => {
 
     if (document.localPreviewUrl) {
       setPreviewUrl(document.localPreviewUrl);
+      setLoading(false);
+      setError('');
+      return undefined;
+    }
+
+    const staticUrl = getDocumentPreviewUrl(document);
+    if (staticUrl && (document.mimeType || '').startsWith('image/')) {
+      setPreviewUrl(staticUrl);
       setLoading(false);
       setError('');
       return undefined;

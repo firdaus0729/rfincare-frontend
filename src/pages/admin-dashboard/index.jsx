@@ -24,6 +24,8 @@ import AccessControlModal from './components/AccessControlModal';
 import DocumentVerificationModal from './components/DocumentVerificationModal';
 import { adminService } from '../../services/adminService';
 import { getLoanProductBySlug } from '../../constants/loanProducts';
+import { pickCustomerPhotoDocument } from '../../utils/applicationFormDetails';
+import { getDocumentPreviewUrl } from '../../utils/documentUrls';
 import BankManagementTab from './components/BankManagementTab';
 import HomepageCmsTab from './components/HomepageCmsTab';
 import LeadsTab from './components/LeadsTab';
@@ -137,12 +139,15 @@ const AdminDashboard = () => {
     return Number.isFinite(num) ? num : 0;
   };
 
-  const mapApplicationRow = (app) => ({
+  const mapApplicationRow = (app, customerImage = null) => ({
     id: app?.id,
+    rawApplication: app,
     customerName: app?.customer?.fullName || 'Unknown',
     customerEmail: app?.customer?.email || '',
-    customerImage: 'https://img.rocket.new/generatedImages/rocket_gen_img_14da91c34-1763294780479.png',
-    customerImageAlt: `Profile picture of ${app?.customer?.fullName}`,
+    customerImage,
+    customerImageAlt: customerImage
+      ? `Photo of ${app?.customer?.fullName || 'customer'}`
+      : `Profile of ${app?.customer?.fullName || 'customer'}`,
     loanType: resolveLoanTypeLabel(app),
     amount: resolveLoanAmount(app),
     bankName: app?.bank?.name || 'Not selected',
@@ -153,13 +158,31 @@ const AdminDashboard = () => {
     date: new Date(app?.createdAt || app?.submittedAt)?.toISOString()?.split('T')?.[0] || '',
   });
 
+  const enrichApplicationsWithPhotos = async (apps) => {
+    const rows = await Promise.all(
+      apps.map(async (app) => {
+        try {
+          const { data: docs } = await adminService.getApplicationDocuments(app.id);
+          const photo = pickCustomerPhotoDocument(docs || []);
+          const url = getDocumentPreviewUrl(photo);
+          return mapApplicationRow(app, url);
+        } catch {
+          return mapApplicationRow(app, null);
+        }
+      }),
+    );
+    return rows;
+  };
+
   const loadApplications = async (filterState = filters) => {
     const { data: apps, error } = await adminService.getAllApplications(filterState);
     if (error) {
       setApplicationsData([]);
       return { error };
     }
-    setApplicationsData(Array.isArray(apps) ? apps.map(mapApplicationRow) : []);
+    const list = Array.isArray(apps) ? apps : [];
+    const rows = await enrichApplicationsWithPhotos(list);
+    setApplicationsData(rows);
     return { error: null };
   };
 

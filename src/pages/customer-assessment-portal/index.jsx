@@ -339,7 +339,7 @@ const CustomerAssessmentPortal = () => {
         break;
 
       case 6: {
-        const required = ['pan_card', 'aadhaar_card', 'income_proof'];
+        const required = ['customer_photo', 'pan_card', 'aadhaar_card', 'income_proof'];
         required.forEach((type) => {
           if (!uploadedDocs?.[type]) {
             newErrors[type] = 'This document is required';

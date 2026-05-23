@@ -94,11 +94,17 @@ const ApplicationTable = ({ applications, onViewDetails, onApprove, onReject }) 
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center space-x-3">
-                    <Image
-                      src={app?.customerImage}
-                      alt={app?.customerImageAlt}
-                      className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover"
-                    />
+                    {app?.customerImage ? (
+                      <Image
+                        src={app.customerImage}
+                        alt={app?.customerImageAlt}
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-border"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon name="User" size={18} className="text-primary" />
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="text-sm md:text-base font-semibold text-foreground truncate">{app?.customerName}</p>
                       <p className="text-xs text-muted-foreground truncate">{app?.customerEmail}</p>

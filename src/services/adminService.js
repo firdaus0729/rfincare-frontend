@@ -24,6 +24,25 @@ export const adminService = {
     }
   },
 
+  async getApplicationById(applicationId) {
+    try {
+      const res = await apiClient.get(`/loan-applications/${applicationId}`);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to fetch application') };
+    }
+  },
+
+  async getApplicationDocuments(applicationId) {
+    try {
+      const res = await apiClient.get('/documents', { params: { applicationId } });
+      const list = toCamelCase(res.data);
+      return { data: Array.isArray(list) ? list : [], error: null };
+    } catch (error) {
+      return { data: [], error: apiError(error, 'Failed to fetch documents') };
+    }
+  },
+
   async approveApplication(applicationId, reviewNotes = '') {
     try {
       const res = await apiClient.patch(`/loan-applications/${applicationId}`, {
