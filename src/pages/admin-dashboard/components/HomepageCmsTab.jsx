@@ -6,6 +6,7 @@ import { cmsService } from '../../../services/cmsService';
 import { homepageService } from '../../../services/homepageService';
 import { prepareLegalHtml } from '../../../utils/legalContent';
 import { getStoryPhotoUrl, formatStoryDate } from '../../../utils/storyMedia';
+import SiteContactSettingsForm from './SiteContactSettingsForm';
 
 const HomepageCmsTab = () => {
   const [tab, setTab] = useState('news');
@@ -37,10 +38,11 @@ const HomepageCmsTab = () => {
   return (
     <div className="space-y-6">
       <div className="flex gap-2 flex-wrap">
-        {['news', 'videos', 'stories', 'legal'].map((t) => (
+        {['contact', 'news', 'videos', 'stories', 'legal'].map((t) => (
           <Button key={t} variant={tab === t ? 'default' : 'outline'} size="sm" onClick={() => setTab(t)}>{t}</Button>
         ))}
       </div>
+      {tab === 'contact' && <SiteContactSettingsForm />}
       {tab === 'news' && (
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-3 border rounded-lg p-4">

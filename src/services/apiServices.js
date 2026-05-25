@@ -1,4 +1,9 @@
 import { apiClient } from '../lib/apiClient';
+import {
+  buildBankListCacheKey,
+  fetchBanksCached,
+  invalidateBankCache,
+} from './bankCache';
 
 // Helper function to convert snake_case to camelCase
 const toCamelCase = (obj) => {
@@ -24,16 +29,23 @@ const toSnakeCase = (obj) => {
   }, {});
 };
 
-export const bankService = {
-  async getAllBanks() {
-    const res = await apiClient.get('/banks', { params: { includeInactive: true } });
-    return toCamelCase(res?.data);
-  },
-  async getActiveBanks(options = {}) {
-    const params = { includeProducts: true };
-    if (options.loanType) params.loanType = options.loanType;
+async function fetchBankList(params) {
+  const key = buildBankListCacheKey(params);
+  return fetchBanksCached(key, async () => {
     const res = await apiClient.get('/banks', { params });
     return toCamelCase(res?.data);
+  });
+}
+
+export const bankService = {
+  async getAllBanks() {
+    return fetchBankList({ includeInactive: true, includeProducts: true });
+  },
+  async getActiveBanks(options = {}) {
+    const params = { includeProducts: options.includeProducts !== false };
+    if (options.loanType) params.loanType = options.loanType;
+    if (options.includeProducts === false) params.includeProducts = false;
+    return fetchBankList(params);
   },
   async getBankById(bankId) {
     const res = await apiClient.get(`/banks/${bankId}`);
@@ -44,6 +56,7 @@ export const bankService = {
     if (payload.logo_url === '') payload.logo_url = null;
     if (payload.logo_alt === '') payload.logo_alt = null;
     const res = await apiClient.post('/banks', payload);
+    invalidateBankCache();
     return toCamelCase(res?.data);
   },
   async updateBank(bankId, bankData) {
@@ -51,10 +64,12 @@ export const bankService = {
     if (payload.logo_url === '') payload.logo_url = null;
     if (payload.logo_alt === '') payload.logo_alt = null;
     const res = await apiClient.patch(`/banks/${bankId}`, payload);
+    invalidateBankCache();
     return toCamelCase(res?.data);
   },
   async deleteBank(bankId) {
     await apiClient.delete(`/banks/${bankId}`);
+    invalidateBankCache();
   },
   async getBankProducts(bankId) {
     const res = await apiClient.get(`/banks/${bankId}/products`);
@@ -62,14 +77,17 @@ export const bankService = {
   },
   async createBankProduct(bankId, productData) {
     const res = await apiClient.post(`/banks/${bankId}/products`, toSnakeCase(productData));
+    invalidateBankCache();
     return toCamelCase(res?.data);
   },
   async updateBankProduct(productId, productData) {
     const res = await apiClient.patch(`/bank-products/${productId}`, toSnakeCase(productData));
+    invalidateBankCache();
     return toCamelCase(res?.data);
   },
   async deleteBankProduct(productId) {
     await apiClient.delete(`/bank-products/${productId}`);
+    invalidateBankCache();
   },
   async getBanksWithProbability(userProfile) {
     const res = await apiClient.post('/banks/probability', userProfile);

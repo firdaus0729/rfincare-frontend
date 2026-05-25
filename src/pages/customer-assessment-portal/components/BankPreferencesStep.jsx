@@ -17,7 +17,7 @@ const BankPreferencesStep = ({ formData, onChange, errors = {} }) => {
 
   useEffect(() => {
     bankService
-      .getActiveBanks()
+      .getActiveBanks({ includeProducts: false })
       .then((data) => setBanks(Array.isArray(data) ? data : []))
       .catch(() => setBanks([]));
   }, []);

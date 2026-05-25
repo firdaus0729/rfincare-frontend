@@ -67,6 +67,19 @@ export const adminService = {
     }
   },
 
+  async requestDeleteApplicationsOtp() {
+    const res = await apiClient.post('/loan-applications/bulk-delete/request-otp');
+    return res.data;
+  },
+
+  async confirmDeleteApplications(applicationIds, otp) {
+    const res = await apiClient.post('/loan-applications/bulk-delete/confirm', {
+      applicationIds,
+      otp,
+    });
+    return res.data;
+  },
+
   async getDashboardStats() {
     try {
       const res = await apiClient.get('/admin/stats');
@@ -103,6 +116,27 @@ export const adminService = {
     }
   },
 
+  /** Employees + agents for lead assignment (names and codes). */
+  async getStaffAssignees() {
+    try {
+      const res = await apiClient.get('/admin/assignees');
+      const data = toCamelCase(res.data);
+      return {
+        data: {
+          employees: data?.employees || [],
+          agents: data?.agents || [],
+          all: data?.all || [...(data?.employees || []), ...(data?.agents || [])],
+        },
+        error: null,
+      };
+    } catch (error) {
+      return {
+        data: { employees: [], agents: [], all: [] },
+        error: apiError(error, 'Failed to load staff for assignment'),
+      };
+    }
+  },
+
   async approveAgent(agentId) {
     try {
       const res = await apiClient.patch(`/admin/agents/${agentId}`, {
@@ -136,16 +170,26 @@ export const adminService = {
     return { error: null };
   },
 
-  async createAgentOnboarding() {
-    return { data: null, error: { message: 'Agent creation migrated to manual seeding for security.' } };
+  async createAgentOnboarding(formData) {
+    try {
+      const res = await apiClient.post('/admin/agents', formData);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to create agent') };
+    }
   },
 
   async getAgentOnboardingList() {
     return { data: [], error: null };
   },
 
-  async createEmployeeOnboarding() {
-    return { data: null, error: { message: 'Employee creation migrated to manual seeding.' } };
+  async createEmployeeOnboarding(formData) {
+    try {
+      const res = await apiClient.post('/admin/employees', formData);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to create employee') };
+    }
   },
 
   async getEmployeeOnboardingList() {

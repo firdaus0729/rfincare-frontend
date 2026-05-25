@@ -5,6 +5,7 @@ import ErrorBoundary from "components/ErrorBoundary";
 import ProtectedRoute from "components/ProtectedRoute";
 import AdminRouteShell from "./components/layout/AdminRouteShell";
 import { LoanProductsProvider } from "./contexts/LoanProductsContext";
+import { SiteContactProvider } from "./contexts/SiteContactContext";
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
 import NotFound from "pages/NotFound";
 
@@ -15,6 +16,7 @@ import ContactUs from './pages/contact-us';
 import ProductComparison from './pages/product-comparison';
 import ProductLanding from './pages/product-landing';
 import EligibilityAssessment from './pages/eligibility-assessment';
+import LoanEmiCalculator from './pages/loan-emi-calculator';
 import LegalPage from './pages/legal-page';
 import ShareYourStory from './pages/share-your-story';
 import OAuthCallback from './pages/oauth-callback';
@@ -66,6 +68,7 @@ function Routes() {
   return (
     <BrowserRouter>
       <LoanProductsProvider>
+      <SiteContactProvider>
       <ErrorBoundary>
         <GoogleAnalyticsTracker />
         <ScrollToTop />
@@ -78,6 +81,7 @@ function Routes() {
           <Route path="/products/:loanType" element={<ProductLanding />} />
           <Route path="/product-comparison" element={<ProductComparison />} />
           <Route path="/eligibility-assessment" element={<EligibilityAssessment />} />
+          <Route path="/resources/loan-emi-calculator" element={<LoanEmiCalculator />} />
           <Route path="/legal/:slug" element={<LegalPage />} />
           <Route path="/share-your-story" element={<ShareYourStory />} />
           <Route path="/oauth/callback" element={<OAuthCallback />} />
@@ -177,6 +181,7 @@ function Routes() {
           <Route path="*" element={<NotFound />} />
         </RouterRoutes>
       </ErrorBoundary>
+      </SiteContactProvider>
       </LoanProductsProvider>
     </BrowserRouter>
   );

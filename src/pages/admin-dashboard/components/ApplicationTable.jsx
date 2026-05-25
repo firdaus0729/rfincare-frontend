@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Image from '../../../components/AppImage';
 
-const ApplicationTable = ({ applications, onViewDetails, onApprove, onReject }) => {
+const ApplicationTable = ({
+  applications,
+  onViewDetails,
+  onApprove,
+  onReject,
+  onBulkDelete,
+  selectionResetKey = 0,
+}) => {
   const [selectedApps, setSelectedApps] = useState([]);
+
+  useEffect(() => {
+    setSelectedApps([]);
+  }, [selectionResetKey]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -106,6 +117,9 @@ const ApplicationTable = ({ applications, onViewDetails, onApprove, onReject }) 
                       </div>
                     )}
                     <div className="min-w-0">
+                      <p className="text-xs font-semibold text-primary truncate mb-0.5">
+                        {app?.applicationNumber}
+                      </p>
                       <p className="text-sm md:text-base font-semibold text-foreground truncate">{app?.customerName}</p>
                       <p className="text-xs text-muted-foreground truncate">{app?.customerEmail}</p>
                     </div>
@@ -186,6 +200,14 @@ const ApplicationTable = ({ applications, onViewDetails, onApprove, onReject }) 
             </Button>
             <Button variant="destructive" size="sm" iconName="X">
               Bulk Reject
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              iconName="Trash2"
+              onClick={() => onBulkDelete?.(selectedApps)}
+            >
+              Delete
             </Button>
           </div>
         </div>

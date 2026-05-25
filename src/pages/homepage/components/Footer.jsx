@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/AppIcon';
 import BrandLogo from '../../../components/ui/BrandLogo';
 import { useLoanProducts } from '../../../contexts/LoanProductsContext';
+import { useSiteContact } from '../../../contexts/SiteContactContext';
 
 const Footer = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { products: loanProducts } = useLoanProducts();
+  const { contact } = useSiteContact();
   const currentYear = new Date()?.getFullYear();
 
   const footerLinks = {
@@ -25,7 +27,7 @@ const Footer = () => {
     resources: [
       { label: t('footer.helpCenter'), path: '/legal/help-center' },
       { label: t('footer.financialGuides'), path: '/legal/financial-guides' },
-      { label: t('footer.loanCalculator'), path: '/eligibility-assessment' },
+      { label: t('footer.loanEmiCalculator'), path: '/resources/loan-emi-calculator' },
       { label: 'Share Your Story', path: '/share-your-story' },
     ],
     legal: [
@@ -37,10 +39,10 @@ const Footer = () => {
   };
 
   const socialLinks = [
-    { name: 'Facebook', icon: 'Facebook', url: '#' },
-    { name: 'Twitter', icon: 'Twitter', url: '#' },
-    { name: 'Linkedin', icon: 'Linkedin', url: '#' },
-    { name: 'Instagram', icon: 'Instagram', url: '#' }
+    { name: 'Facebook', icon: 'Facebook', url: contact.socialFacebook },
+    { name: 'Twitter', icon: 'Twitter', url: contact.socialTwitter },
+    { name: 'Linkedin', icon: 'Linkedin', url: contact.socialLinkedin },
+    { name: 'Instagram', icon: 'Instagram', url: contact.socialInstagram },
   ];
 
   return (
@@ -52,37 +54,43 @@ const Footer = () => {
               <BrandLogo size="md" />
             </div>
             <p className="text-sm md:text-base text-muted-foreground mb-4 max-w-sm">
-              {t('footer.tagline')}
+              {contact.tagline || t('footer.tagline')}
             </p>
             <div className="space-y-2 mb-4">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Icon name="Mail" size={16} />
-                <a href={`mailto:${t('footer.email')}`} className="hover:text-primary transition-colors">
-                  {t('footer.email')}
+                <a href={`mailto:${contact.email}`} className="hover:text-primary transition-colors">
+                  {contact.email}
                 </a>
               </div>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Icon name="Phone" size={16} />
-                <a href={`tel:${t('footer.phone')}`} className="hover:text-primary transition-colors">
-                  {t('footer.phone')}
+                <a href={`tel:${contact.phone}`} className="hover:text-primary transition-colors">
+                  {contact.phone}
                 </a>
               </div>
             </div>
             <div className="space-y-3 mb-4 text-xs text-muted-foreground">
               <div>
-                <p className="font-semibold text-foreground mb-1">{t('footer.registeredOffice')}</p>
-                <p>{t('footer.registeredAddress')}</p>
+                <p className="font-semibold text-foreground mb-1">
+                  {contact.registeredOfficeLabel || t('footer.registeredOffice')}
+                </p>
+                <p>{contact.registeredAddress}</p>
               </div>
               <div>
-                <p className="font-semibold text-foreground mb-1">{t('footer.branchOffice')}</p>
-                <p>{t('footer.branchAddress')}</p>
+                <p className="font-semibold text-foreground mb-1">
+                  {contact.branchOfficeLabel || t('footer.branchOffice')}
+                </p>
+                <p>{contact.branchAddress}</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               {socialLinks?.map((social) => (
                 <a
                   key={social?.name}
-                  href={social?.url}
+                  href={social?.url || '#'}
+                  target={social?.url?.startsWith('http') ? '_blank' : undefined}
+                  rel={social?.url?.startsWith('http') ? 'noopener noreferrer' : undefined}
                   className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all"
                   aria-label={social?.name}
                 >

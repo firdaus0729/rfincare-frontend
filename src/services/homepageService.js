@@ -48,6 +48,11 @@ export const homepageService = {
     const res = await apiClient.post('/public/draft-recovery/verify', payload);
     return res.data;
   },
+  async getSiteContact() {
+    const res = await apiClient.get('/public/site-contact');
+    return res.data;
+  },
+
   async getLegalPage(slug) {
     const res = await apiClient.get(`/public/legal/${slug}`);
     return res.data;

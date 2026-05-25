@@ -1,15 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { leadService } from '../../../services/leadService';
 import { adminService } from '../../../services/adminService';
 import Button from '../../../components/ui/Button';
-import Input from '../../../components/ui/Input';
 
 const LeadsTab = () => {
   const [leads, setLeads] = useState([]);
-  const [assignees, setAssignees] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [assigneesLoading, setAssigneesLoading] = useState(true);
   const [error, setError] = useState('');
+  const [assigneesError, setAssigneesError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+
+  const loadAssignees = useCallback(async () => {
+    setAssigneesLoading(true);
+    setAssigneesError('');
+    const { data, error: err } = await adminService.getStaffAssignees();
+    if (err) {
+      setAssigneesError(err.message);
+      setEmployees([]);
+      setAgents([]);
+    } else {
+      setEmployees(data?.employees || []);
+      setAgents(data?.agents || []);
+    }
+    setAssigneesLoading(false);
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -27,28 +44,19 @@ const LeadsTab = () => {
 
   useEffect(() => {
     load();
-    Promise.all([adminService.getAllEmployees(), adminService.getAllAgents()])
-      .then(([empRes, agentRes]) => {
-        const list = [
-          ...(empRes?.data || []).map((e) => ({
-            id: e.id,
-            label: `${e.employeeName || e.employee_name || 'Employee'} (${e.email})`,
-          })),
-          ...(agentRes?.data || []).map((a) => ({
-            id: a.id,
-            label: `${a.agentName || a.agent_name || 'Agent'} (${a.email})`,
-          })),
-        ];
-        setAssignees(list);
-      })
-      .catch(() => setAssignees([]));
-  }, []);
+    loadAssignees();
+  }, [loadAssignees]);
+
+  const handleRefresh = () => {
+    load();
+    loadAssignees();
+  };
 
   const handleAssign = async (leadId, assignedTo) => {
     if (!assignedTo) return;
     try {
       await leadService.assignLead(leadId, assignedTo);
-      setActionMsg('Lead assigned.');
+      setActionMsg('Lead assigned successfully.');
       load();
     } catch (err) {
       setActionMsg(err?.response?.data?.error || 'Assign failed');
@@ -77,29 +85,78 @@ const LeadsTab = () => {
     }
   };
 
-  if (loading) {
+  const staffCount = employees.length + agents.length;
+
+  const renderAssignSelect = (lead) => (
+    <select
+      className="w-full border border-border rounded-md px-2 py-1.5 text-sm bg-background min-w-[220px]"
+      value={lead.assignedTo || ''}
+      disabled={assigneesLoading || staffCount === 0}
+      onChange={(e) => handleAssign(lead.id, e.target.value)}
+    >
+      <option value="">
+        {assigneesLoading
+          ? 'Loading staff…'
+          : staffCount === 0
+            ? 'No employees/agents — create staff first'
+            : 'Assign to…'}
+      </option>
+      {employees.length > 0 && (
+        <optgroup label="Employees">
+          {employees.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.label}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {agents.length > 0 && (
+        <optgroup label="Agents">
+          {agents.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.label}
+            </option>
+          ))}
+        </optgroup>
+      )}
+    </select>
+  );
+
+  if (loading && leads.length === 0) {
     return <p className="text-muted-foreground p-6">Loading leads…</p>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-bold">Marketing leads</h2>
           <p className="text-sm text-muted-foreground">
             Eligibility OTP leads and abandoned application drafts
           </p>
+          {!assigneesLoading && staffCount > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {employees.length} employee(s), {agents.length} agent(s) available to assign
+            </p>
+          )}
         </div>
-        <Button variant="outline" onClick={load}>
+        <Button variant="outline" onClick={handleRefresh}>
           Refresh
         </Button>
       </div>
+
       {error && (
         <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">{error}</div>
+      )}
+      {assigneesError && (
+        <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+          {assigneesError} — redeploy backend and ensure employees/agents are created in Admin.
+        </div>
       )}
       {actionMsg && (
         <div className="p-3 bg-primary/10 text-primary rounded-lg text-sm break-all">{actionMsg}</div>
       )}
+
       <div className="overflow-x-auto border border-border rounded-lg">
         <table className="w-full text-sm min-w-[900px]">
           <thead className="bg-muted">
@@ -135,21 +192,23 @@ const LeadsTab = () => {
                     </span>
                   </td>
                   <td className="p-3">{lead.eligibilityScore ?? '—'}</td>
-                  <td className="p-3 min-w-[180px]">
-                    <select
-                      className="w-full border border-border rounded-md px-2 py-1.5 text-sm bg-background"
-                      defaultValue=""
-                      onChange={(e) => handleAssign(lead.id, e.target.value)}
-                    >
-                      <option value="">Assign to…</option>
-                      {assignees.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.label}
-                        </option>
-                      ))}
-                    </select>
+                  <td className="p-3 min-w-[240px]">
+                    {renderAssignSelect(lead)}
                     {lead.assignedTo && (
-                      <p className="text-xs text-muted-foreground mt-1">Assigned</p>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Assigned:{' '}
+                        <span className="font-medium text-foreground">
+                          {lead.assignedToCode && lead.assignedToName
+                            ? `${lead.assignedToCode} — ${lead.assignedToName}`
+                            : lead.assignedToName || lead.assignedToCode || 'Staff member'}
+                        </span>
+                        {lead.assignedToRole && (
+                          <span className="text-muted-foreground">
+                            {' '}
+                            ({lead.assignedToRole})
+                          </span>
+                        )}
+                      </p>
                     )}
                   </td>
                   <td className="p-3">

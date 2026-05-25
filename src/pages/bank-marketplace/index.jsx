@@ -53,6 +53,7 @@ const BankMarketplace = () => {
   const [comparisonOverrides, setComparisonOverrides] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [loadSlowHint, setLoadSlowHint] = useState(false);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -69,8 +70,11 @@ const BankMarketplace = () => {
   }, [loanTypeSlug]);
 
   const loadBanks = async () => {
+    let slowTimer;
     try {
       setLoading(true);
+      setLoadSlowHint(false);
+      slowTimer = setTimeout(() => setLoadSlowHint(true), 4000);
       const data = await bankService?.getActiveBanks({
         loanType: loanTypeSlug || undefined,
       });
@@ -88,6 +92,7 @@ const BankMarketplace = () => {
       setBanks([]);
       console.error('Failed to load banks:', err);
     } finally {
+      if (slowTimer) clearTimeout(slowTimer);
       setLoading(false);
     }
   };
@@ -389,6 +394,11 @@ const BankMarketplace = () => {
             <section className="bg-card rounded-lg border border-border p-8 md:p-12 text-center">
                 <span className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4" />
                 <p className="text-muted-foreground">Loading partner banks...</p>
+                {loadSlowHint && (
+                  <p className="text-xs text-muted-foreground mt-3 max-w-sm mx-auto">
+                    First load may take a moment while the server wakes up. Repeat visits are faster.
+                  </p>
+                )}
               </section>
             ) : filteredAndSortedBanks?.length === 0 ? (
             <div className="bg-card rounded-lg border border-border p-8 md:p-12 text-center">

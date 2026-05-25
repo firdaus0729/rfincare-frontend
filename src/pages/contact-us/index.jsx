@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from '../../components/ui/Header';
 import Footer from '../homepage/components/Footer';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import { useSiteContact } from '../../contexts/SiteContactContext';
 
 const ContactUs = () => {
+  const { contact } = useSiteContact();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,35 +21,33 @@ const ContactUs = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  const contactInfo = [
-    {
-      icon: 'Phone',
-      title: 'Phone',
-      details: ['+91-7300069952', '+91-7696664657'],
-      description: 'Mon-Sat, 9 AM - 6 PM'
-    },
-    {
-      icon: 'Mail',
-      title: 'Email',
-      details: ['support@rfincare.com', 'info@rfincare.com'],
-      description: 'We\'ll respond within 24 hours'
-    }
-  ];
+  const contactInfo = useMemo(
+    () => [
+      {
+        icon: 'Phone',
+        title: 'Phone',
+        details: (contact.phones || [contact.phone]).filter(Boolean).map((p) =>
+          p.startsWith('+') ? p : `+91-${p}`,
+        ),
+        description: 'Mon-Sat, 9 AM - 6 PM',
+      },
+      {
+        icon: 'Mail',
+        title: 'Email',
+        details: contact.emails?.length ? contact.emails : [contact.email],
+        description: "We'll respond within 24 hours",
+      },
+    ],
+    [contact],
+  );
 
-  const officeAddresses = [
-    {
-      title: 'Reg. Office',
-      address: 'Ward No 2, Baniya Bass, Mahajan, Bikaner, Rajasthan-334606 India'
-    },
-    {
-      title: 'Circle Office',
-      address: 'M125, Bharat Mata Chowk, Ganesh Nagar Ext. Niwaru Road, Jhotwara, Jaipur-302012 India'
-    },
-    {
-      title: 'Branch Office',
-      address: 'Shop no 3, 2nd Floor, Shiv Market, Near Kirtistambh circle, Ganganagar Road, Bikaner-334001 India'
-    }
-  ];
+  const officeAddresses = useMemo(() => {
+    if (contact.offices?.length) return contact.offices;
+    return [
+      { title: 'Reg. Office', address: contact.registeredAddress },
+      { title: 'Branch Office', address: contact.branchAddress },
+    ].filter((o) => o.address);
+  }, [contact]);
 
   const handleInputChange = (e) => {
     const { name, value } = e?.target;

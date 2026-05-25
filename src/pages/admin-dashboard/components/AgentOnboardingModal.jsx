@@ -84,6 +84,11 @@ export default function AgentOnboardingModal({ isOpen, onClose, onSuccess }) {
             </div>
           )}
 
+          <p className="text-xs text-gray-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            The agent signs in with their <strong>Email ID</strong> and password. After creation, use
+            Approve on the agent card to activate their account.
+          </p>
+
           {/* Login Credentials Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Login Credentials</h3>

@@ -22,6 +22,7 @@ import SystemConfigPanel from './components/SystemConfigPanel';
 import CommissionConfigModal from './components/CommissionConfigModal';
 import AccessControlModal from './components/AccessControlModal';
 import DocumentVerificationModal from './components/DocumentVerificationModal';
+import ApplicationDeleteModal from './components/ApplicationDeleteModal';
 import { adminService } from '../../services/adminService';
 import { getLoanProductBySlug } from '../../constants/loanProducts';
 import { pickCustomerPhotoDocument } from '../../utils/applicationFormDetails';
@@ -36,7 +37,7 @@ import LoanProductsTab from './components/LoanProductsTab';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const activeTab = getAdminTabFromSearch(searchParams);
   const [registrationSubTab, setRegistrationSubTab] = useState('customers');
   const [showAgentModal, setShowAgentModal] = useState(false);
@@ -44,6 +45,9 @@ const AdminDashboard = () => {
   const [showCommissionModal, setShowCommissionModal] = useState(false);
   const [showAccessControlModal, setShowAccessControlModal] = useState(false);
   const [showDocVerificationModal, setShowDocVerificationModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteApplicationIds, setDeleteApplicationIds] = useState([]);
+  const [tableSelectionResetKey, setTableSelectionResetKey] = useState(0);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -143,6 +147,7 @@ const AdminDashboard = () => {
   const mapApplicationRow = (app, customerImage = null) => ({
     id: app?.id,
     rawApplication: app,
+    applicationNumber: app?.applicationNumber || app?.application_number || app?.id,
     customerName: app?.customer?.fullName || 'Unknown',
     customerEmail: app?.customer?.email || '',
     customerImage,
@@ -365,6 +370,18 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleBulkDeleteApplications = (applicationIds) => {
+    setDeleteApplicationIds(applicationIds);
+    setShowDeleteModal(true);
+  };
+
+  const handleApplicationsDeleted = async () => {
+    setDeleteApplicationIds([]);
+    setTableSelectionResetKey((k) => k + 1);
+    await refreshCurrentTab();
+    alert('Selected applications were permanently deleted.');
+  };
+
   const handleViewApplicationDetails = (application) => {
     setSelectedApplication(application);
     setShowDocVerificationModal(true);
@@ -492,6 +509,8 @@ const AdminDashboard = () => {
                       onViewDetails={handleViewApplicationDetails}
                       onApprove={handleApproveApplication}
                       onReject={handleRejectApplication}
+                      onBulkDelete={handleBulkDeleteApplications}
+                      selectionResetKey={tableSelectionResetKey}
                     />
                   </div>
                 )}
@@ -606,6 +625,17 @@ const AdminDashboard = () => {
         onClose={() => setShowDocVerificationModal(false)}
         onApprove={handleApproveApplication}
         onReject={handleRejectApplication}
+      />
+      <ApplicationDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteApplicationIds([]);
+        }}
+        applicationIds={deleteApplicationIds}
+        applications={applicationsData}
+        adminEmail={userProfile?.email || user?.email || ''}
+        onDeleted={handleApplicationsDeleted}
       />
     </>
   );

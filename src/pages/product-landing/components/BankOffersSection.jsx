@@ -15,8 +15,20 @@ import { MAX_BANK_COMPARE } from '../../../constants/bankComparison';
 
 const BankOffersSection = ({ product }) => {
   const navigate = useNavigate();
-  const [banks, setBanks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [banks, setBanks] = useState(() => {
+    try {
+      const key = `banks:${product.slug}`;
+      const raw = sessionStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.at && Date.now() - parsed.at < 5 * 60 * 1000) return parsed.data;
+      }
+    } catch {
+      /* ignore */
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(() => banks.length === 0);
   const [error, setError] = useState('');
   const [compareList, setCompareList] = useState([]);
   const [comparisonOverrides, setComparisonOverrides] = useState({});
@@ -30,9 +42,18 @@ const BankOffersSection = ({ product }) => {
         setError('');
         const data = await bankService.getActiveBanks({ loanType: product.slug });
         if (!cancelled) {
-          setBanks(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data) ? data : [];
+          setBanks(list);
           setCompareList([]);
           setComparisonOverrides({});
+          try {
+            sessionStorage.setItem(
+              `banks:${product.slug}`,
+              JSON.stringify({ data: list, at: Date.now() }),
+            );
+          } catch {
+            /* ignore */
+          }
         }
       } catch {
         if (!cancelled) setError('Unable to load bank offers right now.');

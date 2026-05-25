@@ -21,4 +21,8 @@ export const cmsService = {
     list: (status = 'pending') => apiClient.get('/cms/success-stories', { params: { status } }).then((r) => r.data),
     moderate: (id, body) => apiClient.post(`/cms/success-stories/${id}/moderate`, body).then((r) => r.data),
   },
+  siteContact: {
+    get: () => apiClient.get('/cms/site-contact').then((r) => r.data),
+    update: (body) => apiClient.put('/cms/site-contact', body).then((r) => r.data),
+  },
 };
