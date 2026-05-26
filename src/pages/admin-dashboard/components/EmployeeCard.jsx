@@ -3,7 +3,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Image from '../../../components/AppImage';
 
-const EmployeeCard = ({ employee, onEditRole, onViewActivity }) => {
+const EmployeeCard = ({ employee, onApprove, onEditRole, onViewActivity }) => {
   const getRoleBadge = (role) => {
     const roleConfig = {
       admin: { bg: 'bg-admin-primary/10', text: 'text-admin-primary', icon: 'Shield' },
@@ -68,7 +68,17 @@ const EmployeeCard = ({ employee, onEditRole, onViewActivity }) => {
           </div>
         </div>
       </div>
-      <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-border">
+      <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-border flex-wrap">
+        {employee?.status === 'pending' && onApprove && (
+          <Button
+            variant="default"
+            size="sm"
+            iconName="Check"
+            onClick={() => onApprove(employee.id)}
+          >
+            Activate
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

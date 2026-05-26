@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { adminService } from '../../../services/adminService';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -12,8 +13,26 @@ const CommissionConfigModal = ({ agent, isOpen, onClose, onSave }) => {
     minLoanAmount: '',
     maxLoanAmount: '',
     effectiveFrom: new Date()?.toISOString()?.split('T')?.[0],
-    effectiveTo: ''
+    effectiveTo: '',
   });
+
+  useEffect(() => {
+    if (!isOpen || !agent?.id) return;
+    (async () => {
+      const { data } = await adminService.getAgentCommission(agent.id);
+      if (data) {
+        setFormData({
+          loanType: data.loanType || 'home_loan',
+          commissionType: data.commissionType || 'percentage',
+          commissionValue: data.commissionValue ?? 2.5,
+          minLoanAmount: data.minLoanAmount || '',
+          maxLoanAmount: data.maxLoanAmount || '',
+          effectiveFrom: data.effectiveFrom || new Date().toISOString().split('T')[0],
+          effectiveTo: data.effectiveTo || '',
+        });
+      }
+    })();
+  }, [isOpen, agent?.id]);
 
   const loanTypeOptions = [
     { value: 'home_loan', label: 'Home Loan' },

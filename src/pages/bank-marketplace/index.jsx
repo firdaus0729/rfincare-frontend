@@ -17,7 +17,8 @@ import {
   applyComparisonOverrides,
   mapBankForMarketplace,
 } from '../../utils/bankMarketplace';
-import { getBankProbabilityMap, loadEligibilityResults } from '../../services/leadService';
+import { getBankProbabilityMap, loadEligibilityResults, saveEligibilityResults } from '../../services/leadService';
+import { homepageService } from '../../services/homepageService';
 import MarketplaceEligibilityBanner from './components/MarketplaceEligibilityBanner';
 
 function isAllFilterValue(value) {
@@ -80,7 +81,18 @@ const BankMarketplace = () => {
       });
       const list = Array.isArray(data) ? data : [];
 
-      const eligibility = loadEligibilityResults();
+      let eligibility = loadEligibilityResults();
+      if (!eligibility?.banks?.length && eligibility?.formData) {
+        try {
+          const recalc = await homepageService.calculateEligibility(eligibility.formData);
+          if (recalc?.banks?.length) {
+            saveEligibilityResults(recalc, eligibility.formData);
+            eligibility = loadEligibilityResults();
+          }
+        } catch {
+          /* use cached or empty map */
+        }
+      }
       const probabilityMap = getBankProbabilityMap(eligibility);
       const transformedBanks = list.map((bank) =>
         mapBankForMarketplace(bank, loanTypeSlug, probabilityMap),

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import { interestMatrixService } from '../../services/interestMatrixService';
 import MatrixFilters from './components/MatrixFilters';
 import MatrixGrid from './components/MatrixGrid';
 import RateModal from './components/RateModal';
@@ -11,137 +12,53 @@ import BulkActions from './components/BulkActions';
 import RateHeatmap from './components/RateHeatmap';
 import VersionHistory from './components/VersionHistory';
 
+const CSV_TEMPLATE = `product_type,loan_type,credit_score_min,credit_score_max,loan_amount_min,loan_amount_max,term_min,term_max,interest_rate,status,effective_date,change_note
+Personal Loan,Unsecured,700,850,10000,50000,12,60,6.5,active,2026-01-01,Initial rate`;
+
 const InterestMatrixManagement = () => {
-  const [matrixData, setMatrixData] = useState([
-    {
-      id: 1,
-      productType: "Personal Loan",
-      loanType: "Unsecured",
-      creditScoreMin: 700,
-      creditScoreMax: 850,
-      loanAmountMin: 10000,
-      loanAmountMax: 50000,
-      termMin: 12,
-      termMax: 60,
-      interestRate: 6.5,
-      status: "active",
-      effectiveDate: "2026-01-01",
-      modifiedBy: "Admin User",
-      changeNote: "Initial rate configuration"
-    },
-    {
-      id: 2,
-      productType: "Home Loan",
-      loanType: "Secured",
-      creditScoreMin: 650,
-      creditScoreMax: 749,
-      loanAmountMin: 100000,
-      loanAmountMax: 500000,
-      termMin: 120,
-      termMax: 360,
-      interestRate: 5.75,
-      status: "active",
-      effectiveDate: "2026-01-01",
-      modifiedBy: "Admin User",
-      changeNote: "Competitive rate for mid-tier credit"
-    },
-    {
-      id: 3,
-      productType: "Business Loan",
-      loanType: "Secured",
-      creditScoreMin: 680,
-      creditScoreMax: 850,
-      loanAmountMin: 50000,
-      loanAmountMax: 1000000,
-      termMin: 24,
-      termMax: 120,
-      interestRate: 7.25,
-      status: "active",
-      effectiveDate: "2026-01-05",
-      modifiedBy: "Super Admin",
-      changeNote: "Business expansion rate"
-    },
-    {
-      id: 4,
-      productType: "Personal Loan",
-      loanType: "Unsecured",
-      creditScoreMin: 600,
-      creditScoreMax: 699,
-      loanAmountMin: 5000,
-      loanAmountMax: 25000,
-      termMin: 12,
-      termMax: 48,
-      interestRate: 9.5,
-      status: "pending",
-      effectiveDate: "2026-02-01",
-      modifiedBy: "Rate Manager",
-      changeNote: "Pending approval for lower credit tier"
-    },
-    {
-      id: 5,
-      productType: "Auto Loan",
-      loanType: "Secured",
-      creditScoreMin: 720,
-      creditScoreMax: 850,
-      loanAmountMin: 15000,
-      loanAmountMax: 75000,
-      termMin: 24,
-      termMax: 84,
-      interestRate: 4.99,
-      status: "active",
-      effectiveDate: "2026-01-10",
-      modifiedBy: "Admin User",
-      changeNote: "Promotional rate for excellent credit"
-    },
-    {
-      id: 6,
-      productType: "Home Loan",
-      loanType: "Secured",
-      creditScoreMin: 750,
-      creditScoreMax: 850,
-      loanAmountMin: 200000,
-      loanAmountMax: 1000000,
-      termMin: 180,
-      termMax: 360,
-      interestRate: 5.25,
-      status: "scheduled",
-      effectiveDate: "2026-03-01",
-      modifiedBy: "Super Admin",
-      changeNote: "Premium rate for high-value properties"
-    },
-    {
-      id: 7,
-      productType: "Personal Loan",
-      loanType: "Unsecured",
-      creditScoreMin: 500,
-      creditScoreMax: 599,
-      loanAmountMin: 2000,
-      loanAmountMax: 15000,
-      termMin: 12,
-      termMax: 36,
-      interestRate: 14.99,
-      status: "active",
-      effectiveDate: "2026-01-01",
-      modifiedBy: "Rate Manager",
-      changeNote: "High-risk tier rate"
-    },
-    {
-      id: 8,
-      productType: "Business Loan",
-      loanType: "Unsecured",
-      creditScoreMin: 650,
-      creditScoreMax: 749,
-      loanAmountMin: 25000,
-      loanAmountMax: 250000,
-      termMin: 12,
-      termMax: 60,
-      interestRate: 10.5,
-      status: "active",
-      effectiveDate: "2026-01-08",
-      modifiedBy: "Admin User",
-      changeNote: "Small business support rate"
+  const [matrixData, setMatrixData] = useState([]);
+  const [matrixLoading, setMatrixLoading] = useState(true);
+  const [matrixError, setMatrixError] = useState('');
+  const [importing, setImporting] = useState(false);
+
+  const loadMatrix = useCallback(async () => {
+    setMatrixLoading(true);
+    setMatrixError('');
+    try {
+      const rows = await interestMatrixService.list();
+      setMatrixData(rows || []);
+    } catch (err) {
+      setMatrixError(err?.response?.data?.error || err?.message || 'Failed to load interest matrix');
+    } finally {
+      setMatrixLoading(false);
     }
-  ]);
+  }, []);
+
+  useEffect(() => {
+    loadMatrix();
+  }, [loadMatrix]);
+
+  const handleDownloadFullCsv = () => interestMatrixService.downloadCsv();
+
+  const handleBulkCsvUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const replaceAll = window.confirm(
+        'Replace ALL existing rates with this file?\n\nOK = replace entire matrix\nCancel = append rows only',
+      );
+      const result = await interestMatrixService.importCsv(text, replaceAll);
+      alert(`Imported ${result.imported} rate row(s).`);
+      await loadMatrix();
+    } catch (err) {
+      alert(err?.response?.data?.error || err?.message || 'CSV import failed');
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
 
   const [filters, setFilters] = useState({
     productType: '',
@@ -271,21 +188,19 @@ const InterestMatrixManagement = () => {
     setFilteredData(matrixData);
   };
 
-  const handleSaveRate = (formData) => {
-    if (editData) {
-      setMatrixData(prev => prev?.map(item => 
-        item?.id === editData?.id ? { ...formData, id: item?.id, modifiedBy: "Admin User", changeNote: "Rate updated" } : item
-      ));
-    } else {
-      const newRate = {
-        ...formData,
-        id: matrixData?.length + 1,
-        modifiedBy: "Admin User",
-        changeNote: "New rate configuration"
-      };
-      setMatrixData(prev => [...prev, newRate]);
+  const handleSaveRate = async (formData) => {
+    try {
+      if (editData?.id) {
+        await interestMatrixService.update(editData.id, formData);
+      } else {
+        await interestMatrixService.create(formData);
+      }
+      setIsRateModalOpen(false);
+      setEditData(null);
+      await loadMatrix();
+    } catch (err) {
+      alert(err?.response?.data?.error || err?.message || 'Failed to save rate');
     }
-    setEditData(null);
   };
 
   const handleEditRate = (row) => {
@@ -293,10 +208,14 @@ const InterestMatrixManagement = () => {
     setIsRateModalOpen(true);
   };
 
-  const handleDeleteRate = (id) => {
-    if (window.confirm('Are you sure you want to delete this rate configuration?')) {
-      setMatrixData(prev => prev?.filter(item => item?.id !== id));
-      setSelectedRows(prev => prev?.filter(rowId => rowId !== id));
+  const handleDeleteRate = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this rate configuration?')) return;
+    try {
+      await interestMatrixService.remove(id);
+      setSelectedRows((prev) => prev?.filter((rowId) => rowId !== id));
+      await loadMatrix();
+    } catch (err) {
+      alert(err?.response?.data?.error || err?.message || 'Delete failed');
     }
   };
 
@@ -314,10 +233,14 @@ const InterestMatrixManagement = () => {
     }
   };
 
-  const handleBulkDelete = () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedRows?.length} rate configurations?`)) {
-      setMatrixData(prev => prev?.filter(item => !selectedRows?.includes(item?.id)));
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedRows?.length} rate configuration(s)?`)) return;
+    try {
+      await Promise.all(selectedRows.map((id) => interestMatrixService.remove(id)));
       setSelectedRows([]);
+      await loadMatrix();
+    } catch (err) {
+      alert(err?.response?.data?.error || err?.message || 'Bulk delete failed');
     }
   };
 
@@ -366,11 +289,54 @@ const InterestMatrixManagement = () => {
                   Interest Matrix Management
                 </h1>
                 <p className="text-sm md:text-base text-muted-foreground">
-                  Configure dynamic interest rates based on customer profiles and loan parameters
+                  Bulk update via CSV upload or download. Rates are stored in the database.
                 </p>
+                {matrixError && (
+                  <p className="text-sm text-destructive mt-2">{matrixError}</p>
+                )}
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconName="Download"
+                  onClick={handleDownloadFullCsv}
+                  disabled={matrixLoading}
+                >
+                  Download CSV
+                </Button>
+                <label className="cursor-pointer">
+                  <span className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted">
+                    <Icon name="Upload" size={16} />
+                    {importing ? 'Importing…' : 'Bulk upload CSV'}
+                  </span>
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    disabled={importing}
+                    onChange={handleBulkCsvUpload}
+                  />
+                </label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'interest-matrix-template.csv';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Template
+                </Button>
+                <Button variant="outline" size="sm" iconName="RefreshCw" onClick={loadMatrix}>
+                  Refresh
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

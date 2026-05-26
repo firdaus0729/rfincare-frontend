@@ -16,6 +16,7 @@ import { getAdminTabFromSearch, ADMIN_NAV_ITEMS } from '../../constants/adminNav
 
 import FilterPanel from './components/FilterPanel';
 import PendingRegistrationsTab from './components/PendingRegistrationsTab';
+import CustomersTab from './components/CustomersTab';
 import AgentOnboardingModal from './components/AgentOnboardingModal';
 import EmployeeOnboardingModal from './components/EmployeeOnboardingModal';
 import SystemConfigPanel from './components/SystemConfigPanel';
@@ -39,7 +40,8 @@ const AdminDashboard = () => {
   const [searchParams] = useSearchParams();
   const { user, userProfile, loading: authLoading } = useAuth();
   const activeTab = getAdminTabFromSearch(searchParams);
-  const [registrationSubTab, setRegistrationSubTab] = useState('customers');
+  const [registrationSubTab, setRegistrationSubTab] = useState('pending');
+  const [activityLog, setActivityLog] = useState([]);
   const [showAgentModal, setShowAgentModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [showCommissionModal, setShowCommissionModal] = useState(false);
@@ -285,6 +287,12 @@ const AdminDashboard = () => {
         }
       }
 
+      if (tab === 'activity') {
+        const { data: logs, error: logErr } = await adminService.getAuditLogs(150);
+        if (logErr) errors.push(logErr.message);
+        else setActivityLog(logs || []);
+      }
+
       if (tab === 'employees') {
         if (typeof adminService.getAllEmployees !== 'function') {
           errors.push('Employee list is unavailable. Redeploy the frontend to load the latest admin API.');
@@ -295,11 +303,13 @@ const AdminDashboard = () => {
           } else if (employees) {
             setEmployeesData(employees.map(emp => ({
               id: emp?.id,
+              employeeCode: emp?.employeeCode || 'N/A',
               name: emp?.employeeName || 'Unknown',
               email: emp?.email || '',
               profileImage: "https://img.rocket.new/generatedImages/rocket_gen_img_1b80e6770-1763297889591.png",
               profileImageAlt: `Profile picture of ${emp?.employeeName}`,
               role: emp?.userProfile?.role || 'employee',
+              status: emp?.onboardingStatus || emp?.userProfile?.isActive ? 'active' : 'pending',
               department: 'Operations',
               tasksCompleted: 0,
               tasksTotal: 0,
@@ -346,10 +356,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleViewDetails = (application) => {
-    console.log('View application details:', application);
-  };
-
   const handleApproveApplication = async (applicationId, reviewNotes) => {
     const { error } = await adminService?.approveApplication(applicationId, reviewNotes);
     if (!error) {
@@ -370,6 +376,33 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleBulkApproveApplications = async (applicationIds) => {
+    if (!applicationIds?.length) return;
+    const notes = prompt('Optional review notes for bulk approval:') || '';
+    const { data, error } = await adminService.bulkUpdateApplicationStatus(applicationIds, 'approved', notes);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setTableSelectionResetKey((k) => k + 1);
+    await refreshCurrentTab();
+    alert(`Approved ${data?.updated ?? applicationIds.length} application(s).`);
+  };
+
+  const handleBulkRejectApplications = async (applicationIds) => {
+    if (!applicationIds?.length) return;
+    const reason = prompt('Rejection reason (required):');
+    if (!reason?.trim()) return;
+    const { data, error } = await adminService.bulkUpdateApplicationStatus(applicationIds, 'rejected', reason);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setTableSelectionResetKey((k) => k + 1);
+    await refreshCurrentTab();
+    alert(`Rejected ${data?.updated ?? applicationIds.length} application(s).`);
+  };
+
   const handleBulkDeleteApplications = (applicationIds) => {
     setDeleteApplicationIds(applicationIds);
     setShowDeleteModal(true);
@@ -385,6 +418,15 @@ const AdminDashboard = () => {
   const handleViewApplicationDetails = (application) => {
     setSelectedApplication(application);
     setShowDocVerificationModal(true);
+  };
+
+  const handleApproveEmployee = async (employeeId) => {
+    const { error } = await adminService?.approveEmployee(employeeId);
+    if (error) {
+      alert(error?.message);
+    } else {
+      refreshCurrentTab();
+    }
   };
 
   const handleApproveAgent = async (agentId) => {
@@ -446,11 +488,12 @@ const AdminDashboard = () => {
   };
 
   const handleViewAgentProfile = (agent) => {
-    console.log('View agent profile:', agent);
+    setSelectedAgent(agent);
+    setShowCommissionModal(true);
   };
 
-  const handleViewEmployeeActivity = (employee) => {
-    console.log('View employee activity:', employee);
+  const handleViewEmployeeActivity = () => {
+    navigate('/admin-dashboard?tab=activity');
   };
 
   const handleQuickAction = (actionId) => {
@@ -509,6 +552,8 @@ const AdminDashboard = () => {
                       onViewDetails={handleViewApplicationDetails}
                       onApprove={handleApproveApplication}
                       onReject={handleRejectApplication}
+                      onBulkApprove={handleBulkApproveApplications}
+                      onBulkReject={handleBulkRejectApplications}
                       onBulkDelete={handleBulkDeleteApplications}
                       selectionResetKey={tableSelectionResetKey}
                     />
@@ -517,7 +562,37 @@ const AdminDashboard = () => {
 
                 {/* Registrations Tab */}
                 {activeTab === 'registrations' && (
-                  <PendingRegistrationsTab />
+                  <div className="space-y-6">
+                    <div className="flex gap-2 border-b border-border">
+                      <button
+                        type="button"
+                        onClick={() => setRegistrationSubTab('pending')}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+                          registrationSubTab === 'pending'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground'
+                        }`}
+                      >
+                        Pending registrations
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegistrationSubTab('customers')}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+                          registrationSubTab === 'customers'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground'
+                        }`}
+                      >
+                        All customers
+                      </button>
+                    </div>
+                    {registrationSubTab === 'pending' ? (
+                      <PendingRegistrationsTab />
+                    ) : (
+                      <CustomersTab />
+                    )}
+                  </div>
                 )}
 
                 {/* Agents Tab */}
@@ -557,6 +632,7 @@ const AdminDashboard = () => {
                         <EmployeeCard
                           key={employee?.id}
                           employee={employee}
+                          onApprove={handleApproveEmployee}
                           onEdit={(emp) => {
                             setSelectedEmployee(emp);
                             setShowEmployeeModal(true);
@@ -590,7 +666,7 @@ const AdminDashboard = () => {
 
                 {/* Activity Tab */}
                 {activeTab === 'activity' && (
-                  <ActivityLog activities={[]} />
+                  <ActivityLog activities={activityLog} />
                 )}
               </>
             )}

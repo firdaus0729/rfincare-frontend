@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import Header from '../../components/ui/Header';
@@ -14,6 +14,8 @@ import QuickActions from './components/QuickActions';
 import RecentActivity from './components/RecentActivity';
 import SessionTimeout from '../../components/SessionTimeout';
 import { authService } from '../../services/authService';
+import { agentService } from '../../services/agentService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const signOut = async () => {
   try {
@@ -27,182 +29,54 @@ const signOut = async () => {
 
 const AgentDashboard = () => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [selectedView, setSelectedView] = useState('overview');
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await agentService.getDashboard();
+      setDashboard(data);
+    } catch (err) {
+      console.error('Agent dashboard load failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   const agentProfile = {
-    name: "Sarah Mitchell",
-    agentId: "AG-2024-1547",
-    avatar: "https://img.rocket.new/generatedImages/rocket_gen_img_14da91c34-1763294780479.png",
-    avatarAlt: "Professional headshot of Sarah Mitchell, female agent with shoulder-length brown hair wearing navy blue blazer",
-    joinDate: "March 2024",
-    tier: "Gold Agent",
-    rating: 4.8,
-    totalClients: 47,
-    activeClients: 12
+    name: dashboard?.profile?.name || userProfile?.full_name || 'Agent',
+    agentId: dashboard?.profile?.agentId || '—',
+    avatar: 'https://img.rocket.new/generatedImages/rocket_gen_img_14da91c34-1763294780479.png',
+    avatarAlt: `Profile of ${dashboard?.profile?.name || 'agent'}`,
+    joinDate: '—',
+    tier: dashboard?.profile?.tier || 'Agent',
+    rating: 4.5,
+    totalClients: dashboard?.profile?.totalClients ?? 0,
+    activeClients: dashboard?.profile?.activeClients ?? 0,
   };
 
-  const performanceMetrics = [
-  {
-    id: 1,
-    type: 'customers',
-    label: 'Active Clients',
-    value: '12',
-    subtitle: 'Total: 47 clients',
-    change: '+15%',
-    trend: 'up'
-  },
-  {
-    id: 2,
-    type: 'conversions',
-    label: 'Conversion Rate',
-    value: '68%',
-    subtitle: '8 of 12 approved',
-    change: '+8%',
-    trend: 'up'
-  },
-  {
-    id: 3,
-    type: 'earnings',
-    label: 'This Month',
-    value: '₹12,450',
-    subtitle: 'Pending: ₹3,200',
-    change: '+22%',
-    trend: 'up'
-  },
-  {
-    id: 4,
-    type: 'satisfaction',
-    label: 'Client Rating',
-    value: '4.8',
-    subtitle: 'Based on 35 reviews',
-    change: '+0.3',
-    trend: 'up'
-  }];
+  const performanceMetrics = dashboard?.metrics?.length
+    ? dashboard.metrics
+    : [
+        { id: 1, type: 'customers', label: 'Active Clients', value: '0', subtitle: 'Loading…' },
+      ];
 
+  const clients = (dashboard?.clients || []).map((c) => ({
+    ...c,
+    avatar: c.avatar || agentProfile.avatar,
+    avatarAlt: c.avatarAlt || c.name,
+  }));
 
-  const clients = [
-  {
-    id: 1,
-    name: "Michael Rodriguez",
-    avatar: "https://img.rocket.new/generatedImages/rocket_gen_img_143b978a3-1763294952544.png",
-    avatarAlt: "Professional headshot of Hispanic man with short black hair in navy suit",
-    loanType: "Home Loan",
-    amount: "₹450,000",
-    status: "new",
-    priority: "high",
-    daysActive: "2 days ago",
-    nextAction: "Schedule consultation"
-  },
-  {
-    id: 2,
-    name: "Emily Chen",
-    avatar: "https://img.rocket.new/generatedImages/rocket_gen_img_18a713e78-1763297858426.png",
-    avatarAlt: "Professional headshot of Asian woman with long black hair wearing white blouse",
-    loanType: "Personal Loan",
-    amount: "₹25,000",
-    status: "in-progress",
-    priority: "medium",
-    daysActive: "5 days ago",
-    nextAction: "Review income documents"
-  },
-  {
-    id: 3,
-    name: "James Wilson",
-    avatar: "https://img.rocket.new/generatedImages/rocket_gen_img_130504d21-1763295915180.png",
-    avatarAlt: "Professional headshot of Caucasian man with gray hair wearing dark suit",
-    loanType: "Business Loan",
-    amount: "₹150,000",
-    status: "documents",
-    priority: "high",
-    daysActive: "3 days ago",
-    nextAction: "Upload tax returns"
-  },
-  {
-    id: 4,
-    name: "Priya Sharma",
-    avatar: "https://img.rocket.new/generatedImages/rocket_gen_img_1cfa37edb-1763295967528.png",
-    avatarAlt: "Professional headshot of Indian woman with black hair in elegant blue dress",
-    loanType: "Auto Loan",
-    amount: "₹35,000",
-    status: "submitted",
-    priority: "low",
-    daysActive: "1 day ago",
-    nextAction: null
-  },
-  {
-    id: 5,
-    name: "David Thompson",
-    avatar: "https://img.rocket.new/generatedImages/rocket_gen_img_1a184de25-1763292715446.png",
-    avatarAlt: "Professional headshot of African American man with short hair wearing gray suit",
-    loanType: "Home Loan",
-    amount: "₹520,000",
-    status: "new",
-    priority: "high",
-    daysActive: "Just now",
-    nextAction: "Initial assessment"
-  },
-  {
-    id: 6,
-    name: "Maria Garcia",
-    avatar: "https://img.rocket.new/generatedImages/rocket_gen_img_1892fec82-1763293711662.png",
-    avatarAlt: "Professional headshot of Hispanic woman with curly brown hair wearing red blazer",
-    loanType: "Personal Loan",
-    amount: "₹18,000",
-    status: "in-progress",
-    priority: "medium",
-    daysActive: "4 days ago",
-    nextAction: "Credit verification"
-  }];
+  const commissions = [];
 
-
-  const commissions = [
-  {
-    id: 1,
-    clientName: "Robert Anderson",
-    loanType: "Home Loan",
-    amount: 4500,
-    status: "paid",
-    date: "Jan 10, 2026"
-  },
-  {
-    id: 2,
-    clientName: "Lisa Martinez",
-    loanType: "Business Loan",
-    amount: 3200,
-    status: "pending",
-    date: "Jan 12, 2026"
-  },
-  {
-    id: 3,
-    clientName: "Thomas Brown",
-    loanType: "Auto Loan",
-    amount: 850,
-    status: "paid",
-    date: "Jan 8, 2026"
-  },
-  {
-    id: 4,
-    clientName: "Jennifer Lee",
-    loanType: "Personal Loan",
-    amount: 1200,
-    status: "processing",
-    date: "Jan 14, 2026"
-  },
-  {
-    id: 5,
-    clientName: "Christopher Davis",
-    loanType: "Home Loan",
-    amount: 5100,
-    status: "pending",
-    date: "Jan 13, 2026"
-  }];
-
-
-  const chartData = [
-  { name: 'Week 1', clients: 8, conversions: 5, earnings: 2800 },
-  { name: 'Week 2', clients: 12, conversions: 7, earnings: 3500 },
-  { name: 'Week 3', clients: 10, conversions: 6, earnings: 3100 },
-  { name: 'Week 4', clients: 15, conversions: 10, earnings: 5050 }];
+  const chartData = dashboard?.weeklyPerformance || [];
 
 
   const appointments = [
@@ -344,8 +218,13 @@ const AgentDashboard = () => {
     console.log('Client clicked:', client);
   };
 
-  const handleStatusChange = (clientId, newStatus) => {
-    console.log('Status changed:', clientId, newStatus);
+  const handleStatusChange = async (clientId, newStatus) => {
+    try {
+      await agentService.updateClientStatus(clientId, newStatus);
+      await loadDashboard();
+    } catch (err) {
+      console.error('Status update failed:', err);
+    }
   };
 
   const handleQuickAction = (actionId) => {

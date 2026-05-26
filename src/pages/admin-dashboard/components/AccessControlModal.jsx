@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { adminService } from '../../../services/adminService';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Select from '../../../components/ui/Select';
@@ -9,8 +10,24 @@ const AccessControlModal = ({ employee, isOpen, onClose, onSave }) => {
     moduleName: 'applications',
     permissions: ['read'],
     isActive: true,
-    expiresAt: ''
+    expiresAt: '',
   });
+
+  useEffect(() => {
+    if (!isOpen || !employee?.id) return;
+    (async () => {
+      const { data } = await adminService.getEmployeeAccessControls(employee.id);
+      const row = data?.find((r) => r.moduleName === 'applications') || data?.[0];
+      if (row) {
+        setAccessControls({
+          moduleName: row.moduleName || 'applications',
+          permissions: row.permissions || ['read'],
+          isActive: row.isActive !== false,
+          expiresAt: row.expiresAt ? String(row.expiresAt).slice(0, 10) : '',
+        });
+      }
+    })();
+  }, [isOpen, employee?.id]);
 
   const moduleOptions = [
     { value: 'applications', label: 'Loan Applications' },

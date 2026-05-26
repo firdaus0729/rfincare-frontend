@@ -8,6 +8,8 @@ const ApplicationTable = ({
   onViewDetails,
   onApprove,
   onReject,
+  onBulkApprove,
+  onBulkReject,
   onBulkDelete,
   selectionResetKey = 0,
 }) => {
@@ -195,10 +197,20 @@ const ApplicationTable = ({
         <div className="px-4 py-3 bg-muted/30 border-t border-border flex items-center justify-between">
           <span className="text-sm text-foreground">{selectedApps?.length} selected</span>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" iconName="Check">
+            <Button
+              variant="outline"
+              size="sm"
+              iconName="Check"
+              onClick={() => onBulkApprove?.(selectedApps)}
+            >
               Bulk Approve
             </Button>
-            <Button variant="destructive" size="sm" iconName="X">
+            <Button
+              variant="destructive"
+              size="sm"
+              iconName="X"
+              onClick={() => onBulkReject?.(selectedApps)}
+            >
               Bulk Reject
             </Button>
             <Button

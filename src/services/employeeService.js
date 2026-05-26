@@ -70,7 +70,10 @@ export const employeeService = {
 
   async verifyDocument(documentId, verificationData) {
     try {
-      const res = await apiClient.patch(`/documents/${documentId}/verify`, toSnakeCase(verificationData));
+      const res = await apiClient.patch(`/documents/${documentId}/verification`, {
+        status: verificationData.status,
+        verification_notes: verificationData.verificationNotes || verificationData.notes,
+      });
       return { data: toCamelCase(res.data), error: null };
     } catch (error) {
       return { data: null, error: { message: 'Verification failed' } };
@@ -82,25 +85,23 @@ export const employeeService = {
   // ============================================
   async getEmployeeDashboardStats() {
     try {
-      const res = await apiClient.get('/loan-applications/me');
-      const apps = res.data || [];
-      
-      return {
-        data: {
-          pendingAgents: 0, // Placeholder
-          assignedApplications: apps.filter(a => a.status === 'submitted' || a.status === 'under_review').length,
-          pendingDocuments: 0, // Placeholder
-          completedToday: 0 // Placeholder
-        },
-        error: null
-      };
+      const res = await apiClient.get('/portal/employee/dashboard');
+      return { data: res.data?.stats || res.data, error: null };
     } catch (error) {
       return { data: null, error: { message: 'Failed to fetch stats' } };
     }
   },
 
-  // Log activity (Stubbed)
+  async getEmployeeActivityLog() {
+    try {
+      const res = await apiClient.get('/portal/employee/dashboard');
+      return { data: res.data?.activities || [], error: null };
+    } catch (error) {
+      return { data: [], error: { message: 'Failed to fetch activity' } };
+    }
+  },
+
   async logEmployeeActivity(activityData) {
     console.log('Employee activity log:', activityData);
-  }
+  },
 };

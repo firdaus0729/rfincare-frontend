@@ -162,12 +162,70 @@ export const adminService = {
     }
   },
 
-  async updateAgentCommission() {
-    return { error: { message: 'Commission configuration is not available in this release.' } };
+  async getAgentCommission(agentId) {
+    try {
+      const res = await apiClient.get(`/admin/agents/${agentId}/commission`);
+      const rows = Array.isArray(res.data) ? res.data : [];
+      return { data: rows[0] ? toCamelCase(rows[0]) : null, error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to load commission') };
+    }
   },
 
-  async updateEmployeeAccessControls() {
-    return { error: null };
+  async updateAgentCommission(agentId, config) {
+    try {
+      await apiClient.put(`/admin/agents/${agentId}/commission`, {
+        loan_type: config.loanType,
+        commission_type: config.commissionType,
+        commission_value: config.commissionValue,
+        min_loan_amount: config.minLoanAmount || null,
+        max_loan_amount: config.maxLoanAmount || null,
+        effective_from: config.effectiveFrom || null,
+        effective_to: config.effectiveTo || null,
+      });
+      return { error: null };
+    } catch (error) {
+      return { error: apiError(error, 'Failed to save commission') };
+    }
+  },
+
+  async getEmployeeAccessControls(employeeId) {
+    try {
+      const res = await apiClient.get(`/admin/employees/${employeeId}/access-controls`);
+      const rows = Array.isArray(res.data) ? res.data : [];
+      return { data: rows, error: null };
+    } catch (error) {
+      return { data: [], error: apiError(error, 'Failed to load access controls') };
+    }
+  },
+
+  async updateEmployeeAccessControls(employeeId, accessControls) {
+    try {
+      await apiClient.put(`/admin/employees/${employeeId}/access-controls`, {
+        module_name: accessControls.moduleName,
+        permissions: accessControls.permissions,
+        is_active: accessControls.isActive,
+        expires_at: accessControls.expiresAt || null,
+      });
+      return { error: null };
+    } catch (error) {
+      return { error: apiError(error, 'Failed to update access controls') };
+    }
+  },
+
+  async bulkUpdateApplicationStatus(applicationIds, status, notes = '') {
+    try {
+      const payload = {
+        applicationIds,
+        status,
+        review_notes: status === 'approved' ? notes : undefined,
+        rejection_reason: status === 'rejected' ? notes : undefined,
+      };
+      const res = await apiClient.post('/loan-applications/bulk-status', payload);
+      return { data: res.data, error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Bulk update failed') };
+    }
   },
 
   async createAgentOnboarding(formData) {
@@ -205,8 +263,60 @@ export const adminService = {
     }
   },
 
-  async getAuditLogs() {
-    return { data: [], error: null };
+  async getCustomers(search = '') {
+    try {
+      const res = await apiClient.get('/admin/customers', {
+        params: search ? { search } : {},
+      });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: [], error: apiError(error, 'Failed to load customers') };
+    }
+  },
+
+  async updateCustomer(customerId, payload) {
+    try {
+      const res = await apiClient.patch(`/admin/customers/${customerId}`, payload);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to update customer') };
+    }
+  },
+
+  async approveEmployee(employeeId) {
+    try {
+      const res = await apiClient.patch(`/admin/employees/${employeeId}`, {
+        account_status: 'active',
+        onboarding_status: 'active',
+      });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to activate employee') };
+    }
+  },
+
+  async getAuditLogs(limit = 100) {
+    try {
+      const res = await apiClient.get('/audit-logs', { params: { limit } });
+      const rows = Array.isArray(res.data) ? res.data : [];
+      return {
+        data: rows.map((row) => ({
+          id: row.id,
+          type: String(row.action_type || 'update').toLowerCase(),
+          actionType: `${row.action_type} · ${row.table_name}`,
+          userName: row.user_id ? `User ${String(row.user_id).slice(0, 8)}` : 'System',
+          timestamp: row.created_at
+            ? new Date(row.created_at).toLocaleString()
+            : '',
+          details: row.record_id
+            ? `Record ${row.record_id}`
+            : row.table_name,
+        })),
+        error: null,
+      };
+    } catch (error) {
+      return { data: [], error: apiError(error, 'Failed to load audit logs') };
+    }
   },
 
   async getSystemConfigurations() {
