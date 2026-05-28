@@ -30,15 +30,13 @@ const ALL_PROVIDERS = [
 const OAuthProviderButtons = ({ onProviderSelect, onEmailSignup, oauthReturnPath = '/customer-dashboard' }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [enabledProviders, setEnabledProviders] = useState(['google', 'microsoft', 'apple']);
+  const [enabledProviders, setEnabledProviders] = useState([]);
 
   useEffect(() => {
     apiClient
       .get('/public/oauth-config')
       .then((res) => {
-        if (Array.isArray(res.data?.providers) && res.data.providers.length) {
-          setEnabledProviders(res.data.providers);
-        }
+        if (Array.isArray(res.data?.providers)) setEnabledProviders(res.data.providers);
       })
       .catch(() => {});
   }, []);
