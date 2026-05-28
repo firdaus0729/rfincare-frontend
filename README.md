@@ -9,7 +9,7 @@
 
 From this directory:
 
-```bash
+``bash
 npm install
 npm run dev
 ```
