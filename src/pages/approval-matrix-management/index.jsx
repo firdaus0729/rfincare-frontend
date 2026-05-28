@@ -5,6 +5,19 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import { approvalMatrixService, bankService, auditService } from '../../services/apiServices';
 
+const toNumber = (value, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const principalFromEmi = (annualRatePercent, months, emi) => {
+  const monthlyRate = toNumber(annualRatePercent, 0) / 1200;
+  if (!months || months <= 0 || !emi || emi <= 0) return 0;
+  if (monthlyRate <= 0) return emi * months;
+  const factor = Math.pow(1 + monthlyRate, months);
+  return (emi * (factor - 1)) / (monthlyRate * factor);
+};
+
 
 const ApprovalMatrixManagement = () => {
   const [rules, setRules] = useState([]);
@@ -28,6 +41,11 @@ const ApprovalMatrixManagement = () => {
     maxLoanAmount: '',
     minAge: '',
     maxAge: '',
+    foirUnsecured: '',
+    foirSecured: '',
+    tenureUnsecuredMonths: '',
+    tenureSecuredMonths: '',
+    ltvRatio: '',
     approvalProbability: 75,
     isActive: true,
     priority: 0
@@ -44,6 +62,11 @@ const ApprovalMatrixManagement = () => {
       'maxLoanAmount',
       'minAge',
       'maxAge',
+      'foirUnsecured',
+      'foirSecured',
+      'tenureUnsecuredMonths',
+      'tenureSecuredMonths',
+      'ltvRatio',
       'approvalProbability',
       'priority'
     ];
@@ -149,6 +172,11 @@ const ApprovalMatrixManagement = () => {
         maxLoanAmount: rule?.maxLoanAmount || '',
         minAge: rule?.minAge || '',
         maxAge: rule?.maxAge || '',
+        foirUnsecured: rule?.foirUnsecured || '',
+        foirSecured: rule?.foirSecured || '',
+        tenureUnsecuredMonths: rule?.tenureUnsecuredMonths || '',
+        tenureSecuredMonths: rule?.tenureSecuredMonths || '',
+        ltvRatio: rule?.ltvRatio || '',
         approvalProbability: rule?.approvalProbability,
         isActive: rule?.isActive,
         priority: rule?.priority
@@ -170,6 +198,11 @@ const ApprovalMatrixManagement = () => {
         maxLoanAmount: '',
         minAge: '',
         maxAge: '',
+        foirUnsecured: '',
+        foirSecured: '',
+        tenureUnsecuredMonths: '',
+        tenureSecuredMonths: '',
+        ltvRatio: '',
         approvalProbability: 75,
         isActive: true,
         priority: 0
@@ -242,6 +275,47 @@ const ApprovalMatrixManagement = () => {
     { value: 'professional', label: 'Professional' },
     { value: 'retired', label: 'Retired' }
   ];
+
+  const policyPreview = useMemo(() => {
+    const sampleMonthlyIncome = 100000;
+    const sampleExistingEmi = 15000;
+    const sampleCollateralValue = 5000000;
+    const sampleUnsecuredRate = 14;
+    const sampleSecuredRate = 9;
+
+    const unsecuredFoir = toNumber(formData?.foirUnsecured, 0.55);
+    const securedFoir = toNumber(formData?.foirSecured, 0.65);
+    const unsecuredTenure = toNumber(formData?.tenureUnsecuredMonths, 60);
+    const securedTenure = toNumber(formData?.tenureSecuredMonths, 240);
+    const ltvRatio = toNumber(formData?.ltvRatio, 0.75);
+
+    const unsecuredMaxEmi = Math.max(0, sampleMonthlyIncome * unsecuredFoir - sampleExistingEmi);
+    const securedMaxEmi = Math.max(0, sampleMonthlyIncome * securedFoir - sampleExistingEmi);
+
+    const unsecuredEligible = principalFromEmi(sampleUnsecuredRate, unsecuredTenure, unsecuredMaxEmi);
+    const securedEmiEligible = principalFromEmi(sampleSecuredRate, securedTenure, securedMaxEmi);
+    const securedAssetCap = sampleCollateralValue * ltvRatio;
+    const securedEligible = Math.min(securedEmiEligible, securedAssetCap);
+
+    return {
+      sampleMonthlyIncome,
+      sampleExistingEmi,
+      sampleCollateralValue,
+      unsecuredFoir,
+      securedFoir,
+      unsecuredTenure,
+      securedTenure,
+      ltvRatio,
+      unsecuredMaxEmi,
+      securedMaxEmi,
+      unsecuredEligible,
+      securedEmiEligible,
+      securedAssetCap,
+      securedEligible,
+      sampleUnsecuredRate,
+      sampleSecuredRate,
+    };
+  }, [formData]);
 
   return (
     <div>
@@ -340,6 +414,12 @@ const ApprovalMatrixManagement = () => {
                     </span>
                   </div>
                   <div>
+                    <span className="text-muted-foreground">FOIR:</span>
+                    <span className="ml-2 font-medium">
+                      U {rule?.foirUnsecured != null && rule?.foirUnsecured !== '' ? `${Math.round(rule.foirUnsecured * 100)}%` : 'Default'} / S {rule?.foirSecured != null && rule?.foirSecured !== '' ? `${Math.round(rule.foirSecured * 100)}%` : 'Default'}
+                    </span>
+                  </div>
+                  <div>
                     <span className="text-muted-foreground">Age Range:</span>
                     <span className="ml-2 font-medium">
                       {rule?.minAge || 'Any'} - {rule?.maxAge || 'Any'} years
@@ -418,8 +498,105 @@ const ApprovalMatrixManagement = () => {
                   type="number"
                   value={formData?.maxCreditScore}
                   onChange={(e) => setFormData({ ...formData, maxCreditScore: e?.target?.value })}
-                  placeholder="e.g., 850"
+                  placeholder="e.g., 900"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="FOIR Unsecured (0-1)"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  value={formData?.foirUnsecured}
+                  onChange={(e) => setFormData({ ...formData, foirUnsecured: e?.target?.value })}
+                  placeholder="e.g., 0.55"
+                  description="Example: 0.55 means 55% FOIR"
+                />
+                <Input
+                  label="FOIR Secured (0-1)"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  value={formData?.foirSecured}
+                  onChange={(e) => setFormData({ ...formData, foirSecured: e?.target?.value })}
+                  placeholder="e.g., 0.65"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <Input
+                  label="Tenure Unsecured (months)"
+                  type="number"
+                  min="1"
+                  value={formData?.tenureUnsecuredMonths}
+                  onChange={(e) => setFormData({ ...formData, tenureUnsecuredMonths: e?.target?.value })}
+                  placeholder="e.g., 60"
+                />
+                <Input
+                  label="Tenure Secured (months)"
+                  type="number"
+                  min="1"
+                  value={formData?.tenureSecuredMonths}
+                  onChange={(e) => setFormData({ ...formData, tenureSecuredMonths: e?.target?.value })}
+                  placeholder="e.g., 240"
+                />
+                <Input
+                  label="LTV Ratio (0-1)"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  value={formData?.ltvRatio}
+                  onChange={(e) => setFormData({ ...formData, ltvRatio: e?.target?.value })}
+                  placeholder="e.g., 0.75"
+                />
+              </div>
+              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Policy Preview (sample calculation)</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Sample input used: Monthly income ₹{policyPreview.sampleMonthlyIncome.toLocaleString('en-IN')}, Existing EMI ₹{policyPreview.sampleExistingEmi.toLocaleString('en-IN')}, Collateral ₹{policyPreview.sampleCollateralValue.toLocaleString('en-IN')}.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <h4 className="text-sm font-semibold text-foreground mb-2">Unsecured Formula</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Max EMI = (Income × FOIR) - Existing EMI
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Eligible Amount = PrincipalFromEMI(rate, tenure, max EMI)
+                    </p>
+                    <div className="mt-2 text-xs space-y-1">
+                      <p>FOIR: <span className="font-medium">{Math.round(policyPreview.unsecuredFoir * 100)}%</span></p>
+                      <p>Tenure: <span className="font-medium">{policyPreview.unsecuredTenure} months</span></p>
+                      <p>Rate Used: <span className="font-medium">{policyPreview.sampleUnsecuredRate}%</span></p>
+                      <p>Max EMI: <span className="font-medium">₹{Math.round(policyPreview.unsecuredMaxEmi).toLocaleString('en-IN')}</span></p>
+                      <p>Eligible Amount: <span className="font-semibold text-primary">₹{Math.round(policyPreview.unsecuredEligible).toLocaleString('en-IN')}</span></p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <h4 className="text-sm font-semibold text-foreground mb-2">Secured Formula</h4>
+                    <p className="text-xs text-muted-foreground">
+                      EMI Eligible = PrincipalFromEMI(rate, tenure, max EMI)
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Final Eligible = min(EMI Eligible, Collateral × LTV)
+                    </p>
+                    <div className="mt-2 text-xs space-y-1">
+                      <p>FOIR: <span className="font-medium">{Math.round(policyPreview.securedFoir * 100)}%</span></p>
+                      <p>Tenure: <span className="font-medium">{policyPreview.securedTenure} months</span></p>
+                      <p>LTV: <span className="font-medium">{Math.round(policyPreview.ltvRatio * 100)}%</span></p>
+                      <p>Rate Used: <span className="font-medium">{policyPreview.sampleSecuredRate}%</span></p>
+                      <p>EMI-based Eligible: <span className="font-medium">₹{Math.round(policyPreview.securedEmiEligible).toLocaleString('en-IN')}</span></p>
+                      <p>Collateral × LTV Cap: <span className="font-medium">₹{Math.round(policyPreview.securedAssetCap).toLocaleString('en-IN')}</span></p>
+                      <p>Final Eligible Amount: <span className="font-semibold text-primary">₹{Math.round(policyPreview.securedEligible).toLocaleString('en-IN')}</span></p>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <Input

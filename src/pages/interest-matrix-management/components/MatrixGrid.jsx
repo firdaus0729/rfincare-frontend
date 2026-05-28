@@ -75,6 +75,7 @@ const MatrixGrid = ({
                 />
               </th>
               {[
+                { key: 'bankName', label: 'Bank' },
                 { key: 'productType', label: 'Product' },
                 { key: 'loanType', label: 'Loan Type' },
                 { key: 'creditScoreMin', label: 'Credit Min' },
@@ -125,6 +126,9 @@ const MatrixGrid = ({
                   />
                 </td>
                 <td className="px-4 py-3 text-sm font-medium text-foreground">
+                  {row?.bankName || 'All Banks'}
+                </td>
+                <td className="px-4 py-3 text-sm font-medium text-foreground">
                   {row?.productType}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
@@ -137,10 +141,10 @@ const MatrixGrid = ({
                   {row?.creditScoreMax}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
-                  ${row?.loanAmountMin?.toLocaleString()}
+                  ₹{row?.loanAmountMin?.toLocaleString('en-IN')}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
-                  ${row?.loanAmountMax?.toLocaleString()}
+                  ₹{row?.loanAmountMax?.toLocaleString('en-IN')}
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {row?.termMin}m

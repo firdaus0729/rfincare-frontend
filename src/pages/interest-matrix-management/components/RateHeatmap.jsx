@@ -7,7 +7,7 @@ const RateHeatmap = ({ matrixData }) => {
     { min: 580, max: 669, label: '580-669' },
     { min: 670, max: 739, label: '670-739' },
     { min: 740, max: 799, label: '740-799' },
-    { min: 800, max: 850, label: '800-850' }
+    { min: 800, max: 900, label: '800-900' }
   ];
 
   const loanAmountRanges = [

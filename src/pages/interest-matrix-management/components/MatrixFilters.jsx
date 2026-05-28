@@ -10,7 +10,8 @@ const MatrixFilters = ({
   onApplyFilters, 
   onResetFilters,
   productTypes,
-  loanTypes 
+  loanTypes,
+  bankOptions,
 }) => {
   return (
     <div className="bg-card rounded-lg border border-border p-4 md:p-6 mb-4 md:mb-6">
@@ -30,6 +31,15 @@ const MatrixFilters = ({
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Select
+          label="Bank Name"
+          placeholder="All Banks"
+          options={bankOptions || []}
+          value={filters?.bankId}
+          onChange={(value) => onFilterChange('bankId', value)}
+          clearable
+        />
+
         <Select
           label="Product Type"
           placeholder="All Products"
@@ -55,17 +65,17 @@ const MatrixFilters = ({
           value={filters?.minCreditScore}
           onChange={(e) => onFilterChange('minCreditScore', e?.target?.value)}
           min="300"
-          max="850"
+          max="900"
         />
 
         <Input
           label="Max Credit Score"
           type="number"
-          placeholder="e.g., 850"
+          placeholder="e.g., 900"
           value={filters?.maxCreditScore}
           onChange={(e) => onFilterChange('maxCreditScore', e?.target?.value)}
           min="300"
-          max="850"
+          max="900"
         />
 
         <Input

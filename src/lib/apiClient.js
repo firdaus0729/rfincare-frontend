@@ -4,8 +4,18 @@ import { getApiBaseUrl } from './runtimeConfig';
 
 const API_BASE_URL = getApiBaseUrl();
 
+const ACCESS_TOKEN_STORAGE_KEY = 'rfincare_access_token';
+
 let accessToken = null;
 let refreshingPromise = null;
+
+try {
+  if (typeof window !== 'undefined') {
+    accessToken = window.sessionStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) || null;
+  }
+} catch {
+  accessToken = null;
+}
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -14,6 +24,17 @@ export const apiClient = axios.create({
 
 export function setAccessToken(token) {
   accessToken = token || null;
+  try {
+    if (typeof window !== 'undefined') {
+      if (accessToken) {
+        window.sessionStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken);
+      } else {
+        window.sessionStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+      }
+    }
+  } catch {
+    /* ignore storage errors */
+  }
 }
 
 apiClient.interceptors.request.use((config) => {
@@ -33,7 +54,6 @@ apiClient.interceptors.response.use(
     if (!original || original.__isRetry) throw error;
     if (status !== 401) throw error;
     if (original.skipAuthRefresh) throw error;
-    if (!accessToken) throw error;
 
     if (original.url?.startsWith('/auth/')) throw error;
 
@@ -49,7 +69,12 @@ apiClient.interceptors.response.use(
         });
     }
 
-    await refreshingPromise;
+    try {
+      await refreshingPromise;
+    } catch (refreshErr) {
+      setAccessToken(null);
+      throw refreshErr;
+    }
     original.__isRetry = true;
     return apiClient.request(original);
   },

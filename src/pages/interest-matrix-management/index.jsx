@@ -11,15 +11,17 @@ import ImpactAnalyzer from './components/ImpactAnalyzer';
 import BulkActions from './components/BulkActions';
 import RateHeatmap from './components/RateHeatmap';
 import VersionHistory from './components/VersionHistory';
+import { bankService } from '../../services/apiServices';
 
-const CSV_TEMPLATE = `product_type,loan_type,credit_score_min,credit_score_max,loan_amount_min,loan_amount_max,term_min,term_max,interest_rate,status,effective_date,change_note
-Personal Loan,Unsecured,700,850,10000,50000,12,60,6.5,active,2026-01-01,Initial rate`;
+const CSV_TEMPLATE = `bank_name,product_type,loan_type,credit_score_min,credit_score_max,loan_amount_min,loan_amount_max,term_min,term_max,interest_rate,status,effective_date,change_note
+HDFC Bank,Personal Loan,Unsecured,700,900,10000,50000,12,60,6.5,active,2026-01-01,Initial rate`;
 
 const InterestMatrixManagement = () => {
   const [matrixData, setMatrixData] = useState([]);
   const [matrixLoading, setMatrixLoading] = useState(true);
   const [matrixError, setMatrixError] = useState('');
   const [importing, setImporting] = useState(false);
+  const [bankOptions, setBankOptions] = useState([]);
 
   const loadMatrix = useCallback(async () => {
     setMatrixLoading(true);
@@ -37,6 +39,23 @@ const InterestMatrixManagement = () => {
   useEffect(() => {
     loadMatrix();
   }, [loadMatrix]);
+
+  useEffect(() => {
+    const loadBanks = async () => {
+      try {
+        const banks = await bankService.getActiveBanks({ includeProducts: false });
+        setBankOptions(
+          (banks || []).map((bank) => ({
+            value: bank.id,
+            label: bank.name,
+          })),
+        );
+      } catch {
+        setBankOptions([]);
+      }
+    };
+    loadBanks();
+  }, []);
 
   const handleDownloadFullCsv = () => interestMatrixService.downloadCsv();
 
@@ -61,6 +80,7 @@ const InterestMatrixManagement = () => {
   };
 
   const [filters, setFilters] = useState({
+    bankId: '',
     productType: '',
     loanType: '',
     minCreditScore: '',
@@ -143,6 +163,10 @@ const InterestMatrixManagement = () => {
       filtered = filtered?.filter(item => item?.productType === filters?.productType);
     }
 
+    if (filters?.bankId) {
+      filtered = filtered?.filter(item => item?.bankId === filters?.bankId);
+    }
+
     if (filters?.loanType) {
       filtered = filtered?.filter(item => item?.loanType === filters?.loanType);
     }
@@ -176,6 +200,7 @@ const InterestMatrixManagement = () => {
 
   const handleResetFilters = () => {
     setFilters({
+      bankId: '',
       productType: '',
       loanType: '',
       minCreditScore: '',
@@ -450,6 +475,7 @@ const InterestMatrixManagement = () => {
             onFilterChange={handleFilterChange}
             onApplyFilters={applyFilters}
             onResetFilters={handleResetFilters}
+            bankOptions={bankOptions}
             productTypes={productTypes}
             loanTypes={loanTypes}
           />
@@ -482,6 +508,7 @@ const InterestMatrixManagement = () => {
         editData={editData}
         productTypes={productTypes}
         loanTypes={loanTypes}
+        bankOptions={bankOptions}
       />
       <ImpactAnalyzer
         isOpen={isImpactAnalyzerOpen}

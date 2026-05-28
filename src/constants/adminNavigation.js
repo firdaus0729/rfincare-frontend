@@ -11,6 +11,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'Leads', tab: 'leads', icon: 'UserCheck' },
   { label: 'Status check', tab: 'status-check', icon: 'Search' },
   { label: 'Loan products', tab: 'loan-products', icon: 'Package' },
+  { label: 'Document matrix', tab: 'document-requirements', icon: 'Files' },
   { label: 'Banks', tab: 'bank-management', icon: 'Building' },
   { label: 'Homepage CMS', tab: 'homepage-cms', icon: 'Layout' },
   { label: 'System', tab: 'system', icon: 'Settings' },

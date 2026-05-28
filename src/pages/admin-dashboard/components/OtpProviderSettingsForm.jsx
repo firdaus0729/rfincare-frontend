@@ -15,12 +15,20 @@ const EMAIL_OPTIONS = [
   { value: 'smtp', label: 'SMTP (uses SMTP_* in server .env)' },
 ];
 
+const WHATSAPP_OPTIONS = [
+  { value: 'console', label: 'Console (development — logs OTP)' },
+  { value: 'twilio', label: 'Twilio WhatsApp' },
+  { value: 'msg91', label: 'MSG91' },
+];
+
 const OtpProviderSettingsForm = () => {
   const [form, setForm] = useState({
     smsProvider: 'console',
+    whatsappProvider: 'console',
     emailProvider: 'console',
     requireMobileOtp: true,
     requireEmailOtp: true,
+    requireWhatsappOtp: false,
     providerConfig: {
       msg91SenderId: '',
       msg91TemplateId: '',
@@ -37,9 +45,11 @@ const OtpProviderSettingsForm = () => {
       const data = await cmsService.otpSettings.get();
       setForm({
         smsProvider: data?.smsProvider || 'console',
+        whatsappProvider: data?.whatsappProvider || 'console',
         emailProvider: data?.emailProvider || 'console',
         requireMobileOtp: data?.requireMobileOtp !== false,
         requireEmailOtp: data?.requireEmailOtp !== false,
+        requireWhatsappOtp: data?.requireWhatsappOtp === true,
         providerConfig: {
           msg91SenderId: data?.providerConfig?.msg91SenderId || '',
           msg91TemplateId: data?.providerConfig?.msg91TemplateId || '',
@@ -88,12 +98,18 @@ const OtpProviderSettingsForm = () => {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <Select
           label="SMS operator"
           value={form.smsProvider}
           onChange={(value) => setForm((p) => ({ ...p, smsProvider: value }))}
           options={SMS_OPTIONS}
+        />
+        <Select
+          label="WhatsApp operator"
+          value={form.whatsappProvider}
+          onChange={(value) => setForm((p) => ({ ...p, whatsappProvider: value }))}
+          options={WHATSAPP_OPTIONS}
         />
         <Select
           label="Email operator"
@@ -119,6 +135,14 @@ const OtpProviderSettingsForm = () => {
             onChange={(e) => setForm((p) => ({ ...p, requireEmailOtp: e.target.checked }))}
           />
           Require email OTP
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.requireWhatsappOtp}
+            onChange={(e) => setForm((p) => ({ ...p, requireWhatsappOtp: e.target.checked }))}
+          />
+          Require WhatsApp OTP
         </label>
       </div>
 

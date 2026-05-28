@@ -35,7 +35,7 @@ const CommissionTracker = ({ commissions }) => {
             <Icon name="TrendingUp" size={20} color="white" />
             <p className="text-sm opacity-90">Total Earned</p>
           </div>
-          <p className="text-2xl md:text-3xl font-bold">${totalEarned?.toLocaleString()}</p>
+          <p className="text-2xl md:text-3xl font-bold">₹{totalEarned?.toLocaleString('en-IN')}</p>
           <p className="text-xs opacity-75 mt-1">This month</p>
         </div>
 
@@ -44,7 +44,7 @@ const CommissionTracker = ({ commissions }) => {
             <Icon name="Clock" size={20} color="white" />
             <p className="text-sm opacity-90">Pending</p>
           </div>
-          <p className="text-2xl md:text-3xl font-bold">${pendingAmount?.toLocaleString()}</p>
+          <p className="text-2xl md:text-3xl font-bold">₹{pendingAmount?.toLocaleString('en-IN')}</p>
           <p className="text-xs opacity-75 mt-1">Processing</p>
         </div>
       </div>
@@ -71,7 +71,7 @@ const CommissionTracker = ({ commissions }) => {
 
             <div className="flex items-center space-x-3 flex-shrink-0">
               <div className="text-right">
-                <p className="text-sm font-bold text-foreground whitespace-nowrap">${commission?.amount?.toLocaleString()}</p>
+                <p className="text-sm font-bold text-foreground whitespace-nowrap">₹{commission?.amount?.toLocaleString('en-IN')}</p>
                 <p className="text-xs text-muted-foreground">{commission?.date}</p>
               </div>
               <span className={`text-xs px-2 py-1 rounded-full border ${getStatusColor(commission?.status)}`}>

@@ -56,6 +56,21 @@ export const employeeService = {
     }
   },
 
+  async updateApplicationStatus(applicationId, statusData) {
+    try {
+      const payload = {
+        status: statusData.status,
+        status_notes: statusData.notes || statusData.statusNotes || null,
+        document_stage_status: statusData.documentStageStatus || null,
+        bank_approval_status: statusData.bankApprovalStatus || null,
+      };
+      const res = await apiClient.patch(`/loan-applications/${applicationId}`, payload);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: error.response?.data?.error || 'Status update failed' } };
+    }
+  },
+
   // ============================================
   // DOCUMENT VERIFICATION
   // ============================================

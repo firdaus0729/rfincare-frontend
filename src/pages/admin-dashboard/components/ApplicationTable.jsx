@@ -40,6 +40,11 @@ const ApplicationTable = ({
     );
   };
 
+  const prettifyStage = (value) =>
+    String(value || '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
   const getPriorityBadge = (priority) => {
     const priorityConfig = {
       high: { bg: 'bg-destructive/10', text: 'text-destructive', icon: 'AlertCircle' },
@@ -73,7 +78,7 @@ const ApplicationTable = ({
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
+        <table className="w-full min-w-[1100px]">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
               <th className="px-4 py-3 text-left">
@@ -89,6 +94,9 @@ const ApplicationTable = ({
               <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Amount</th>
               <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Bank</th>
               <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Status</th>
+              <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Document Stage</th>
+              <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Bank Stage</th>
+              <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Agent Code</th>
               <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Priority</th>
               <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Date</th>
               <th className="px-4 py-3 text-left text-xs md:text-sm font-semibold text-foreground">Actions</th>
@@ -149,6 +157,15 @@ const ApplicationTable = ({
                 </td>
                 <td className="px-4 py-3">
                   {getStatusBadge(app?.status)}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-xs md:text-sm text-foreground">{prettifyStage(app?.documentStageStatus)}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-xs md:text-sm text-foreground">{prettifyStage(app?.bankApprovalStatus)}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-xs md:text-sm font-medium text-foreground">{app?.agentCode || '—'}</span>
                 </td>
                 <td className="px-4 py-3">
                   {getPriorityBadge(app?.priority)}

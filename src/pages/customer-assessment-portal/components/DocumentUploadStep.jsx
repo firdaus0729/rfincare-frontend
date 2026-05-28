@@ -5,6 +5,7 @@ import { customerJourneyService } from '../../../services/customerJourneyService
 import {
   APPLICANT_DOCUMENTS,
   coApplicantDocType,
+  normalizeDynamicDocumentRequirements,
   requiresCoApplicant,
 } from '../../../constants/assessmentDocuments';
 import DocumentPreviewModal from './DocumentPreviewModal';
@@ -22,6 +23,16 @@ const DocumentUploadCard = ({
   onView,
 }) => {
   const imageOnly = docType === 'customer_photo' || docType === coApplicantDocType('customer_photo');
+  const allowedShort = (doc.allowedFileTypes || []).map((t) => String(t).toLowerCase());
+  const dynamicAccept = allowedShort.length
+    ? allowedShort.map((ext) => {
+        if (ext === 'jpeg' || ext === 'jpg') return '.jpg,.jpeg,image/jpeg';
+        if (ext === 'png') return '.png,image/png';
+        if (ext === 'pdf') return '.pdf,application/pdf';
+        if (ext === 'webp') return '.webp,image/webp';
+        return ext;
+      }).join(',')
+    : null;
 
   return (
     <div
@@ -50,11 +61,11 @@ const DocumentUploadCard = ({
         <input
           ref={fileInputRef}
           type="file"
-          accept={
+          accept={dynamicAccept || (
             imageOnly
               ? '.jpg,.jpeg,.png,image/jpeg,image/png,image/webp'
               : '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf'
-          }
+          )}
           className="hidden"
           onChange={onSelectFile}
         />
@@ -85,6 +96,7 @@ const DocumentUploadStep = ({
   applicationId,
   uploadedDocs,
   onUploaded,
+  onRequirementsLoaded,
   errors,
   employmentType,
 }) => {
@@ -93,6 +105,7 @@ const DocumentUploadStep = ({
   const [uploading, setUploading] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [documentDefinitions, setDocumentDefinitions] = useState(APPLICANT_DOCUMENTS);
 
   const dualUpload = requiresCoApplicant(employmentType);
   const serverDocsSynced = useRef(false);
@@ -126,6 +139,26 @@ const DocumentUploadStep = ({
     };
   }, [applicationId, onUploaded]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadRequirements = async () => {
+      if (!applicationId) {
+        setDocumentDefinitions(APPLICANT_DOCUMENTS);
+        onRequirementsLoaded?.(APPLICANT_DOCUMENTS);
+        return;
+      }
+      const { data } = await customerJourneyService.getDocumentRequirements({ applicationId });
+      if (cancelled) return;
+      const resolved = normalizeDynamicDocumentRequirements(data?.requirements || []);
+      setDocumentDefinitions(resolved);
+      onRequirementsLoaded?.(resolved);
+    };
+    loadRequirements();
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId, onRequirementsLoaded]);
+
   useEffect(
     () => () => {
       Object.values(localPreviewUrls.current).forEach((url) => {
@@ -139,16 +172,32 @@ const DocumentUploadStep = ({
     const file = event.target.files?.[0];
     if (!file || !applicationId) return;
 
+    const normalizedType = String(docType).replace(/^co_applicant_/, '');
+    const docDef = documentDefinitions.find((d) => d.type === normalizedType);
+    const allowedShort = (docDef?.allowedFileTypes || []).map((t) => String(t).toLowerCase());
     const imageOnly =
       docType === 'customer_photo' || docType === coApplicantDocType('customer_photo');
-    const allowed = imageOnly
+    const defaultAllowed = imageOnly
       ? ['image/jpeg', 'image/png', 'image/webp']
       : ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-    if (!allowed.includes(file.type)) {
+    const allowedMime = allowedShort.length
+      ? defaultAllowed.filter((mime) => {
+          const lower = mime.toLowerCase();
+          if (allowedShort.includes(lower)) return true;
+          if (lower.includes('pdf') && allowedShort.includes('pdf')) return true;
+          if (lower.includes('png') && allowedShort.includes('png')) return true;
+          if ((lower.includes('jpg') || lower.includes('jpeg')) && (allowedShort.includes('jpg') || allowedShort.includes('jpeg'))) return true;
+          if (lower.includes('webp') && allowedShort.includes('webp')) return true;
+          return false;
+        })
+      : defaultAllowed;
+    if (!allowedMime.includes(file.type)) {
       setUploadError(
-        imageOnly
-          ? 'Photo must be a JPG or PNG image.'
-          : 'Please upload JPG, PNG, or PDF files only.',
+        allowedShort.length
+          ? `Please upload only: ${allowedShort.join(', ')}`
+          : imageOnly
+            ? 'Photo must be a JPG or PNG image.'
+            : 'Please upload JPG, PNG, or PDF files only.',
       );
       return;
     }
@@ -203,7 +252,7 @@ const DocumentUploadStep = ({
       </div>
 
       <div className="space-y-6">
-        {APPLICANT_DOCUMENTS.map((doc) => {
+        {documentDefinitions.map((doc) => {
           const applicantType = doc.type;
           const coType = coApplicantDocType(doc.type);
 

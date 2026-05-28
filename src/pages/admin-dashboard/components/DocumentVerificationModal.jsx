@@ -18,6 +18,9 @@ const DocumentVerificationModal = ({ application, isOpen, onClose, onApprove, on
   const [previewDoc, setPreviewDoc] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [documentStageStatus, setDocumentStageStatus] = useState('documents_pending');
+  const [bankApprovalStatus, setBankApprovalStatus] = useState('submitted_to_bank');
+  const [stageUpdateNotes, setStageUpdateNotes] = useState('');
 
   useEffect(() => {
     if (!isOpen || !application?.id) {
@@ -44,6 +47,8 @@ const DocumentVerificationModal = ({ application, isOpen, onClose, onApprove, on
         setDetail(application.rawApplication || null);
       } else {
         setDetail(appRes.data);
+        setDocumentStageStatus(appRes.data?.documentStageStatus || 'documents_pending');
+        setBankApprovalStatus(appRes.data?.bankApprovalStatus || 'submitted_to_bank');
       }
       setDocuments(docsRes.data || []);
       setLoading(false);
@@ -96,6 +101,16 @@ const DocumentVerificationModal = ({ application, isOpen, onClose, onApprove, on
     'Applicant';
 
   const amount = Number(app?.loanAmount ?? app?.data?.loanAmount ?? application?.amount ?? 0);
+  const stageOptions = [
+    { value: 'submitted_to_bank', label: 'Submitted To Bank' },
+    { value: 'at_kyc_stage', label: 'At KYC Stage' },
+    { value: 'at_bgv_stage', label: 'At BGV Stage' },
+    { value: 'at_credit_stage', label: 'At Credit Stage' },
+    { value: 'at_property_valuation_stage', label: 'At Property Valuation Stage' },
+    { value: 'at_property_technical_stage', label: 'At Property Technical Stage' },
+    { value: 'at_disbursement_stage', label: 'At Disbursement Stage' },
+    { value: 'bank_rejected', label: 'Bank Rejected Application' },
+  ];
 
   const handleApprove = () => {
     onApprove(application?.id, reviewNotes);
@@ -109,6 +124,19 @@ const DocumentVerificationModal = ({ application, isOpen, onClose, onApprove, on
     }
     onReject(application?.id, rejectionReason);
     onClose();
+  };
+
+  const handleStageUpdate = async () => {
+    const { error } = await adminService.updateApplicationStage(application?.id, {
+      document_stage_status: documentStageStatus,
+      bank_approval_status: bankApprovalStatus,
+      status_notes: stageUpdateNotes,
+    });
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    alert('QC/Bank stage updated successfully.');
   };
 
   if (!isOpen || !application) return null;
@@ -172,6 +200,62 @@ const DocumentVerificationModal = ({ application, isOpen, onClose, onApprove, on
                     <p className="text-xs text-muted-foreground">Status</p>
                     <p className="text-sm font-semibold capitalize">{application?.status || app?.status}</p>
                   </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Document stage</p>
+                    <p className="text-sm font-semibold capitalize">
+                      {String(app?.documentStageStatus || 'documents_pending').replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bank stage</p>
+                    <p className="text-sm font-semibold capitalize">
+                      {String(app?.bankApprovalStatus || 'submitted_to_bank').replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Agent code</p>
+                    <p className="text-sm font-semibold">{app?.sourcedAgentCode || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                  <h3 className="text-sm font-bold text-foreground">QC and Bank Approval Tracking</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-muted-foreground mb-1">Document stage</label>
+                      <select
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                        value={documentStageStatus}
+                        onChange={(e) => setDocumentStageStatus(e.target.value)}
+                      >
+                        {stageOptions.filter((o) => o.value !== 'bank_rejected').map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-muted-foreground mb-1">Bank approval stage</label>
+                      <select
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                        value={bankApprovalStatus}
+                        onChange={(e) => setBankApprovalStatus(e.target.value)}
+                      >
+                        {stageOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <textarea
+                    value={stageUpdateNotes}
+                    onChange={(e) => setStageUpdateNotes(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary"
+                    rows={2}
+                    placeholder="Optional notes for QC/Bank stage update"
+                  />
+                  <Button variant="outline" onClick={handleStageUpdate}>
+                    Update stage tracking
+                  </Button>
                 </div>
 
                 {sections.map((section) => (

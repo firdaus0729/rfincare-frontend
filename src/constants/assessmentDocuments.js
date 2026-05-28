@@ -35,9 +35,22 @@ export function requiresCoApplicant(employmentType) {
   return employmentType === 'retired';
 }
 
+export function normalizeDynamicDocumentRequirements(requirements = []) {
+  if (!Array.isArray(requirements) || !requirements.length) return APPLICANT_DOCUMENTS;
+  return requirements.map((item, index) => ({
+    type: item.documentType,
+    label: item.title || item.documentType,
+    description: item.subtitle || '',
+    icon: item.icon || 'FileText',
+    allowedFileTypes: item.allowedFileTypes || [],
+    sortOrder: Number(item.sortOrder ?? index),
+    isRequired: item.isRequired !== false,
+  }));
+}
+
 /** All document type keys required for the current applicant profile. */
-export function getRequiredDocumentTypes(employmentType) {
-  const base = APPLICANT_DOCUMENTS.map((d) => d.type);
+export function getRequiredDocumentTypes(employmentType, requirements = APPLICANT_DOCUMENTS) {
+  const base = requirements.filter((d) => d.isRequired !== false).map((d) => d.type);
   if (!requiresCoApplicant(employmentType)) return base;
   return [...base, ...base.map(coApplicantDocType)];
 }

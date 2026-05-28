@@ -15,6 +15,11 @@ const CommissionConfigModal = ({ agent, isOpen, onClose, onSave }) => {
     effectiveFrom: new Date()?.toISOString()?.split('T')?.[0],
     effectiveTo: '',
   });
+  const [circularTitle, setCircularTitle] = useState('');
+  const [circularDescription, setCircularDescription] = useState('');
+  const [circularFile, setCircularFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [circulars, setCirculars] = useState([]);
 
   useEffect(() => {
     if (!isOpen || !agent?.id) return;
@@ -31,6 +36,8 @@ const CommissionConfigModal = ({ agent, isOpen, onClose, onSave }) => {
           effectiveTo: data.effectiveTo || '',
         });
       }
+      const circularRes = await adminService.getCommissionCirculars();
+      setCirculars(circularRes?.data || []);
     })();
   }, [isOpen, agent?.id]);
 
@@ -52,6 +59,30 @@ const CommissionConfigModal = ({ agent, isOpen, onClose, onSave }) => {
     onSave(formData);
   };
 
+  const handleUploadCircular = async () => {
+    if (!circularFile) {
+      alert('Please select a PDF file first.');
+      return;
+    }
+    setUploading(true);
+    const { error } = await adminService.uploadCommissionCircular({
+      title: circularTitle,
+      description: circularDescription,
+      file: circularFile,
+    });
+    setUploading(false);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    setCircularTitle('');
+    setCircularDescription('');
+    setCircularFile(null);
+    const circularRes = await adminService.getCommissionCirculars();
+    setCirculars(circularRes?.data || []);
+    alert('Circular uploaded and now visible to all agents.');
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -60,7 +91,7 @@ const CommissionConfigModal = ({ agent, isOpen, onClose, onSave }) => {
         <div className="border-b border-border p-4 md:p-6 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-foreground">Configure Commission</h2>
-            <p className="text-sm text-muted-foreground">Agent: {agent?.name}</p>
+            <p className="text-sm text-muted-foreground">Universal config (applies to all agents)</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <Icon name="X" size={20} />
@@ -139,6 +170,50 @@ const CommissionConfigModal = ({ agent, isOpen, onClose, onSave }) => {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Commission Circular (PDF)</h3>
+            <p className="text-xs text-muted-foreground">
+              Upload circular once and it becomes visible to all agents in Agent Dashboard.
+            </p>
+            <Input
+              label="Circular title"
+              value={circularTitle}
+              onChange={(e) => setCircularTitle(e.target.value)}
+              placeholder="e.g. Commission update May 2026"
+            />
+            <Input
+              label="Description (optional)"
+              value={circularDescription}
+              onChange={(e) => setCircularDescription(e.target.value)}
+              placeholder="Short note for agents"
+            />
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(e) => setCircularFile(e.target.files?.[0] || null)}
+              className="block w-full text-sm"
+            />
+            <Button type="button" variant="outline" onClick={handleUploadCircular} disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Upload Circular PDF'}
+            </Button>
+
+            {circulars.length > 0 && (
+              <div className="space-y-2">
+                {circulars.slice(0, 5).map((c) => (
+                  <a
+                    key={c.id}
+                    href={c.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-sm text-primary hover:underline"
+                  >
+                    {c.title}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-border">

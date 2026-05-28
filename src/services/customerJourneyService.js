@@ -139,6 +139,22 @@ export const customerJourneyService = {
     }
   },
 
+  async getDocumentRequirements({ applicationId, bankId, productType, loanType } = {}) {
+    try {
+      const res = await apiClient.get('/document-requirements/resolve', {
+        params: {
+          applicationId: applicationId || undefined,
+          bankId: bankId || undefined,
+          productType: productType || undefined,
+          loanType: loanType || undefined,
+        },
+      });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: { requirements: [] }, error };
+    }
+  },
+
   async deleteDocument(documentId) {
     try {
       await apiClient.delete(`/documents/${documentId}`);

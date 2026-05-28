@@ -67,6 +67,15 @@ export const adminService = {
     }
   },
 
+  async updateApplicationStage(applicationId, payload) {
+    try {
+      const res = await apiClient.patch(`/loan-applications/${applicationId}`, payload);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to update stage tracking') };
+    }
+  },
+
   async requestDeleteApplicationsOtp() {
     const res = await apiClient.post('/loan-applications/bulk-delete/request-otp');
     return res.data;
@@ -186,6 +195,30 @@ export const adminService = {
       return { error: null };
     } catch (error) {
       return { error: apiError(error, 'Failed to save commission') };
+    }
+  },
+
+  async getCommissionCirculars() {
+    try {
+      const res = await apiClient.get('/admin/commission/circulars');
+      return { data: toCamelCase(res.data || []), error: null };
+    } catch (error) {
+      return { data: [], error: apiError(error, 'Failed to load commission circulars') };
+    }
+  },
+
+  async uploadCommissionCircular({ title, description, file }) {
+    try {
+      const form = new FormData();
+      if (title) form.append('title', title);
+      if (description) form.append('description', description);
+      form.append('file', file);
+      const res = await apiClient.post('/admin/commission/circulars', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to upload circular PDF') };
     }
   },
 
@@ -351,5 +384,70 @@ export const adminService = {
   async verifyStatusCheck(payload) {
     const res = await apiClient.post('/admin/status-check/verify', payload);
     return res.data;
+  },
+
+  async getDocumentRequirements(filters = {}) {
+    try {
+      const res = await apiClient.get('/admin/document-requirements', { params: filters });
+      return { data: toCamelCase(res.data || []), error: null };
+    } catch (error) {
+      return { data: [], error: apiError(error, 'Failed to load document requirements') };
+    }
+  },
+
+  async createDocumentRequirement(payload) {
+    try {
+      const res = await apiClient.post('/admin/document-requirements', payload);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to create requirement') };
+    }
+  },
+
+  async updateDocumentRequirement(id, payload) {
+    try {
+      const res = await apiClient.patch(`/admin/document-requirements/${id}`, payload);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to update requirement') };
+    }
+  },
+
+  async deleteDocumentRequirement(id) {
+    try {
+      await apiClient.delete(`/admin/document-requirements/${id}`);
+      return { error: null };
+    } catch (error) {
+      return { error: apiError(error, 'Failed to delete requirement') };
+    }
+  },
+
+  async importDocumentRequirementsCsv(csv, replaceAll = true) {
+    try {
+      const res = await apiClient.post('/admin/document-requirements/import.csv', {
+        csv,
+        replaceAll,
+      });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to import CSV') };
+    }
+  },
+
+  async exportDocumentRequirementsCsv() {
+    try {
+      const res = await apiClient.get('/admin/document-requirements/export.csv', {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'document-requirements.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      return { error: null };
+    } catch (error) {
+      return { error: apiError(error, 'Failed to export CSV') };
+    }
   },
 };

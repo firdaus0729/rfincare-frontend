@@ -4,8 +4,9 @@ import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 
-const RateModal = ({ isOpen, onClose, onSave, editData, productTypes, loanTypes }) => {
+const RateModal = ({ isOpen, onClose, onSave, editData, productTypes, loanTypes, bankOptions }) => {
   const [formData, setFormData] = useState({
+    bankId: '',
     productType: '',
     loanType: '',
     creditScoreMin: '',
@@ -26,6 +27,7 @@ const RateModal = ({ isOpen, onClose, onSave, editData, productTypes, loanTypes 
       setFormData(editData);
     } else {
       setFormData({
+        bankId: '',
         productType: '',
         loanType: '',
         creditScoreMin: '',
@@ -118,6 +120,15 @@ const RateModal = ({ isOpen, onClose, onSave, editData, productTypes, loanTypes 
         <form onSubmit={handleSubmit} className="p-4 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <Select
+              label="Bank Name"
+              options={bankOptions || []}
+              value={formData?.bankId || ''}
+              onChange={(value) => handleChange('bankId', value)}
+              placeholder="All banks (generic)"
+              clearable
+            />
+
+            <Select
               label="Product Type"
               required
               options={productTypes}
@@ -140,7 +151,7 @@ const RateModal = ({ isOpen, onClose, onSave, editData, productTypes, loanTypes 
               type="number"
               required
               min="300"
-              max="850"
+              max="900"
               value={formData?.creditScoreMin}
               onChange={(e) => handleChange('creditScoreMin', e?.target?.value)}
               error={errors?.creditScoreMin}
@@ -152,7 +163,7 @@ const RateModal = ({ isOpen, onClose, onSave, editData, productTypes, loanTypes 
               type="number"
               required
               min="300"
-              max="850"
+              max="900"
               value={formData?.creditScoreMax}
               onChange={(e) => handleChange('creditScoreMax', e?.target?.value)}
               error={errors?.creditScoreMax}
@@ -160,7 +171,7 @@ const RateModal = ({ isOpen, onClose, onSave, editData, productTypes, loanTypes 
             />
 
             <Input
-              label="Min Loan Amount ($)"
+              label="Min Loan Amount (₹)"
               type="number"
               required
               min="0"
@@ -171,7 +182,7 @@ const RateModal = ({ isOpen, onClose, onSave, editData, productTypes, loanTypes 
             />
 
             <Input
-              label="Max Loan Amount ($)"
+              label="Max Loan Amount (₹)"
               type="number"
               required
               min="0"

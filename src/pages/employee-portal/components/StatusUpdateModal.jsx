@@ -7,6 +7,12 @@ import { Checkbox } from '../../../components/ui/Checkbox';
 const StatusUpdateModal = ({ application, isOpen, onClose, onUpdate }) => {
   const [status, setStatus] = useState(application?.status || 'under_review');
   const [statusNotes, setStatusNotes] = useState('');
+  const [documentStageStatus, setDocumentStageStatus] = useState(
+    application?.documentStageStatus || 'documents_pending',
+  );
+  const [bankApprovalStatus, setBankApprovalStatus] = useState(
+    application?.bankApprovalStatus || 'submitted_to_bank',
+  );
   const [sendNotification, setSendNotification] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -17,6 +23,16 @@ const StatusUpdateModal = ({ application, isOpen, onClose, onUpdate }) => {
     { value: 'approved', label: 'Approved' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'disbursed', label: 'Disbursed' }
+  ];
+  const stageOptions = [
+    { value: 'submitted_to_bank', label: 'Submitted To Bank' },
+    { value: 'at_kyc_stage', label: 'At KYC Stage' },
+    { value: 'at_bgv_stage', label: 'At BGV Stage' },
+    { value: 'at_credit_stage', label: 'At Credit Stage' },
+    { value: 'at_property_valuation_stage', label: 'At Property Valuation Stage' },
+    { value: 'at_property_technical_stage', label: 'At Property Technical Stage' },
+    { value: 'at_disbursement_stage', label: 'At Disbursement Stage' },
+    { value: 'bank_rejected', label: 'Bank Rejected Application' },
   ];
 
   const getStatusColor = (statusValue) => {
@@ -42,6 +58,8 @@ const StatusUpdateModal = ({ application, isOpen, onClose, onUpdate }) => {
       await onUpdate(application?.id, {
         status,
         notes: statusNotes,
+        documentStageStatus,
+        bankApprovalStatus,
         sendNotification
       });
       onClose();
@@ -114,6 +132,24 @@ const StatusUpdateModal = ({ application, isOpen, onClose, onUpdate }) => {
               value={status}
               onChange={setStatus}
             />
+          </div>
+
+          <div className="bg-muted rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">QC and Bank Stages</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Select
+                label="Document stage"
+                options={stageOptions.filter((o) => o.value !== 'bank_rejected')}
+                value={documentStageStatus}
+                onChange={setDocumentStageStatus}
+              />
+              <Select
+                label="Bank approval stage"
+                options={stageOptions}
+                value={bankApprovalStatus}
+                onChange={setBankApprovalStatus}
+              />
+            </div>
           </div>
 
           {/* Status Notes */}

@@ -77,6 +77,7 @@ const AgentDashboard = () => {
   const commissions = [];
 
   const chartData = dashboard?.weeklyPerformance || [];
+  const circulars = dashboard?.circulars || [];
 
 
   const appointments = [
@@ -382,6 +383,30 @@ const AgentDashboard = () => {
                 <UpcomingAppointments appointments={appointments} />
               </div>
               <RecentActivity activities={recentActivities} />
+            </div>
+
+            <div className="bg-card rounded-lg border border-border p-4 md:p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold text-foreground">Commission Circulars</h2>
+                <Icon name="FileText" size={18} className="text-primary" />
+              </div>
+              {circulars.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No circular uploaded yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {circulars.map((c) => (
+                    <a
+                      key={c.id}
+                      href={c.file_url || c.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-sm text-primary hover:underline"
+                    >
+                      {c.title}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
 
             <TrainingResources resources={trainingResources} />

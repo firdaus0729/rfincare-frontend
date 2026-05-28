@@ -103,9 +103,8 @@ const generateCredentials = (formData) => {
   const firstName = (formData?.firstName || 'user')?.toLowerCase()?.replace(/[^a-z0-9]/g, '') || 'user';
   const phone = (formData?.phone || '')?.replace(/[^0-9]/g, '')?.slice(-4) || '0000';
   const username = `${firstName}${phone}`;
-  const email = `${username}@rfincare.customer`;
   const password = `RFC${phone}${firstName.slice(0, 4).toUpperCase()}!`;
-  return { email, password, username };
+  return { password, username };
 };
 
 const getStoredCredentials = (formData) => {
@@ -136,6 +135,7 @@ const CustomerAssessmentPortal = () => {
   const [applicationId, setApplicationId] = useState(null);
   const [otpAuthenticatedUserId, setOtpAuthenticatedUserId] = useState(null);
   const [uploadedDocs, setUploadedDocs] = useState({});
+  const [documentRequirements, setDocumentRequirements] = useState([]);
   const autoSaveTimer = useRef(null);
 
   const steps = [
@@ -430,7 +430,8 @@ const CustomerAssessmentPortal = () => {
         break;
 
       case 6: {
-        getRequiredDocumentTypes(formData?.employmentType).forEach((type) => {
+        const requirementDefs = documentRequirements?.length ? documentRequirements : undefined;
+        getRequiredDocumentTypes(formData?.employmentType, requirementDefs).forEach((type) => {
           if (!uploadedDocs?.[type]) {
             newErrors[type] = 'This document is required';
           }
@@ -773,6 +774,7 @@ const CustomerAssessmentPortal = () => {
             applicationId={applicationId}
             uploadedDocs={uploadedDocs}
             onUploaded={handleDocUploaded}
+            onRequirementsLoaded={setDocumentRequirements}
             errors={errors}
             employmentType={formData?.employmentType}
           />

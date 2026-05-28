@@ -114,7 +114,14 @@ const ReportsAndAnalytics = () => {
       alert(`${report.name} generated (${data.rows?.length || 0} rows). CSV downloaded.`);
       loadDashboard();
     } catch (err) {
-      alert(err?.response?.data?.error || err?.message || 'Report generation failed');
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.error || err?.message || 'Report generation failed';
+      if (status === 401 || /jwt expired/i.test(String(msg))) {
+        alert('Session expired. Please login again, then generate report.');
+        window.location.href = '/authentication-management-center';
+        return;
+      }
+      alert(msg);
     }
   };
 
@@ -156,7 +163,14 @@ const ReportsAndAnalytics = () => {
       }
       setShowExportModal(false);
     } catch (err) {
-      alert(err?.response?.data?.error || err?.message || 'Export failed');
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.error || err?.message || 'Export failed';
+      if (status === 401 || /jwt expired/i.test(String(msg))) {
+        alert('Session expired. Please login again, then export report.');
+        window.location.href = '/authentication-management-center';
+        return;
+      }
+      alert(msg);
     }
   };
 

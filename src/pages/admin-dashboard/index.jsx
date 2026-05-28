@@ -35,6 +35,7 @@ import StatusCheckAdminTab from './components/StatusCheckAdminTab';
 import OtpProviderSettingsForm from './components/OtpProviderSettingsForm';
 import OAuthProviderSettingsForm from './components/OAuthProviderSettingsForm';
 import LoanProductsTab from './components/LoanProductsTab';
+import DocumentRequirementsTab from './components/DocumentRequirementsTab';
 
 
 const AdminDashboard = () => {
@@ -164,6 +165,9 @@ const AdminDashboard = () => {
     bankLogo: app?.bank?.logoUrl || '',
     bankLogoAlt: app?.bank?.name ? `${app.bank.name} logo` : 'Bank',
     status: app?.status || 'pending',
+    documentStageStatus: app?.documentStageStatus || 'documents_pending',
+    bankApprovalStatus: app?.bankApprovalStatus || 'submitted_to_bank',
+    agentCode: app?.sourcedAgentCode || app?.agentCode || '—',
     priority: app?.adminPriority || 'medium',
     date: new Date(app?.createdAt || app?.submittedAt)?.toISOString()?.split('T')?.[0] || '',
   });
@@ -311,7 +315,10 @@ const AdminDashboard = () => {
               profileImage: "https://img.rocket.new/generatedImages/rocket_gen_img_1b80e6770-1763297889591.png",
               profileImageAlt: `Profile picture of ${emp?.employeeName}`,
               role: emp?.userProfile?.role || 'employee',
-              status: emp?.onboardingStatus || emp?.userProfile?.isActive ? 'active' : 'pending',
+              status:
+                (emp?.onboardingStatus === 'active' || emp?.userProfile?.isActive)
+                  ? 'active'
+                  : 'pending',
               department: 'Operations',
               tasksCompleted: 0,
               tasksTotal: 0,
@@ -654,6 +661,8 @@ const AdminDashboard = () => {
                 {activeTab === 'bank-management' && <BankManagementTab />}
 
                 {activeTab === 'loan-products' && <LoanProductsTab />}
+
+                {activeTab === 'document-requirements' && <DocumentRequirementsTab />}
 
                 {activeTab === 'homepage-cms' && <HomepageCmsTab />}
 
