@@ -3,6 +3,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { bankService } from '../../../services/apiServices';
+import { getBankLogoAlt, getBankLogoUrl } from '../../../utils/bankBranding';
 
 const PartnersSection = () => {
   const navigate = useNavigate();
@@ -18,14 +19,15 @@ const PartnersSection = () => {
     try {
       setLoading(true);
       setError('');
-      const data = await bankService?.getAllBanks();
+      const data = await bankService?.getActiveBanks({ includeProducts: false });
       
       // Transform bank data to partners format
       const transformedPartners = data?.map(bank => ({
         id: bank?.id,
         name: bank?.name,
-        logo: bank?.logoUrl || "https://img.rocket.new/generatedImages/rocket_gen_img_1f767ab23-1764656769085.png",
-        logoAlt: bank?.logoAlt || `${bank?.name} official logo`,
+        logo: getBankLogoUrl(bank),
+        logoAlt: getBankLogoAlt(bank),
+        displayPriority: bank?.displayPriority || bank?.display_priority || 0,
         type: bank?.bankType === 'public' ? 'Public Sector Bank' : 
               bank?.bankType === 'private' ? 'Private Sector Bank' :
               bank?.bankType === 'foreign' ? 'Foreign Bank' :
@@ -113,10 +115,15 @@ const PartnersSection = () => {
             {partners?.map((partner) =>
             <div key={partner?.id} className="bg-card rounded-xl border border-border p-6 hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center">
                 <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4 overflow-hidden">
-                  <img
-                  src={partner?.logo}
-                  alt={partner?.logoAlt}
-                  className="w-full h-full object-cover" />
+                  {partner?.logo ? (
+                    <img
+                      src={partner?.logo}
+                      alt={partner?.logoAlt}
+                      className="w-full h-full object-contain p-2"
+                    />
+                  ) : (
+                    <Icon name="Building2" size={26} className="text-muted-foreground" />
+                  )}
                 
                 </div>
                 <h3 className="text-sm font-bold text-foreground mb-2">{partner?.name}</h3>

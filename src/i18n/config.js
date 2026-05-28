@@ -35,4 +35,14 @@ i18n?.use(LanguageDetector)?.use(initReactI18next)?.init({
     }
   });
 
+const applyDocumentLanguage = (lang) => {
+  if (typeof document === 'undefined') return;
+  const baseLang = (lang || 'en').split('-')[0];
+  document.documentElement.lang = baseLang;
+  document.documentElement.setAttribute('data-lang', baseLang);
+};
+
+applyDocumentLanguage(i18n?.language);
+i18n?.on('languageChanged', applyDocumentLanguage);
+
 export default i18n;

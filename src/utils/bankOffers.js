@@ -1,4 +1,5 @@
 import { productMatchesLoanType } from '../constants/loanProducts';
+import { getBankLogoAlt, getBankLogoUrl } from './bankBranding';
 
 export function parseProductData(product) {
   if (!product?.data) return {};
@@ -35,8 +36,8 @@ export function buildBankOffers(banks, loanProduct) {
       offers.push({
         bankId: bank.id,
         bankName: bank.name,
-        logoUrl: bank.logoUrl,
-        logoAlt: bank.logoAlt,
+        logoUrl: getBankLogoUrl(bank),
+        logoAlt: getBankLogoAlt(bank),
         rating: bank.rating,
         reviewsCount: bank.reviewsCount,
         productId: null,
@@ -60,8 +61,8 @@ export function buildBankOffers(banks, loanProduct) {
       offers.push({
         bankId: bank.id,
         bankName: bank.name,
-        logoUrl: bank.logoUrl,
-        logoAlt: bank.logoAlt,
+        logoUrl: getBankLogoUrl(bank),
+        logoAlt: getBankLogoAlt(bank),
         rating: bank.rating,
         reviewsCount: bank.reviewsCount,
         productId: product.id,

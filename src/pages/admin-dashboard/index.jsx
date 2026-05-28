@@ -32,6 +32,8 @@ import BankManagementTab from './components/BankManagementTab';
 import HomepageCmsTab from './components/HomepageCmsTab';
 import LeadsTab from './components/LeadsTab';
 import StatusCheckAdminTab from './components/StatusCheckAdminTab';
+import OtpProviderSettingsForm from './components/OtpProviderSettingsForm';
+import OAuthProviderSettingsForm from './components/OAuthProviderSettingsForm';
 import LoanProductsTab from './components/LoanProductsTab';
 
 
@@ -661,7 +663,11 @@ const AdminDashboard = () => {
 
                 {/* System Configuration Tab */}
                 {activeTab === 'system' && (
-                  <SystemConfigPanel />
+                  <div className="space-y-8">
+                    <OAuthProviderSettingsForm />
+                    <OtpProviderSettingsForm />
+                    <SystemConfigPanel />
+                  </div>
                 )}
 
                 {/* Activity Tab */}

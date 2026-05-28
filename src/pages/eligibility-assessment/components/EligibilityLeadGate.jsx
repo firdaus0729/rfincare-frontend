@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Icon from '../../../components/AppIcon';
@@ -11,14 +11,23 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [consent, setConsent] = useState(false);
-  const [otp, setOtp] = useState('');
+  const [mobileOtp, setMobileOtp] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
   const [leadId, setLeadId] = useState(null);
   const [otpSent, setOtpSent] = useState(false);
   const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [otpSettings, setOtpSettings] = useState({
+    requireMobileOtp: true,
+    requireEmailOtp: true,
+  });
 
   const normalizedPhone = () => phone.replace(/\D/g, '').slice(-10);
+
+  useEffect(() => {
+    leadService.getOtpSettings().then(setOtpSettings).catch(() => {});
+  }, []);
 
   const validateContact = () => {
     if (!fullName.trim()) return 'Full name is required.';
@@ -49,13 +58,20 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
         consentAccepted: true,
       });
       setLeadId(lead.id);
-      await leadService.requestOtp({
+      const otpRes = await leadService.requestOtp({
         phone: normalizedPhone(),
         email: email.trim(),
         leadId: lead.id,
       });
+      if (otpRes?.requireMobileOtp !== undefined || otpRes?.requireEmailOtp !== undefined) {
+        setOtpSettings({
+          requireMobileOtp: otpRes.requireMobileOtp !== false,
+          requireEmailOtp: otpRes.requireEmailOtp !== false,
+        });
+      }
       setOtpSent(true);
-      setOtp('');
+      setMobileOtp('');
+      setEmailOtp('');
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || 'Could not send OTP');
     } finally {
@@ -65,8 +81,13 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
 
   const handleVerify = async () => {
     setError('');
-    if (otp.length !== 6) {
+
+    if (otpSettings.requireMobileOtp && mobileOtp.length !== 6) {
       setError('Enter the 6-digit OTP sent to your mobile.');
+      return;
+    }
+    if (otpSettings.requireEmailOtp && emailOtp.length !== 6) {
+      setError('Enter the 6-digit OTP sent to your email.');
       return;
     }
 
@@ -74,7 +95,9 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
     try {
       const res = await leadService.verifyOtp({
         phone: normalizedPhone(),
-        otp,
+        email: email.trim(),
+        mobileOtp: otpSettings.requireMobileOtp ? mobileOtp : undefined,
+        emailOtp: otpSettings.requireEmailOtp ? emailOtp : undefined,
         leadId,
       });
       setVerified(true);
@@ -90,6 +113,10 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
       setLoading(false);
     }
   };
+
+  const canVerify =
+    (!otpSettings.requireMobileOtp || mobileOtp.length === 6) &&
+    (!otpSettings.requireEmailOtp || emailOtp.length === 6);
 
   if (verified) {
     return (
@@ -108,8 +135,8 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
       <div>
         <h3 className="font-semibold text-foreground">Verify your contact details</h3>
         <p className="text-xs text-muted-foreground mt-1">
-          Enter your name, email, and mobile. We will send an OTP to your mobile to verify before showing the
-          eligibility form.
+          Enter your name, email, and mobile. We will send separate OTP codes to your mobile
+          {otpSettings.requireEmailOtp ? ' and email' : ''} to verify before showing the eligibility form.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -150,17 +177,33 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
         </span>
       </label>
       {otpSent && (
-        <div className="space-y-2">
-          <Input
-            label="OTP sent to your mobile"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="6-digit code"
-            maxLength={6}
-          />
+        <div className="space-y-4">
+          {otpSettings.requireMobileOtp && (
+            <div className="space-y-2">
+              <Input
+                label="OTP sent to your mobile"
+                value={mobileOtp}
+                onChange={(e) => setMobileOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6-digit code"
+                maxLength={6}
+              />
+            </div>
+          )}
+          {otpSettings.requireEmailOtp && (
+            <div className="space-y-2">
+              <Input
+                label="OTP sent to your email"
+                value={emailOtp}
+                onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6-digit code"
+                maxLength={6}
+              />
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
-            OTP sent to {normalizedPhone()}
-            {email.trim() ? ` · Email on file: ${email.trim()}` : ''}
+            {otpSettings.requireMobileOtp && <>Mobile OTP sent to {normalizedPhone()}</>}
+            {otpSettings.requireMobileOtp && otpSettings.requireEmailOtp && ' · '}
+            {otpSettings.requireEmailOtp && <>Email OTP sent to {email.trim()}</>}
           </p>
         </div>
       )}
@@ -168,12 +211,36 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
       <div className="flex flex-wrap gap-3">
         {!otpSent ? (
           <Button type="button" onClick={handleCreateAndSendOtp} disabled={loading}>
-            {loading ? 'Sending…' : 'Send OTP to mobile'}
+            {loading ? 'Sending…' : 'Send OTP to mobile & email'}
           </Button>
         ) : (
           <>
-            <Button type="button" onClick={handleVerify} disabled={loading || otp.length !== 6}>
+            <Button type="button" onClick={handleVerify} disabled={loading || !canVerify}>
               {loading ? 'Verifying…' : 'Verify & continue'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={async () => {
+                setError('');
+                setLoading(true);
+                try {
+                  await leadService.requestOtp({
+                    phone: normalizedPhone(),
+                    email: email.trim(),
+                    leadId,
+                  });
+                  setMobileOtp('');
+                  setEmailOtp('');
+                } catch (err) {
+                  setError(err?.response?.data?.error || 'Could not resend OTP');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Resend OTPs
             </Button>
             <Button
               type="button"
@@ -181,7 +248,8 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
               disabled={loading}
               onClick={() => {
                 setOtpSent(false);
-                setOtp('');
+                setMobileOtp('');
+                setEmailOtp('');
                 setError('');
               }}
             >

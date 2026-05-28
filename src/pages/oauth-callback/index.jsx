@@ -5,8 +5,15 @@ import { OAUTH_RETURN_PATH_KEY } from '../../services/authService';
 
 const OAUTH_ERROR_MESSAGES = {
   invalid_state: 'Sign-in was interrupted. Please try again.',
-  not_configured: 'This sign-in provider is not configured on the server yet.',
+  not_configured: 'This sign-in provider is not configured. Ask admin to enable it under System → OAuth.',
   no_user_id: 'Could not read your account from the provider. Try another sign-in method.',
+  not_registered:
+    'No application found for this email. Please complete an eligibility/application on Rfincare first, then sign in with Google.',
+  staff_account: 'This email is registered as staff. Use the staff login page instead.',
+  account_inactive: 'Your account is inactive. Please contact support.',
+  no_email: 'We could not get your email from the provider. Allow email permission and try again.',
+  token_exchange_failed:
+    'OAuth failed — check that redirect URI in admin matches Google/Microsoft console exactly.',
 };
 
 const OAuthCallback = () => {
@@ -26,9 +33,12 @@ const OAuthCallback = () => {
       }
 
       if (error) {
+        const decoded = decodeURIComponent(error);
         navigate('/customer-login', {
           replace: true,
-          state: { error: OAUTH_ERROR_MESSAGES[error] || `Sign-in failed (${error})` },
+          state: {
+            error: OAUTH_ERROR_MESSAGES[decoded] || OAUTH_ERROR_MESSAGES[error] || `Sign-in failed (${decoded})`,
+          },
         });
         return;
       }

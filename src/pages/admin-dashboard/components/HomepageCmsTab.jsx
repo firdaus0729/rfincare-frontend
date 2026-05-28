@@ -17,6 +17,21 @@ const HomepageCmsTab = () => {
   const [videoForm, setVideoForm] = useState({ title: '', description: '', youtubeUrl: '', isPublished: true });
   const [legalSlug, setLegalSlug] = useState('privacy-policy');
   const [legalForm, setLegalForm] = useState({ title: '', bodyHtml: '' });
+  const [trustForm, setTrustForm] = useState({
+    heading: 'Trusted by Thousands',
+    subtitle: 'Our commitment to security, transparency, and customer success speaks for itself',
+    stats: [],
+    certifications: [],
+  });
+  const [aboutForm, setAboutForm] = useState({
+    heroTitle: 'About Rfincare',
+    heroSubtitle:
+      'Empowering Indians with smart financial solutions through technology and transparency',
+    stats: [],
+    values: [],
+    storyHeading: 'Our Story',
+    storyParagraphsText: '',
+  });
 
   const load = async () => {
     const [n, v, s] = await Promise.all([
@@ -33,12 +48,39 @@ const HomepageCmsTab = () => {
     setLegalSlug(slug);
   };
 
-  useEffect(() => { load().catch(console.error); loadLegal('privacy-policy').catch(() => {}); }, []);
+  useEffect(() => {
+    load().catch(console.error);
+    loadLegal('privacy-policy').catch(() => {});
+    cmsService.trustSignals.get().then((data) => {
+      setTrustForm({
+        heading: data?.heading || 'Trusted by Thousands',
+        subtitle:
+          data?.subtitle ||
+          'Our commitment to security, transparency, and customer success speaks for itself',
+        stats: Array.isArray(data?.stats) ? data.stats : [],
+        certifications: Array.isArray(data?.certifications) ? data.certifications : [],
+      });
+    }).catch(() => {});
+    cmsService.aboutContent.get().then((data) => {
+      setAboutForm({
+        heroTitle: data?.heroTitle || 'About Rfincare',
+        heroSubtitle:
+          data?.heroSubtitle ||
+          'Empowering Indians with smart financial solutions through technology and transparency',
+        stats: Array.isArray(data?.stats) ? data.stats : [],
+        values: Array.isArray(data?.values) ? data.values : [],
+        storyHeading: data?.storyHeading || 'Our Story',
+        storyParagraphsText: Array.isArray(data?.storyParagraphs)
+          ? data.storyParagraphs.join('\n\n')
+          : '',
+      });
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-6">
       <div className="flex gap-2 flex-wrap">
-        {['contact', 'news', 'videos', 'stories', 'legal'].map((t) => (
+        {['contact', 'news', 'videos', 'stories', 'trust', 'about', 'legal'].map((t) => (
           <Button key={t} variant={tab === t ? 'default' : 'outline'} size="sm" onClick={() => setTab(t)}>{t}</Button>
         ))}
       </div>
@@ -169,6 +211,272 @@ const HomepageCmsTab = () => {
             );
           })}
         </ul>
+      )}
+      {tab === 'trust' && (
+        <div className="space-y-4 max-w-4xl">
+          <Input
+            label="Section heading"
+            value={trustForm.heading}
+            onChange={(e) => setTrustForm((p) => ({ ...p, heading: e.target.value }))}
+          />
+          <Input
+            label="Section subtitle"
+            value={trustForm.subtitle}
+            onChange={(e) => setTrustForm((p) => ({ ...p, subtitle: e.target.value }))}
+          />
+
+          <div className="border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold">Statistics (value, label, icon, color)</h3>
+            {trustForm.stats.map((item, idx) => (
+              <div key={item.id || idx} className="grid md:grid-cols-5 gap-2">
+                <Input
+                  label="Value"
+                  value={item.value || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      stats: p.stats.map((s, i) => (i === idx ? { ...s, value: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="Label"
+                  value={item.label || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      stats: p.stats.map((s, i) => (i === idx ? { ...s, label: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="Icon"
+                  value={item.icon || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      stats: p.stats.map((s, i) => (i === idx ? { ...s, icon: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="Color var"
+                  value={item.color || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      stats: p.stats.map((s, i) => (i === idx ? { ...s, color: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="ID"
+                  value={item.id || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      stats: p.stats.map((s, i) => (i === idx ? { ...s, id: e.target.value } : s)),
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold">Certifications (name, icon, description)</h3>
+            {trustForm.certifications.map((item, idx) => (
+              <div key={item.id || idx} className="grid md:grid-cols-4 gap-2">
+                <Input
+                  label="Name"
+                  value={item.name || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      certifications: p.certifications.map((s, i) =>
+                        i === idx ? { ...s, name: e.target.value } : s,
+                      ),
+                    }))
+                  }
+                />
+                <Input
+                  label="Icon"
+                  value={item.icon || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      certifications: p.certifications.map((s, i) =>
+                        i === idx ? { ...s, icon: e.target.value } : s,
+                      ),
+                    }))
+                  }
+                />
+                <Input
+                  label="Description"
+                  value={item.description || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      certifications: p.certifications.map((s, i) =>
+                        i === idx ? { ...s, description: e.target.value } : s,
+                      ),
+                    }))
+                  }
+                />
+                <Input
+                  label="ID"
+                  value={item.id || ''}
+                  onChange={(e) =>
+                    setTrustForm((p) => ({
+                      ...p,
+                      certifications: p.certifications.map((s, i) =>
+                        i === idx ? { ...s, id: e.target.value } : s,
+                      ),
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+
+          <Button
+            onClick={() => cmsService.trustSignals.update(trustForm)}
+          >
+            Save trust section
+          </Button>
+        </div>
+      )}
+      {tab === 'about' && (
+        <div className="space-y-4 max-w-5xl">
+          <Input
+            label="Hero title"
+            value={aboutForm.heroTitle}
+            onChange={(e) => setAboutForm((p) => ({ ...p, heroTitle: e.target.value }))}
+          />
+          <Input
+            label="Hero subtitle"
+            value={aboutForm.heroSubtitle}
+            onChange={(e) => setAboutForm((p) => ({ ...p, heroSubtitle: e.target.value }))}
+          />
+
+          <div className="border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold">About number matrix</h3>
+            {aboutForm.stats.map((item, idx) => (
+              <div key={item.id || idx} className="grid md:grid-cols-3 gap-2">
+                <Input
+                  label="Value"
+                  value={item.value || ''}
+                  onChange={(e) =>
+                    setAboutForm((p) => ({
+                      ...p,
+                      stats: p.stats.map((s, i) => (i === idx ? { ...s, value: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="Label"
+                  value={item.label || ''}
+                  onChange={(e) =>
+                    setAboutForm((p) => ({
+                      ...p,
+                      stats: p.stats.map((s, i) => (i === idx ? { ...s, label: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="ID"
+                  value={item.id || ''}
+                  onChange={(e) =>
+                    setAboutForm((p) => ({
+                      ...p,
+                      stats: p.stats.map((s, i) => (i === idx ? { ...s, id: e.target.value } : s)),
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold">What Drives Us cards</h3>
+            {aboutForm.values.map((item, idx) => (
+              <div key={item.id || idx} className="grid md:grid-cols-4 gap-2">
+                <Input
+                  label="Title"
+                  value={item.title || ''}
+                  onChange={(e) =>
+                    setAboutForm((p) => ({
+                      ...p,
+                      values: p.values.map((s, i) => (i === idx ? { ...s, title: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="Icon"
+                  value={item.icon || ''}
+                  onChange={(e) =>
+                    setAboutForm((p) => ({
+                      ...p,
+                      values: p.values.map((s, i) => (i === idx ? { ...s, icon: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="Description"
+                  value={item.description || ''}
+                  onChange={(e) =>
+                    setAboutForm((p) => ({
+                      ...p,
+                      values: p.values.map((s, i) => (i === idx ? { ...s, description: e.target.value } : s)),
+                    }))
+                  }
+                />
+                <Input
+                  label="ID"
+                  value={item.id || ''}
+                  onChange={(e) =>
+                    setAboutForm((p) => ({
+                      ...p,
+                      values: p.values.map((s, i) => (i === idx ? { ...s, id: e.target.value } : s)),
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+
+          <Input
+            label="Story heading"
+            value={aboutForm.storyHeading}
+            onChange={(e) => setAboutForm((p) => ({ ...p, storyHeading: e.target.value }))}
+          />
+          <div>
+            <label className="block text-sm font-medium mb-2">Story paragraphs (separate with blank line)</label>
+            <textarea
+              className="w-full border rounded-lg p-3 min-h-[180px]"
+              value={aboutForm.storyParagraphsText}
+              onChange={(e) => setAboutForm((p) => ({ ...p, storyParagraphsText: e.target.value }))}
+            />
+          </div>
+
+          <Button
+            onClick={() =>
+              cmsService.aboutContent.update({
+                heroTitle: aboutForm.heroTitle,
+                heroSubtitle: aboutForm.heroSubtitle,
+                stats: aboutForm.stats,
+                values: aboutForm.values,
+                storyHeading: aboutForm.storyHeading,
+                storyParagraphs: aboutForm.storyParagraphsText
+                  .split('\n')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              })
+            }
+          >
+            Save about section
+          </Button>
+        </div>
       )}
       {tab === 'legal' && (
         <div className="space-y-4 max-w-3xl">

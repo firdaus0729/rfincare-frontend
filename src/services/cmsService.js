@@ -25,4 +25,20 @@ export const cmsService = {
     get: () => apiClient.get('/cms/site-contact').then((r) => r.data),
     update: (body) => apiClient.put('/cms/site-contact', body).then((r) => r.data),
   },
+  trustSignals: {
+    get: () => apiClient.get('/cms/homepage/trust-signals').then((r) => r.data),
+    update: (body) => apiClient.put('/cms/homepage/trust-signals', body).then((r) => r.data),
+  },
+  aboutContent: {
+    get: () => apiClient.get('/cms/about-content').then((r) => r.data),
+    update: (body) => apiClient.put('/cms/about-content', body).then((r) => r.data),
+  },
+  otpSettings: {
+    get: () => apiClient.get('/cms/otp-settings').then((r) => r.data),
+    update: (body) => apiClient.put('/cms/otp-settings', body).then((r) => r.data),
+  },
+  oauthSettings: {
+    get: () => apiClient.get('/cms/oauth-settings').then((r) => r.data),
+    update: (body) => apiClient.put('/cms/oauth-settings', body).then((r) => r.data),
+  },
 };

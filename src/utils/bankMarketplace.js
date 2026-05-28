@@ -1,4 +1,5 @@
 import { getLoanProductBySlug } from '../constants/loanProducts';
+import { getBankLogoAlt, getBankLogoUrl } from './bankBranding';
 
 export function parseProductData(product) {
   if (!product) return {};
@@ -98,8 +99,8 @@ export function mapBankForMarketplace(bank, loanTypeSlug, probabilityMap = null)
     id: bank?.id,
     productId: primaryProduct?.id,
     name: bank?.name,
-    logo: bank?.logoUrl || bank?.logo_url,
-    logoAlt: bank?.logoAlt || bank?.logo_alt || `${bank?.name} logo`,
+    logo: getBankLogoUrl(bank),
+    logoAlt: getBankLogoAlt(bank),
     rating: bank?.rating || 4.5,
     reviews: `${bank?.reviewsCount ?? bank?.reviews_count ?? 0} reviews`,
     probability:

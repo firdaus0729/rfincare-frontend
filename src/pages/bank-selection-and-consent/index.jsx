@@ -12,6 +12,7 @@ import ConfirmationScreen from './components/ConfirmationScreen';
 import { useAuth } from '../../contexts/AuthContext';
 import { applicationService } from '../../services/applicationService';
 import { bankService } from '../../services/apiServices';
+import { getBankLogoAlt, getBankLogoUrl } from '../../utils/bankBranding';
 
 const BankSelectionAndConsent = () => {
   const navigate = useNavigate();
@@ -53,8 +54,8 @@ const BankSelectionAndConsent = () => {
         return {
           id: bank?.id,
           name: bank?.name,
-          logo: bank?.logoUrl,
-          logoAlt: bank?.logoAlt || `${bank?.name} logo`,
+          logo: getBankLogoUrl(bank),
+          logoAlt: getBankLogoAlt(bank),
           description: `Trusted financial institution offering competitive loan products.`,
           interestRate: primaryProduct?.interestRateMin || 8.0,
           processingTime: '3-5 business days',

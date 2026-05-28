@@ -9,6 +9,14 @@ export const homepageService = {
     const res = await apiClient.get('/public/homepage/videos');
     return res.data;
   },
+  async getTrustSignals() {
+    const res = await apiClient.get('/public/homepage/trust-signals');
+    return res.data;
+  },
+  async getAboutContent() {
+    const res = await apiClient.get('/public/about-content');
+    return res.data;
+  },
   async getSuccessStories() {
     const res = await apiClient.get('/public/success-stories');
     return res.data;

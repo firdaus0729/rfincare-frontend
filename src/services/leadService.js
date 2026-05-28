@@ -6,13 +6,24 @@ export const leadService = {
     return res.data;
   },
 
+  async getOtpSettings() {
+    const res = await apiClient.get('/leads/otp-settings');
+    return res.data;
+  },
+
   async requestOtp({ phone, email, leadId }) {
     const res = await apiClient.post('/leads/request-otp', { phone, email, leadId });
     return res.data;
   },
 
-  async verifyOtp({ phone, otp, leadId }) {
-    const res = await apiClient.post('/leads/verify-otp', { phone, otp, leadId });
+  async verifyOtp({ phone, email, mobileOtp, emailOtp, leadId }) {
+    const res = await apiClient.post('/leads/verify-otp', {
+      phone,
+      email,
+      mobileOtp,
+      emailOtp,
+      leadId,
+    });
     return res.data;
   },
 

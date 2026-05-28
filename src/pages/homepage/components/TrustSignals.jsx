@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
+import { homepageService } from '../../../services/homepageService';
+import { bankService } from '../../../services/apiServices';
+import { getBankLogoAlt, getBankLogoUrl } from '../../../utils/bankBranding';
 
-const TrustSignals = () => {
-  const statistics = [
+const DEFAULT_STATISTICS = [
   {
     id: 'applications',
     value: '50,000+',
@@ -34,7 +36,7 @@ const TrustSignals = () => {
   }];
 
 
-  const certifications = [
+const DEFAULT_CERTIFICATIONS = [
   {
     id: 'ssl',
     name: 'SSL Secured',
@@ -60,40 +62,68 @@ const TrustSignals = () => {
     description: 'Data protection'
   }];
 
+const TrustSignals = () => {
+  const [statistics, setStatistics] = useState(DEFAULT_STATISTICS);
+  const [certifications, setCertifications] = useState(DEFAULT_CERTIFICATIONS);
+  const [heading, setHeading] = useState('Trusted by Thousands');
+  const [subtitle, setSubtitle] = useState(
+    'Our commitment to security, transparency, and customer success speaks for itself',
+  );
+  const [bankPartners, setBankPartners] = useState([]);
 
-  const bankPartners = [
-  {
-    id: 'bank1',
-    name: 'First National Bank',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_110ddeab1-1767460670898.png",
-    logoAlt: 'First National Bank logo featuring blue shield emblem with gold accents on white background',
-    years: '5+ years',
-    volume: '10,000+ loans'
-  },
-  {
-    id: 'bank2',
-    name: 'Capital Trust Bank',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_1b56d2e4b-1768453455755.png",
-    logoAlt: 'Capital Trust Bank logo with modern green and blue geometric design on white background',
-    years: '4+ years',
-    volume: '8,500+ loans'
-  },
-  {
-    id: 'bank3',
-    name: 'United Financial',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_1686bead5-1768453457417.png",
-    logoAlt: 'United Financial logo featuring red and white corporate branding with professional typography',
-    years: '6+ years',
-    volume: '12,000+ loans'
-  },
-  {
-    id: 'bank4',
-    name: 'Metro Credit Union',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_135b6439b-1767605395048.png",
-    logoAlt: 'Metro Credit Union logo with orange circular emblem and modern sans-serif text on white',
-    years: '3+ years',
-    volume: '6,000+ loans'
-  }];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await homepageService.getTrustSignals();
+        if (cancelled || !data) return;
+        setHeading(data.heading || 'Trusted by Thousands');
+        setSubtitle(
+          data.subtitle ||
+            'Our commitment to security, transparency, and customer success speaks for itself',
+        );
+        if (Array.isArray(data.stats) && data.stats.length) {
+          setStatistics(data.stats);
+        }
+        if (Array.isArray(data.certifications) && data.certifications.length) {
+          setCertifications(data.certifications);
+        }
+      } catch {
+        /* fallback to defaults */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const banks = await bankService.getActiveBanks({ includeProducts: false });
+        if (cancelled || !Array.isArray(banks)) return;
+        const mapped = banks
+          .map((bank) => ({
+            id: bank?.id,
+            name: bank?.name,
+            logo: getBankLogoUrl(bank),
+            logoAlt: getBankLogoAlt(bank),
+            years: bank?.partnershipDuration || bank?.partnership_duration || '-',
+            volume: bank?.customersServed || bank?.customers_served || '-',
+            displayPriority: bank?.displayPriority || bank?.display_priority || 0,
+          }))
+          .sort((a, b) => b.displayPriority - a.displayPriority)
+          .slice(0, 4);
+        setBankPartners(mapped);
+      } catch {
+        setBankPartners([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
 
   return (
@@ -101,10 +131,10 @@ const TrustSignals = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 md:mb-12">
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-3 md:mb-4">
-            Trusted by Thousands
+            {heading}
           </h2>
           <p className="text-sm md:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Our commitment to security, transparency, and customer success speaks for itself
+            {subtitle}
           </p>
         </div>
 
@@ -143,32 +173,39 @@ const TrustSignals = () => {
           <h3 className="text-xl md:text-2xl font-bold text-foreground text-center mb-6 md:mb-8">
             Our Banking Partners
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            {bankPartners?.map((bank) =>
-            <div key={bank?.id} className="feature-card text-center">
-                <div className="w-full h-16 md:h-20 mb-4 flex items-center justify-center overflow-hidden rounded-lg bg-muted">
-                  <Image
-                  src={bank?.logo}
-                  alt={bank?.logoAlt}
-                  className="w-full h-full object-contain p-2" />
-
+          {bankPartners.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground">No active partner banks configured.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+              {bankPartners?.map((bank) =>
+              <div key={bank?.id} className="feature-card text-center">
+                  <div className="w-full h-16 md:h-20 mb-4 flex items-center justify-center overflow-hidden rounded-lg bg-muted">
+                    {bank?.logo ? (
+                      <Image
+                        src={bank?.logo}
+                        alt={bank?.logoAlt}
+                        className="w-full h-full object-contain p-2" />
+                    ) : (
+                      <Icon name="Building2" size={24} className="text-muted-foreground" />
+                    )}
+                  </div>
+                  <h4 className="font-semibold text-sm md:text-base text-foreground mb-2 line-clamp-2">
+                    {bank?.name}
+                  </h4>
+                  <div className="flex items-center justify-center space-x-4 text-xs text-muted-foreground">
+                    <span className="flex items-center space-x-1">
+                      <Icon name="Calendar" size={12} />
+                      <span>{bank?.years}</span>
+                    </span>
+                    <span className="flex items-center space-x-1">
+                      <Icon name="FileCheck" size={12} />
+                      <span>{bank?.volume}</span>
+                    </span>
+                  </div>
                 </div>
-                <h4 className="font-semibold text-sm md:text-base text-foreground mb-2 line-clamp-2">
-                  {bank?.name}
-                </h4>
-                <div className="flex items-center justify-center space-x-4 text-xs text-muted-foreground">
-                  <span className="flex items-center space-x-1">
-                    <Icon name="Calendar" size={12} />
-                    <span>{bank?.years}</span>
-                  </span>
-                  <span className="flex items-center space-x-1">
-                    <Icon name="FileCheck" size={12} />
-                    <span>{bank?.volume}</span>
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>);
