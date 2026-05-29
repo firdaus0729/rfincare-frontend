@@ -9,6 +9,24 @@ const ACCESS_TOKEN_STORAGE_KEY = 'rfincare_access_token';
 let accessToken = null;
 let refreshingPromise = null;
 
+function redirectToLoginByPath() {
+  if (typeof window === 'undefined') return;
+  const p = window.location.pathname || '';
+  if (p.startsWith('/admin') || p.startsWith('/reports') || p.startsWith('/interest-matrix') || p.startsWith('/approval-matrix')) {
+    window.location.assign('/admin-login');
+    return;
+  }
+  if (p.startsWith('/employee')) {
+    window.location.assign('/employee-login');
+    return;
+  }
+  if (p.startsWith('/agent')) {
+    window.location.assign('/agent-login');
+    return;
+  }
+  window.location.assign('/customer-login');
+}
+
 try {
   if (typeof window !== 'undefined') {
     accessToken = window.sessionStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) || null;
@@ -73,6 +91,7 @@ apiClient.interceptors.response.use(
       await refreshingPromise;
     } catch (refreshErr) {
       setAccessToken(null);
+      redirectToLoginByPath();
       throw refreshErr;
     }
     original.__isRetry = true;
