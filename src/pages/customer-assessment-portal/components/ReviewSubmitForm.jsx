@@ -2,6 +2,10 @@ import React from 'react';
 import Icon from '../../../components/AppIcon';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { requiresCoApplicant } from '../../../constants/assessmentDocuments';
+import {
+  FINANCIAL_HISTORY_QUESTIONS,
+  financialHistoryLabel,
+} from '../../../constants/assessmentFinancialHistory';
 
 const ReviewSubmitForm = ({ formData, errors, onChange }) => {
   const formatCurrency = (val) => val ? `₹${parseInt(val)?.toLocaleString('en-IN')}` : '';
@@ -77,7 +81,11 @@ const ReviewSubmitForm = ({ formData, errors, onChange }) => {
         { label: 'Requested Amount', value: formatCurrency(formData?.loanAmount) },
         { label: 'Credit Score Range', value: formData?.creditScoreRange },
         { label: 'Monthly Debt Payments', value: formatCurrency(formData?.monthlyDebtPayments) },
-        { label: 'Total Assets', value: formatCurrency(formData?.totalAssets) }
+        { label: 'Total Assets', value: formatCurrency(formData?.totalAssets) },
+        ...FINANCIAL_HISTORY_QUESTIONS.map((q) => ({
+          label: q.label,
+          value: financialHistoryLabel(formData?.[q.field]),
+        })),
       ]
     }
   ];

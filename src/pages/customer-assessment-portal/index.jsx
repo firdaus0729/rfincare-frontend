@@ -23,6 +23,11 @@ import { normalizeLoanApiKey } from '../../constants/loanProducts';
 import { leadService } from '../../services/leadService';
 import { downloadConsentRecord } from '../../utils/consentRecord';
 import { getRequiredDocumentTypes, requiresCoApplicant } from '../../constants/assessmentDocuments';
+import {
+  FINANCIAL_HISTORY_INITIAL,
+  FINANCIAL_HISTORY_QUESTIONS,
+  isFinancialHistoryYes,
+} from '../../constants/assessmentFinancialHistory';
 
 const SESSION_KEY = 'loan_assessment_session';
 
@@ -56,7 +61,7 @@ const INITIAL_FORM_DATA = {
   coApplicant: { ...INITIAL_CO_APPLICANT },
   loanPurpose: '', loanAmount: '', creditScoreRange: '',
   monthlyDebtPayments: '', totalAssets: '',
-  hasBankruptcy: false, hasForeclosure: false, hasTaxLiens: false, hasCoSignedLoans: false,
+  ...FINANCIAL_HISTORY_INITIAL,
   certifyAccuracy: false, authorizeCredit: false, agreeTerms: false, consentCommunications: false,
   consentSignatureAgreed: false, customerSignature: '',
   submitAuthMethod: 'signature',
@@ -411,6 +416,11 @@ const CustomerAssessmentPortal = () => {
         if (!formData?.creditScoreRange) newErrors.creditScoreRange = 'Credit score range is required';
         if (!formData?.monthlyDebtPayments && formData?.monthlyDebtPayments !== 0) newErrors.monthlyDebtPayments = 'Monthly debt payments is required';
         if (!formData?.totalAssets && formData?.totalAssets !== 0) newErrors.totalAssets = 'Total assets is required';
+        FINANCIAL_HISTORY_QUESTIONS.forEach((question) => {
+          if (!formData?.[question.field]) {
+            newErrors[question.field] = 'Please select Yes or No';
+          }
+        });
         break;
 
       case 4: {
@@ -523,10 +533,16 @@ const CustomerAssessmentPortal = () => {
     credit_score_range: formData?.creditScoreRange || null,
     monthly_debt_payments: formData?.monthlyDebtPayments ? parseFloat(formData?.monthlyDebtPayments) : null,
     total_assets: formData?.totalAssets ? parseFloat(formData?.totalAssets) : null,
-    has_bankruptcy: formData?.hasBankruptcy || false,
-    has_foreclosure: formData?.hasForeclosure || false,
-    has_tax_liens: formData?.hasTaxLiens || false,
-    has_co_signed_loans: formData?.hasCoSignedLoans || false,
+    ...Object.fromEntries(
+      FINANCIAL_HISTORY_QUESTIONS.map((q) => [
+        q.payloadKey,
+        formData?.[q.field] || null,
+      ]),
+    ),
+    has_bankruptcy: isFinancialHistoryYes(formData?.loanDefaultPast36Months),
+    has_foreclosure: isFinancialHistoryYes(formData?.accountNpaWrittenOff),
+    has_tax_liens: isFinancialHistoryYes(formData?.creditBureauOverdue),
+    has_co_signed_loans: isFinancialHistoryYes(formData?.coApplicantOrGuarantor),
     preferred_bank_id: formData?.preferredBankId || null,
     loan_priority: serializeLoanPriorities(getLoanPriorities(formData)) || null,
     loan_priorities: getLoanPriorities(formData),

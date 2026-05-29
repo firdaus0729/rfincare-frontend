@@ -6,10 +6,7 @@ import Button from '../../../components/ui/Button';
 import BankComparisonPanel from '../../../components/bank-comparison/BankComparisonPanel';
 import { bankService } from '../../../services/apiServices';
 import { buildBankOffers, formatLoanAmount } from '../../../utils/bankOffers';
-import {
-  applyComparisonOverrides,
-  mapBankForMarketplace,
-} from '../../../utils/bankMarketplace';
+import { mapBankForMarketplace } from '../../../utils/bankMarketplace';
 import { getBankProbabilityMap, loadEligibilityResults } from '../../../services/leadService';
 import { MAX_BANK_COMPARE } from '../../../constants/bankComparison';
 
@@ -31,7 +28,6 @@ const BankOffersSection = ({ product }) => {
   const [loading, setLoading] = useState(() => banks.length === 0);
   const [error, setError] = useState('');
   const [compareList, setCompareList] = useState([]);
-  const [comparisonOverrides, setComparisonOverrides] = useState({});
   const comparisonSectionRef = useRef(null);
 
   useEffect(() => {
@@ -45,7 +41,6 @@ const BankOffersSection = ({ product }) => {
           const list = Array.isArray(data) ? data : [];
           setBanks(list);
           setCompareList([]);
-          setComparisonOverrides({});
           try {
             sessionStorage.setItem(
               `banks:${product.slug}`,
@@ -76,12 +71,7 @@ const BankOffersSection = ({ product }) => {
 
   const offers = useMemo(() => buildBankOffers(banks, product), [banks, product]);
 
-  const comparedBanks = marketplaceBanks
-    .filter((b) => compareList.includes(b.id))
-    .map((b) => {
-      const overrides = comparisonOverrides[b.id];
-      return overrides ? applyComparisonOverrides(b, overrides) : b;
-    });
+  const comparedBanks = marketplaceBanks.filter((b) => compareList.includes(b.id));
 
   const scrollToComparison = () => {
     comparisonSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -101,29 +91,6 @@ const BankOffersSection = ({ product }) => {
         setTimeout(scrollToComparison, 100);
       }
       return next;
-    });
-  };
-
-  const handleComparisonChange = (bankId, patch) => {
-    setComparisonOverrides((prev) => {
-      const base = prev[bankId] || {};
-      const bank = marketplaceBanks.find((b) => b.id === bankId);
-      const next = { ...base, ...patch };
-      if (patch.featuresText !== undefined) {
-        next.features = patch.featuresText
-          .split('\n')
-          .map((s) => s.trim())
-          .filter(Boolean);
-      }
-      if (!prev[bankId] && bank) {
-        if (next.interestRate === undefined) next.interestRate = bank.interestRate;
-        if (next.processingFee === undefined) next.processingFee = bank.processingFee;
-        if (next.otherCharges === undefined) next.otherCharges = bank.otherCharges;
-        if (next.featuresText === undefined) {
-          next.featuresText = (bank.features || []).join('\n');
-        }
-      }
-      return { ...prev, [bankId]: next };
     });
   };
 
@@ -176,8 +143,6 @@ const BankOffersSection = ({ product }) => {
             productLabel={product.label}
             banks={comparedBanks}
             rawBanks={marketplaceBanks.filter((b) => compareList.includes(b.id))}
-            comparisonOverrides={comparisonOverrides}
-            onComparisonChange={handleComparisonChange}
             onApply={handleApply}
             onRemoveBank={(id) => setCompareList((p) => p.filter((x) => x !== id))}
             onClearAll={() => setCompareList([])}

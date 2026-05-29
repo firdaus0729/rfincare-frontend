@@ -8,8 +8,6 @@ const BankComparisonPanel = ({
   productLabel,
   banks,
   rawBanks,
-  comparisonOverrides,
-  onComparisonChange,
   onApply,
   onRemoveBank,
   onClearAll,
@@ -74,10 +72,7 @@ const BankComparisonPanel = ({
           <BankComparisonTable
             banks={banks}
             rawBanks={rawBanks}
-            comparisonOverrides={comparisonOverrides}
-            onComparisonChange={onComparisonChange}
             onApply={onApply}
-            editable
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">

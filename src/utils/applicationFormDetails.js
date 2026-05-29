@@ -33,6 +33,10 @@ const LABELS = {
   creditScoreRange: 'Credit score range',
   monthlyDebtPayments: 'Monthly debt payments',
   totalAssets: 'Total assets',
+  loanDefaultPast36Months: 'Loan default (90+ days, 36 months)',
+  accountNpaWrittenOff: 'NPA / write-off / settlement',
+  creditBureauOverdue: 'Credit bureau overdue',
+  coApplicantOrGuarantor: 'Co-applicant or guarantor on other loan',
   preferredBankName: 'Preferred bank',
   relationship: 'Relationship',
 };
@@ -58,6 +62,7 @@ const CO_APPLICANT_LABELS = {
 function formatValue(key, value) {
   if (value == null || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (value === 'yes' || value === 'no') return value === 'yes' ? 'Yes' : 'No';
   if (key.toLowerCase().includes('income') || key === 'loanAmount' || key === 'monthlyRent' || key === 'totalAssets' || key === 'monthlyDebtPayments') {
     const num = Number(String(value).replace(/,/g, ''));
     if (Number.isFinite(num) && num > 0) return `₹${num.toLocaleString('en-IN')}`;
@@ -179,6 +184,7 @@ export function buildApplicationDetailSections(application) {
       icon: 'IndianRupee',
       fields: pickFields(merged, [
         'loanPurpose', 'loanAmount', 'creditScoreRange', 'monthlyDebtPayments', 'totalAssets',
+        'loanDefaultPast36Months', 'accountNpaWrittenOff', 'creditBureauOverdue', 'coApplicantOrGuarantor',
         'preferredBankName',
       ]),
     },

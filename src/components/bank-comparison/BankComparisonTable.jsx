@@ -11,7 +11,7 @@ const BankComparisonTable = ({
   comparisonOverrides = {},
   onComparisonChange,
   onApply,
-  editable = true,
+  editable = false,
 }) => {
   if (!banks?.length) return null;
 

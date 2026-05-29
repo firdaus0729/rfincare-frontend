@@ -10,7 +10,6 @@ const EmploymentInfoForm = ({ formData, errors, onChange, onCoApplicantChange })
     { value: 'business_owner', label: 'Business Owner' },
     { value: 'professional', label: 'Professional' },
     { value: 'retired', label: 'Retired' },
-    { value: 'unemployed', label: 'Unemployed' }
   ];
 
   const industryOptions = [

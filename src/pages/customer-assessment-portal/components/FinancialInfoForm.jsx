@@ -1,8 +1,11 @@
 import React from 'react';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
-import { Checkbox } from '../../../components/ui/Checkbox';
 import { useLoanProducts } from '../../../contexts/LoanProductsContext';
+import {
+  FINANCIAL_HISTORY_QUESTIONS,
+  FINANCIAL_YES_NO_OPTIONS,
+} from '../../../constants/assessmentFinancialHistory';
 
 const FinancialInfoForm = ({ formData, errors, onChange }) => {
   const { products } = useLoanProducts();
@@ -81,34 +84,24 @@ const FinancialInfoForm = ({ formData, errors, onChange }) => {
         />
       </div>
       <div className="space-y-4">
-        <p className="text-sm md:text-base font-medium text-foreground">
-          Financial History (Check all that apply)
+        <p className="text-sm md:text-base font-medium text-foreground">Financial history</p>
+        <p className="text-xs md:text-sm text-muted-foreground -mt-2">
+          Answer each question below. Select Yes or No as applicable.
         </p>
-        
-        <div className="space-y-3">
-          <Checkbox
-            label="I have declared bankruptcy in the past 7 years"
-            checked={formData?.hasBankruptcy}
-            onChange={(e) => onChange('hasBankruptcy', e?.target?.checked)}
-          />
-
-          <Checkbox
-            label="I have had a foreclosure in the past 7 years"
-            checked={formData?.hasForeclosure}
-            onChange={(e) => onChange('hasForeclosure', e?.target?.checked)}
-          />
-
-          <Checkbox
-            label="I have outstanding tax liens"
-            checked={formData?.hasTaxLiens}
-            onChange={(e) => onChange('hasTaxLiens', e?.target?.checked)}
-          />
-
-          <Checkbox
-            label="I have co-signed for other loans"
-            checked={formData?.hasCoSignedLoans}
-            onChange={(e) => onChange('hasCoSignedLoans', e?.target?.checked)}
-          />
+        <div className="space-y-4">
+          {FINANCIAL_HISTORY_QUESTIONS.map((question) => (
+            <Select
+              key={question.field}
+              label={question.label}
+              description={question.description}
+              options={FINANCIAL_YES_NO_OPTIONS}
+              value={formData?.[question.field]}
+              onChange={(value) => onChange(question.field, value)}
+              error={errors?.[question.field]}
+              required
+              placeholder="Select Yes or No"
+            />
+          ))}
         </div>
       </div>
       <div className="p-4 md:p-6 bg-muted rounded-lg border border-border">

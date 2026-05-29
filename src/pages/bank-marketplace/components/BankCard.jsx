@@ -124,7 +124,7 @@ const BankCard = ({
       <div className="space-y-2 md:space-y-3 mb-4 md:mb-6 flex-grow">
         <h4 className="text-xs md:text-sm font-semibold text-foreground">Key Features</h4>
         <div className="space-y-2">
-          {(bank?.features?.length ? bank.features : ['Use the fields above to list product features']).map(
+          {(bank?.features?.length ? bank.features : ['Contact lender for full feature list']).map(
             (feature, index) => (
             <div key={`${feature}-${index}`} className="flex items-start space-x-2">
               <Icon name="CheckCircle2" size={16} className="text-success flex-shrink-0 mt-0.5" />

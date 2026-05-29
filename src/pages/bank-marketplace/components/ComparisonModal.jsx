@@ -2,14 +2,7 @@ import React from 'react';
 import Icon from '../../../components/AppIcon';
 import BankComparisonTable from '../../../components/bank-comparison/BankComparisonTable';
 
-const ComparisonModal = ({
-  banks,
-  rawBanks = [],
-  comparisonOverrides = {},
-  onComparisonChange,
-  onClose,
-  onApply,
-}) => {
+const ComparisonModal = ({ banks, rawBanks = [], onClose, onApply }) => {
   if (banks?.length === 0) return null;
 
   return (
@@ -21,7 +14,7 @@ const ComparisonModal = ({
               Compare Banks
             </h2>
             <p className="text-xs md:text-sm text-muted-foreground mt-1">
-              Adjust rates, fees, and features below to compare side by side
+              Compare interest rates, fees, and features side by side
             </p>
           </div>
           <button
@@ -37,10 +30,7 @@ const ComparisonModal = ({
           <BankComparisonTable
             banks={banks}
             rawBanks={rawBanks}
-            comparisonOverrides={comparisonOverrides}
-            onComparisonChange={onComparisonChange}
             onApply={onApply}
-            editable
           />
         </div>
       </div>
