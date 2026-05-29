@@ -61,6 +61,22 @@ const INITIAL_FORM_DATA = {
   coApplicant: { ...INITIAL_CO_APPLICANT },
   loanPurpose: '', loanAmount: '', creditScoreRange: '',
   monthlyDebtPayments: '', totalAssets: '',
+  hasRunningLoanOrCard: '',
+  personalLoanEmi1: '',
+  personalLoanEmi2: '',
+  housingLoanEmi1: '',
+  housingLoanEmi2: '',
+  carLoanEmi: '',
+  twoWheelerLoanEmi: '',
+  otherLoanEmi1: '',
+  otherLoanEmi2: '',
+  creditCardOutstanding1: '',
+  creditCardOutstanding2: '',
+  creditCardOutstanding3: '',
+  creditCardOutstanding4: '',
+  hasAnyOverdue: '',
+  overdueAmount: '',
+  overdueLoanType: '',
   ...FINANCIAL_HISTORY_INITIAL,
   certifyAccuracy: false, authorizeCredit: false, agreeTerms: false, consentCommunications: false,
   consentSignatureAgreed: false, customerSignature: '',
@@ -416,6 +432,20 @@ const CustomerAssessmentPortal = () => {
         if (!formData?.creditScoreRange) newErrors.creditScoreRange = 'Credit score range is required';
         if (!formData?.monthlyDebtPayments && formData?.monthlyDebtPayments !== 0) newErrors.monthlyDebtPayments = 'Monthly debt payments is required';
         if (!formData?.totalAssets && formData?.totalAssets !== 0) newErrors.totalAssets = 'Total assets is required';
+        if (!formData?.hasRunningLoanOrCard) {
+          newErrors.hasRunningLoanOrCard = 'Please select Yes or No';
+        }
+        if (!formData?.hasAnyOverdue) {
+          newErrors.hasAnyOverdue = 'Please select Yes or No';
+        }
+        if (formData?.hasAnyOverdue === 'yes') {
+          if (!formData?.overdueAmount && formData?.overdueAmount !== 0) {
+            newErrors.overdueAmount = 'Overdue amount is required';
+          }
+          if (!formData?.overdueLoanType) {
+            newErrors.overdueLoanType = 'Please select loan type';
+          }
+        }
         FINANCIAL_HISTORY_QUESTIONS.forEach((question) => {
           if (!formData?.[question.field]) {
             newErrors[question.field] = 'Please select Yes or No';
@@ -533,6 +563,22 @@ const CustomerAssessmentPortal = () => {
     credit_score_range: formData?.creditScoreRange || null,
     monthly_debt_payments: formData?.monthlyDebtPayments ? parseFloat(formData?.monthlyDebtPayments) : null,
     total_assets: formData?.totalAssets ? parseFloat(formData?.totalAssets) : null,
+    has_running_loan_or_card: formData?.hasRunningLoanOrCard || null,
+    personal_loan_emi_1: formData?.personalLoanEmi1 ? parseFloat(formData?.personalLoanEmi1) : null,
+    personal_loan_emi_2: formData?.personalLoanEmi2 ? parseFloat(formData?.personalLoanEmi2) : null,
+    housing_loan_emi_1: formData?.housingLoanEmi1 ? parseFloat(formData?.housingLoanEmi1) : null,
+    housing_loan_emi_2: formData?.housingLoanEmi2 ? parseFloat(formData?.housingLoanEmi2) : null,
+    car_loan_emi: formData?.carLoanEmi ? parseFloat(formData?.carLoanEmi) : null,
+    two_wheeler_loan_emi: formData?.twoWheelerLoanEmi ? parseFloat(formData?.twoWheelerLoanEmi) : null,
+    other_loan_emi_1: formData?.otherLoanEmi1 ? parseFloat(formData?.otherLoanEmi1) : null,
+    other_loan_emi_2: formData?.otherLoanEmi2 ? parseFloat(formData?.otherLoanEmi2) : null,
+    credit_card_outstanding_1: formData?.creditCardOutstanding1 ? parseFloat(formData?.creditCardOutstanding1) : null,
+    credit_card_outstanding_2: formData?.creditCardOutstanding2 ? parseFloat(formData?.creditCardOutstanding2) : null,
+    credit_card_outstanding_3: formData?.creditCardOutstanding3 ? parseFloat(formData?.creditCardOutstanding3) : null,
+    credit_card_outstanding_4: formData?.creditCardOutstanding4 ? parseFloat(formData?.creditCardOutstanding4) : null,
+    has_any_overdue: formData?.hasAnyOverdue || null,
+    overdue_amount: formData?.overdueAmount ? parseFloat(formData?.overdueAmount) : null,
+    overdue_loan_type: formData?.overdueLoanType || null,
     ...Object.fromEntries(
       FINANCIAL_HISTORY_QUESTIONS.map((q) => [
         q.payloadKey,

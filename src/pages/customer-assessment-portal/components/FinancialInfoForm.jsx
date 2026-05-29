@@ -23,6 +23,19 @@ const FinancialInfoForm = ({ formData, errors, onChange }) => {
     { value: 'unknown', label: "I don't know" }
   ];
 
+  const yesNoOptions = FINANCIAL_YES_NO_OPTIONS;
+  const hasRunningLoans = formData?.hasRunningLoanOrCard === 'yes';
+  const hasOverdue = formData?.hasAnyOverdue === 'yes';
+
+  const overdueLoanTypeOptions = [
+    { value: 'personal_loan', label: 'Personal loan' },
+    { value: 'home_loan', label: 'Home loan' },
+    { value: 'car_loan', label: 'Car loan' },
+    { value: 'two_wheeler_loan', label: 'Two wheeler loan' },
+    { value: 'credit_card', label: 'Credit card' },
+    { value: 'other', label: 'Other' },
+  ];
+
   return (
     <div className="space-y-6 md:space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -83,6 +96,216 @@ const FinancialInfoForm = ({ formData, errors, onChange }) => {
           min={0}
         />
       </div>
+
+      <div className="rounded-lg border border-border bg-card p-4 md:p-6 space-y-4">
+        <div>
+          <p className="text-sm md:text-base font-semibold text-foreground">Existing loan details</p>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
+            Do you have any running loan or credit card?
+          </p>
+        </div>
+
+        <Select
+          label="Do you have any loan or credit card running?"
+          options={yesNoOptions}
+          value={formData?.hasRunningLoanOrCard}
+          onChange={(value) => onChange('hasRunningLoanOrCard', value)}
+          error={errors?.hasRunningLoanOrCard}
+          required
+          placeholder="Select Yes or No"
+        />
+
+        {hasRunningLoans && (
+          <div className="space-y-4">
+            <p className="text-xs md:text-sm text-muted-foreground">
+              If Yes, enter the details below.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <Input
+                label="Personal Loan 1 EMI"
+                type="number"
+                placeholder="0"
+                description="Monthly EMI in INR (₹)"
+                value={formData?.personalLoanEmi1}
+                onChange={(e) => onChange('personalLoanEmi1', e?.target?.value)}
+                error={errors?.personalLoanEmi1}
+                min={0}
+              />
+              <Input
+                label="Personal Loan 2 EMI"
+                type="number"
+                placeholder="0"
+                description="Monthly EMI in INR (₹)"
+                value={formData?.personalLoanEmi2}
+                onChange={(e) => onChange('personalLoanEmi2', e?.target?.value)}
+                error={errors?.personalLoanEmi2}
+                min={0}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <Input
+                label="Housing Loan 1 EMI"
+                type="number"
+                placeholder="0"
+                description="Monthly EMI in INR (₹)"
+                value={formData?.housingLoanEmi1}
+                onChange={(e) => onChange('housingLoanEmi1', e?.target?.value)}
+                error={errors?.housingLoanEmi1}
+                min={0}
+              />
+              <Input
+                label="Housing Loan 2 EMI"
+                type="number"
+                placeholder="0"
+                description="Monthly EMI in INR (₹)"
+                value={formData?.housingLoanEmi2}
+                onChange={(e) => onChange('housingLoanEmi2', e?.target?.value)}
+                error={errors?.housingLoanEmi2}
+                min={0}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <Input
+                label="Car Loan EMI"
+                type="number"
+                placeholder="0"
+                description="Monthly EMI in INR (₹)"
+                value={formData?.carLoanEmi}
+                onChange={(e) => onChange('carLoanEmi', e?.target?.value)}
+                error={errors?.carLoanEmi}
+                min={0}
+              />
+              <Input
+                label="Two Wheeler Loan EMI"
+                type="number"
+                placeholder="0"
+                description="Monthly EMI in INR (₹)"
+                value={formData?.twoWheelerLoanEmi}
+                onChange={(e) => onChange('twoWheelerLoanEmi', e?.target?.value)}
+                error={errors?.twoWheelerLoanEmi}
+                min={0}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <Input
+                label="Other Loan EMI 1"
+                type="number"
+                placeholder="0"
+                description="Monthly EMI in INR (₹)"
+                value={formData?.otherLoanEmi1}
+                onChange={(e) => onChange('otherLoanEmi1', e?.target?.value)}
+                error={errors?.otherLoanEmi1}
+                min={0}
+              />
+              <Input
+                label="Other Loan EMI 2"
+                type="number"
+                placeholder="0"
+                description="Monthly EMI in INR (₹)"
+                value={formData?.otherLoanEmi2}
+                onChange={(e) => onChange('otherLoanEmi2', e?.target?.value)}
+                error={errors?.otherLoanEmi2}
+                min={0}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <Input
+                label="Credit Card 1 outstanding"
+                type="number"
+                placeholder="0"
+                description="Outstanding amount in INR (₹)"
+                value={formData?.creditCardOutstanding1}
+                onChange={(e) => onChange('creditCardOutstanding1', e?.target?.value)}
+                error={errors?.creditCardOutstanding1}
+                min={0}
+              />
+              <Input
+                label="Credit Card 2 outstanding"
+                type="number"
+                placeholder="0"
+                description="Outstanding amount in INR (₹)"
+                value={formData?.creditCardOutstanding2}
+                onChange={(e) => onChange('creditCardOutstanding2', e?.target?.value)}
+                error={errors?.creditCardOutstanding2}
+                min={0}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <Input
+                label="Credit Card 3 outstanding"
+                type="number"
+                placeholder="0"
+                description="Outstanding amount in INR (₹)"
+                value={formData?.creditCardOutstanding3}
+                onChange={(e) => onChange('creditCardOutstanding3', e?.target?.value)}
+                error={errors?.creditCardOutstanding3}
+                min={0}
+              />
+              <Input
+                label="Credit Card 4 outstanding"
+                type="number"
+                placeholder="0"
+                description="Outstanding amount in INR (₹)"
+                value={formData?.creditCardOutstanding4}
+                onChange={(e) => onChange('creditCardOutstanding4', e?.target?.value)}
+                error={errors?.creditCardOutstanding4}
+                min={0}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-border bg-card p-4 md:p-6 space-y-4">
+        <div>
+          <p className="text-sm md:text-base font-semibold text-foreground">Borrowing details</p>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
+            Are you having any overdue in any loan?
+          </p>
+        </div>
+
+        <Select
+          label="Any overdue in any loan?"
+          options={yesNoOptions}
+          value={formData?.hasAnyOverdue}
+          onChange={(value) => onChange('hasAnyOverdue', value)}
+          error={errors?.hasAnyOverdue}
+          required
+          placeholder="Select Yes or No"
+        />
+
+        {hasOverdue && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <Input
+              label="If yes, how much is overdue?"
+              type="number"
+              placeholder="0"
+              description="Overdue amount in INR (₹)"
+              value={formData?.overdueAmount}
+              onChange={(e) => onChange('overdueAmount', e?.target?.value)}
+              error={errors?.overdueAmount}
+              min={0}
+              required
+            />
+            <Select
+              label="Loan details of overdue"
+              options={overdueLoanTypeOptions}
+              value={formData?.overdueLoanType}
+              onChange={(value) => onChange('overdueLoanType', value)}
+              error={errors?.overdueLoanType}
+              required
+              placeholder="Select loan type"
+            />
+          </div>
+        )}
+      </div>
+
       <div className="space-y-4">
         <p className="text-sm md:text-base font-medium text-foreground">Financial history</p>
         <p className="text-xs md:text-sm text-muted-foreground -mt-2">
