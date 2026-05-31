@@ -33,12 +33,16 @@ const PerformanceMetrics = ({ metrics }) => {
             <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br ${getMetricColor(metric?.type)} flex items-center justify-center`}>
               <Icon name={getMetricIcon(metric?.type)} size={20} color="white" />
             </div>
-            <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${
-              metric?.trend === 'up' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`}>
-              <Icon name={metric?.trend === 'up' ? 'TrendingUp' : 'TrendingDown'} size={12} />
-              <span>{metric?.change}</span>
-            </div>
+            {metric?.change != null && (
+              <div
+                className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                  metric?.trend === 'up' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                }`}
+              >
+                <Icon name={metric?.trend === 'up' ? 'TrendingUp' : 'TrendingDown'} size={12} />
+                <span>{metric.change}</span>
+              </div>
+            )}
           </div>
           <div className="space-y-1">
             <p className="text-xs md:text-sm text-muted-foreground">{metric?.label}</p>

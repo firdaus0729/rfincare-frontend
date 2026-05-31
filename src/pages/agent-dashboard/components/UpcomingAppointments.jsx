@@ -3,7 +3,7 @@ import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
 
-const UpcomingAppointments = ({ appointments }) => {
+const UpcomingAppointments = ({ appointments, onMessage }) => {
   const getAppointmentTypeColor = (type) => {
     const colors = {
       consultation: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -90,7 +90,12 @@ const UpcomingAppointments = ({ appointments }) => {
                   <Button variant="outline" size="xs" iconName="Phone">
                     Call
                   </Button>
-                  <Button variant="outline" size="xs" iconName="MessageSquare">
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    iconName="MessageSquare"
+                    onClick={() => onMessage?.(appointment)}
+                  >
                     Message
                   </Button>
                   <Button variant="ghost" size="xs" iconName="MoreHorizontal" />

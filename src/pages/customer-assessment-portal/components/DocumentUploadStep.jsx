@@ -94,6 +94,7 @@ const DocumentUploadCard = ({
 
 const DocumentUploadStep = ({
   applicationId,
+  customerId,
   uploadedDocs,
   onUploaded,
   onRequirementsLoaded,
@@ -142,16 +143,28 @@ const DocumentUploadStep = ({
   useEffect(() => {
     let cancelled = false;
     const loadRequirements = async () => {
-      if (!applicationId) {
-        setDocumentDefinitions(APPLICANT_DOCUMENTS);
-        onRequirementsLoaded?.(APPLICANT_DOCUMENTS);
-        return;
+      try {
+        if (!applicationId) {
+          setDocumentDefinitions(APPLICANT_DOCUMENTS);
+          onRequirementsLoaded?.(APPLICANT_DOCUMENTS);
+          return;
+        }
+        const { data, error } = await customerJourneyService.getDocumentRequirements({ applicationId });
+        if (cancelled) return;
+        if (error) {
+          setDocumentDefinitions(APPLICANT_DOCUMENTS);
+          onRequirementsLoaded?.(APPLICANT_DOCUMENTS);
+          return;
+        }
+        const resolved = normalizeDynamicDocumentRequirements(data?.requirements || []);
+        setDocumentDefinitions(resolved);
+        onRequirementsLoaded?.(resolved);
+      } catch {
+        if (!cancelled) {
+          setDocumentDefinitions(APPLICANT_DOCUMENTS);
+          onRequirementsLoaded?.(APPLICANT_DOCUMENTS);
+        }
       }
-      const { data } = await customerJourneyService.getDocumentRequirements({ applicationId });
-      if (cancelled) return;
-      const resolved = normalizeDynamicDocumentRequirements(data?.requirements || []);
-      setDocumentDefinitions(resolved);
-      onRequirementsLoaded?.(resolved);
     };
     loadRequirements();
     return () => {
@@ -211,6 +224,7 @@ const DocumentUploadStep = ({
     const { data, error } = await customerJourneyService.uploadDocument(file, {
       applicationId,
       documentType: docType,
+      customerId,
     });
     setUploading(null);
 

@@ -4,6 +4,7 @@ import Button from '../../../components/ui/Button';
 import Image from '../../../components/AppImage';
 import { documentTypeLabel, getDocumentPreviewUrl } from '../../../utils/documentUrls';
 import { DOC_STATUS_LABELS } from '../../../services/documentManagementService';
+import AgentDocumentUploadPanel from './AgentDocumentUploadPanel';
 
 const statusStyles = {
   approved: 'bg-success/10 text-success',
@@ -17,9 +18,11 @@ const ApplicationDocumentsView = ({
   application,
   documents,
   loading,
+  isAgent = false,
   onBack,
   onOpenDocument,
   onDownload,
+  onDocumentUploaded,
 }) => {
   return (
     <div className="space-y-6">
@@ -55,6 +58,10 @@ const ApplicationDocumentsView = ({
           <p className="text-xs text-muted-foreground">Rejected</p>
         </div>
       </div>
+
+      {isAgent && (
+        <AgentDocumentUploadPanel application={application} onUploaded={onDocumentUploaded} />
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading documents…</div>

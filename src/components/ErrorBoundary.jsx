@@ -4,11 +4,14 @@ import Icon from "./AppIcon";
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorMessage: '' };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return {
+      hasError: true,
+      errorMessage: error?.message || 'Unexpected error',
+    };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -17,8 +20,23 @@ class ErrorBoundary extends React.Component {
     // console.log("Error caught by ErrorBoundary:", error, errorInfo);
   }
 
+  handleRetry = () => {
+    if (typeof window !== 'undefined' && window.location.pathname.includes('customer-assessment-portal')) {
+      try {
+        localStorage.removeItem('loan_assessment_form_data');
+        localStorage.removeItem('loan_assessment_step');
+        localStorage.removeItem('loan_assessment_application_id');
+        localStorage.removeItem('loan_assessment_session');
+      } catch {
+        /* ignore */
+      }
+    }
+    this.setState({ hasError: false, errorMessage: '' });
+  };
+
   render() {
     if (this.state?.hasError) {
+      const isDev = import.meta.env?.DEV;
       return (
         <div className="min-h-screen flex items-center justify-center bg-neutral-50">
           <div className="text-center p-8 max-w-md">
@@ -32,17 +50,37 @@ class ErrorBoundary extends React.Component {
             </div>
             <div className="flex flex-col gap-1 text-center">
               <h1 className="text-2xl font-medium text-neutral-800">Something went wrong</h1>
-              <p className="text-neutral-600 text-base w w-8/12 mx-auto">We encountered an unexpected error while processing your request.</p>
+              <p className="text-neutral-600 text-base w-8/12 mx-auto">We encountered an unexpected error while processing your request.</p>
+              {isDev && this.state.errorMessage && (
+                <p className="text-xs text-neutral-500 mt-3 font-mono break-words">{this.state.errorMessage}</p>
+              )}
             </div>
-            <div className="flex justify-center items-center mt-6">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-6">
               <button
+                type="button"
+                onClick={this.handleRetry}
+                className="bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors duration-200 shadow-sm"
+              >
+                <Icon name="RefreshCw" size={18} color="#fff" />
+                Try again
+              </button>
+              <button
+                type="button"
                 onClick={() => {
-                  window.location.href = "/";
+                  try {
+                    localStorage.removeItem('loan_assessment_form_data');
+                    localStorage.removeItem('loan_assessment_step');
+                    localStorage.removeItem('loan_assessment_application_id');
+                    localStorage.removeItem('loan_assessment_session');
+                  } catch {
+                    /* ignore */
+                  }
+                  window.location.href = '/customer-assessment-portal';
                 }}
                 className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors duration-200 shadow-sm"
               >
                 <Icon name="ArrowLeft" size={18} color="#fff" />
-                Back
+                Back to assessment
               </button>
             </div>
           </div >

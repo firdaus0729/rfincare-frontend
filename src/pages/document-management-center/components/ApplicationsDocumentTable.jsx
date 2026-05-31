@@ -10,7 +10,7 @@ const summaryStyles = {
   in_review: 'bg-blue-500/10 text-blue-600',
 };
 
-const ApplicationsDocumentTable = ({ applications, onSelectApplication, loading }) => {
+const ApplicationsDocumentTable = ({ applications, onSelectApplication, loading, isAgent = false }) => {
   if (loading) {
     return (
       <div className="text-center py-16">
@@ -24,7 +24,11 @@ const ApplicationsDocumentTable = ({ applications, onSelectApplication, loading 
     return (
       <div className="text-center py-16">
         <Icon name="FolderOpen" size={48} className="text-muted-foreground mx-auto mb-3" />
-        <p className="text-muted-foreground">No applications found.</p>
+        <p className="text-muted-foreground">
+          {isAgent
+            ? 'No applications found. Search by application number or customer mobile (10 digits). Only applications you submitted appear here.'
+            : 'No applications found.'}
+        </p>
       </div>
     );
   }

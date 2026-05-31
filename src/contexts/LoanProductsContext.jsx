@@ -15,7 +15,7 @@ export function LoanProductsProvider({ children }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     const { data, error } = await loanProductCatalogService.listPublic();
-    if (!error && data?.length) {
+    if (!error && Array.isArray(data) && data.length) {
       setProducts(data);
       setLoanProductRegistry(data);
     } else {

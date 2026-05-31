@@ -7,8 +7,18 @@ import {
   financialHistoryLabel,
 } from '../../../constants/assessmentFinancialHistory';
 
+const displayValue = (val) => {
+  if (val == null || val === '') return '';
+  if (typeof val === 'object') return '';
+  return String(val);
+};
+
 const ReviewSubmitForm = ({ formData, errors, onChange }) => {
-  const formatCurrency = (val) => val ? `₹${parseInt(val)?.toLocaleString('en-IN')}` : '';
+  const formatCurrency = (val) => {
+    const n = Number.parseFloat(val);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    return `₹${Math.round(n).toLocaleString('en-IN')}`;
+  };
   const showCoApplicant = requiresCoApplicant(formData?.employmentType);
   const ca = formData?.coApplicant || {};
 
@@ -77,9 +87,9 @@ const ReviewSubmitForm = ({ formData, errors, onChange }) => {
       title: 'Financial Information',
       icon: 'IndianRupee',
       items: [
-        { label: 'Loan Purpose', value: formData?.loanPurpose },
+        { label: 'Loan Purpose', value: displayValue(formData?.loanPurpose) },
         { label: 'Requested Amount', value: formatCurrency(formData?.loanAmount) },
-        { label: 'Credit Score Range', value: formData?.creditScoreRange },
+        { label: 'Credit Score Range', value: displayValue(formData?.creditScoreRange) },
         { label: 'Monthly Debt Payments', value: formatCurrency(formData?.monthlyDebtPayments) },
         { label: 'Total Assets', value: formatCurrency(formData?.totalAssets) },
         { label: 'Any running loan / credit card', value: formData?.hasRunningLoanOrCard === 'yes' ? 'Yes' : formData?.hasRunningLoanOrCard === 'no' ? 'No' : '' },
@@ -97,7 +107,7 @@ const ReviewSubmitForm = ({ formData, errors, onChange }) => {
         { label: 'Credit Card 4 outstanding', value: formatCurrency(formData?.creditCardOutstanding4) },
         { label: 'Any overdue in any loan', value: formData?.hasAnyOverdue === 'yes' ? 'Yes' : formData?.hasAnyOverdue === 'no' ? 'No' : '' },
         { label: 'Overdue amount', value: formatCurrency(formData?.overdueAmount) },
-        { label: 'Overdue loan type', value: formData?.overdueLoanType },
+        { label: 'Overdue loan type', value: displayValue(formData?.overdueLoanType) },
         ...FINANCIAL_HISTORY_QUESTIONS.map((q) => ({
           label: q.label,
           value: financialHistoryLabel(formData?.[q.field]),

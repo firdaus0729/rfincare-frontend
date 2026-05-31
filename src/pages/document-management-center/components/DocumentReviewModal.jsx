@@ -14,6 +14,7 @@ const DocumentReviewModal = ({
   isOpen,
   onClose,
   onUpdated,
+  readOnly = false,
 }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -142,17 +143,25 @@ const DocumentReviewModal = ({
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Remark / verification notes
-            </label>
-            <textarea
-              value={remark}
-              onChange={(e) => setRemark(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg text-sm min-h-[80px] focus:ring-2 focus:ring-primary"
-              placeholder="Add notes for approval or rejection (required when rejecting)…"
-            />
-          </div>
+          {!readOnly && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Remark / verification notes
+              </label>
+              <textarea
+                value={remark}
+                onChange={(e) => setRemark(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm min-h-[80px] focus:ring-2 focus:ring-primary"
+                placeholder="Add notes for approval or rejection (required when rejecting)…"
+              />
+            </div>
+          )}
+          {readOnly && document.verificationNote && (
+            <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+              <span className="font-medium">Remark: </span>
+              {document.verificationNote}
+            </p>
+          )}
 
           {error && (
             <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">
@@ -168,30 +177,34 @@ const DocumentReviewModal = ({
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Close
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => handleVerify('pending')}
-            disabled={submitting}
-            iconName="Clock"
-          >
-            Mark pending
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => handleVerify('rejected')}
-            disabled={submitting}
-            iconName="X"
-          >
-            Reject
-          </Button>
-          <Button
-            variant="default"
-            onClick={() => handleVerify('approved')}
-            disabled={submitting}
-            iconName="Check"
-          >
-            Approve
-          </Button>
+          {!readOnly && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => handleVerify('pending')}
+                disabled={submitting}
+                iconName="Clock"
+              >
+                Mark pending
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleVerify('rejected')}
+                disabled={submitting}
+                iconName="X"
+              >
+                Reject
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => handleVerify('approved')}
+                disabled={submitting}
+                iconName="Check"
+              >
+                Approve
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

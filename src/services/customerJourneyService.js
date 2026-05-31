@@ -108,6 +108,7 @@ export const customerJourneyService = {
       form.append('file', file);
       if (documentData?.applicationId) form.append('applicationId', documentData.applicationId);
       if (documentData?.documentType) form.append('documentType', documentData.documentType);
+      if (documentData?.customerId) form.append('customerId', documentData.customerId);
       const res = await apiClient.post('/documents', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });

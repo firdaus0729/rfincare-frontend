@@ -68,7 +68,7 @@ const AccessControlModal = ({ employee, isOpen, onClose, onSave }) => {
       <div className="bg-card rounded-lg max-w-lg w-full">
         <div className="border-b border-border p-4 md:p-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Access Control</h2>
+            <h2 className="text-xl font-bold text-foreground">Access type</h2>
             <p className="text-sm text-muted-foreground">Employee: {employee?.name}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>

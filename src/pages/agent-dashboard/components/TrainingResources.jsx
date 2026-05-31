@@ -2,7 +2,13 @@ import React from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 
-const TrainingResources = ({ resources }) => {
+const TrainingResources = ({
+  resources,
+  onViewAll,
+  showViewAll = true,
+  onOpenResource,
+  onStartResource,
+}) => {
   const getResourceTypeIcon = (type) => {
     const icons = {
       course: 'GraduationCap',
@@ -39,11 +45,18 @@ const TrainingResources = ({ resources }) => {
           <Icon name="BookOpen" size={20} color="var(--color-primary)" />
           <h2 className="text-lg md:text-xl font-bold text-foreground">Training & Certification</h2>
         </div>
-        <Button variant="outline" size="sm" iconName="ExternalLink">
-          View All
-        </Button>
+        {showViewAll && (
+          <Button variant="outline" size="sm" iconName="ExternalLink" onClick={onViewAll}>
+            View All
+          </Button>
+        )}
       </div>
       <div className="space-y-3">
+        {!resources?.length && (
+          <p className="text-sm text-muted-foreground text-center py-6">
+            No training content yet. Your admin will publish videos, PDFs, and circulars here.
+          </p>
+        )}
         {resources?.map((resource) => (
           <div
             key={resource?.id}
@@ -100,8 +113,11 @@ const TrainingResources = ({ resources }) => {
                     variant={resource?.progress > 0 ? 'outline' : 'default'}
                     size="xs"
                     iconName={resource?.progress > 0 ? 'Play' : 'ArrowRight'}
+                    onClick={() =>
+                      (resource?.progress > 0 ? onOpenResource : onStartResource)?.(resource)
+                    }
                   >
-                    {resource?.progress > 0 ? 'Continue' : 'Start'}
+                    {resource?.progress >= 100 ? 'Review' : resource?.progress > 0 ? 'Continue' : 'Start'}
                   </Button>
                 </div>
               </div>

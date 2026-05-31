@@ -22,6 +22,7 @@ import EmployeeOnboardingModal from './components/EmployeeOnboardingModal';
 import SystemConfigPanel from './components/SystemConfigPanel';
 import CommissionConfigModal from './components/CommissionConfigModal';
 import AccessControlModal from './components/AccessControlModal';
+import StaffManageModal from './components/StaffManageModal';
 import DocumentVerificationModal from './components/DocumentVerificationModal';
 import ApplicationDeleteModal from './components/ApplicationDeleteModal';
 import { adminService } from '../../services/adminService';
@@ -36,6 +37,9 @@ import OtpProviderSettingsForm from './components/OtpProviderSettingsForm';
 import OAuthProviderSettingsForm from './components/OAuthProviderSettingsForm';
 import LoanProductsTab from './components/LoanProductsTab';
 import DocumentRequirementsTab from './components/DocumentRequirementsTab';
+import HierarchyMappingTab from './components/HierarchyMappingTab';
+import AgentLearningTab from './components/AgentLearningTab';
+import EmployeeLearningTab from './components/EmployeeLearningTab';
 
 
 const AdminDashboard = () => {
@@ -49,6 +53,9 @@ const AdminDashboard = () => {
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [showCommissionModal, setShowCommissionModal] = useState(false);
   const [showAccessControlModal, setShowAccessControlModal] = useState(false);
+  const [showStaffManageModal, setShowStaffManageModal] = useState(false);
+  const [staffManageType, setStaffManageType] = useState('agent');
+  const [staffManageTab, setStaffManageTab] = useState('details');
   const [showDocVerificationModal, setShowDocVerificationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteApplicationIds, setDeleteApplicationIds] = useState([]);
@@ -478,6 +485,17 @@ const AdminDashboard = () => {
     }
   };
 
+  const openStaffManage = (type, person, tab = 'details') => {
+    setStaffManageType(type);
+    setStaffManageTab(tab);
+    if (type === 'agent') {
+      setSelectedAgent(person);
+    } else {
+      setSelectedEmployee(person);
+    }
+    setShowStaffManageModal(true);
+  };
+
   const handleEditEmployeeRole = (employee) => {
     setSelectedEmployee(employee);
     setShowAccessControlModal(true);
@@ -520,7 +538,7 @@ const AdminDashboard = () => {
     if (action) action();
   };
 
-  const showStats = ['applications', 'agents', 'employees', 'registrations', 'leads'].includes(activeTab);
+  const showStats = ['applications', 'agents', 'employees', 'registrations', 'leads', 'hierarchy'].includes(activeTab);
 
   return (
     <>
@@ -621,6 +639,8 @@ const AdminDashboard = () => {
                           onApprove={handleApproveAgent}
                           onReject={handleRejectAgent}
                           onViewProfile={handleConfigureCommission}
+                          onEditDetails={(a) => openStaffManage('agent', a, 'details')}
+                          onResetPassword={(a) => openStaffManage('agent', a, 'password')}
                         />
                       ))}
                     </div>
@@ -642,16 +662,10 @@ const AdminDashboard = () => {
                           key={employee?.id}
                           employee={employee}
                           onApprove={handleApproveEmployee}
-                          onEdit={(emp) => {
-                            setSelectedEmployee(emp);
-                            setShowEmployeeModal(true);
-                          }}
+                          onEditDetails={(emp) => openStaffManage('employee', emp, 'details')}
+                          onResetPassword={(emp) => openStaffManage('employee', emp, 'password')}
                           onEditRole={handleEditEmployeeRole}
                           onViewActivity={handleViewEmployeeActivity}
-                          onAccessControl={(emp) => {
-                            setSelectedEmployee(emp);
-                            setShowAccessControlModal(true);
-                          }}
                         />
                       ))}
                     </div>
@@ -669,6 +683,12 @@ const AdminDashboard = () => {
                 {activeTab === 'status-check' && <StatusCheckAdminTab />}
 
                 {activeTab === 'leads' && <LeadsTab />}
+
+                {activeTab === 'hierarchy' && <HierarchyMappingTab />}
+
+                {activeTab === 'agent-learning' && <AgentLearningTab />}
+
+                {activeTab === 'employee-learning' && <EmployeeLearningTab />}
 
                 {/* System Configuration Tab */}
                 {activeTab === 'system' && (
@@ -703,6 +723,14 @@ const AdminDashboard = () => {
         isOpen={showCommissionModal}
         onClose={() => setShowCommissionModal(false)}
         onSave={handleSaveCommission}
+      />
+      <StaffManageModal
+        staffType={staffManageType}
+        staff={staffManageType === 'agent' ? selectedAgent : selectedEmployee}
+        isOpen={showStaffManageModal}
+        initialTab={staffManageTab}
+        onClose={() => setShowStaffManageModal(false)}
+        onSuccess={refreshCurrentTab}
       />
       <AccessControlModal
         employee={selectedEmployee}

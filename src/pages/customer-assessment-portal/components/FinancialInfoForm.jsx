@@ -9,8 +9,9 @@ import {
 
 const FinancialInfoForm = ({ formData, errors, onChange }) => {
   const { products } = useLoanProducts();
+  const productList = Array.isArray(products) ? products.filter((p) => p?.apiKey) : [];
   const loanPurposeOptions = [
-    ...products.map((p) => ({ value: p.apiKey, label: p.label })),
+    ...productList.map((p) => ({ value: p.apiKey, label: p.label || p.apiKey })),
     { value: 'debt_consolidation', label: 'Debt Consolidation' },
   ];
 

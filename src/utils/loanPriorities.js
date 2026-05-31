@@ -29,8 +29,9 @@ const VALID_IDS = new Set(LOAN_PRIORITY_OPTIONS.map((o) => o.id));
 
 /** Read priorities from form state (array or legacy single string). */
 export function getLoanPriorities(formData) {
-  if (Array.isArray(formData?.loanPriorities) && formData.loanPriorities.length) {
-    return formData.loanPriorities.filter((id) => VALID_IDS.has(id)).slice(0, 2);
+  const rawPriorities = formData?.loanPriorities;
+  if (Array.isArray(rawPriorities) && rawPriorities.length) {
+    return rawPriorities.filter((id) => VALID_IDS.has(id)).slice(0, 2);
   }
   const legacy = formData?.loanPriority;
   if (!legacy || typeof legacy !== 'string') return [];

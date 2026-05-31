@@ -38,6 +38,10 @@ import BankMarketplace from './pages/bank-marketplace';
 import AdminDashboard from './pages/admin-dashboard';
 import EmployeePortal from './pages/employee-portal';
 import AgentDashboard from './pages/agent-dashboard';
+import AgentAssistedApplicationPage from './pages/agent-assisted-application';
+import AgentLearningPage from './pages/agent-learning';
+import AgentSettingsPage from './pages/agent-settings';
+import EmployeeSettingsPage from './pages/employee-settings';
 import CustomerDashboard from './pages/customer-dashboard';
 
 // Protected Admin Pages
@@ -119,6 +123,14 @@ function Routes() {
               </ProtectedRoute>
             } 
           />
+          <Route
+            path="/employee/settings"
+            element={
+              <ProtectedRoute allowedRoles={['employee', 'admin', 'super_admin']}>
+                <EmployeeSettingsPage />
+              </ProtectedRoute>
+            }
+          />
           
           {/* ==================== AGENT PROTECTED ROUTES ==================== */}
           <Route 
@@ -128,6 +140,30 @@ function Routes() {
                 <AgentDashboard />
               </ProtectedRoute>
             } 
+          />
+          <Route
+            path="/agent/customer-application"
+            element={
+              <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+                <AgentAssistedApplicationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/learning"
+            element={
+              <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+                <AgentLearningPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/settings"
+            element={
+              <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+                <AgentSettingsPage />
+              </ProtectedRoute>
+            }
           />
           
           {/* ==================== CUSTOMER PROTECTED ROUTES ==================== */}

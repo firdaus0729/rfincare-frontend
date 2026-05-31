@@ -12,11 +12,15 @@ import PerformanceMetrics from './components/PerformanceMetrics';
 import ActivityLog from './components/ActivityLog';
 import TrainingResources from './components/TrainingResources';
 import AgentVerificationModal from './components/AgentVerificationModal';
-import ApplicationReviewModal from './components/ApplicationReviewModal';
-import StatusUpdateModal from './components/StatusUpdateModal';
+import ApplicationWorkspaceModal from './components/ApplicationWorkspaceModal';
 import { employeeService } from '../../services/employeeService';
+import {
+  employeeLearningService,
+  resolveLearningOpenUrl,
+} from '../../services/employeeLearningService';
 import SessionTimeout from '../../components/SessionTimeout';
 import { useAuth } from '../../contexts/AuthContext';
+import { employeeProfileService, resolveAvatarUrl } from '../../services/employeeProfileService';
 
 
 const EmployeePortal = () => {
@@ -24,8 +28,7 @@ const EmployeePortal = () => {
   const { signOut } = useAuth();
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [selectedAgent, setSelectedAgent] = useState(null);
-  const [selectedApplication, setSelectedApplication] = useState(null);
-  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [workspaceApplication, setWorkspaceApplication] = useState(null);
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,55 +42,21 @@ const EmployeePortal = () => {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [activityLog, setActivityLog] = useState([]);
 
-  const mockTrainingResources = [
-  {
-    id: 1,
-    title: "Advanced Document Fraud Detection",
-    description: "Learn to identify sophisticated document forgeries and manipulation techniques using AI-powered tools and manual verification methods.",
-    category: "Fraud Detection",
-    duration: "45 min",
-    completions: "234",
-    isNew: true
-  },
-  {
-    id: 2,
-    title: "KYC Compliance Updates 2026",
-    description: "Stay updated with the latest KYC regulations and compliance requirements for financial institutions in 2026.",
-    category: "Compliance",
-    duration: "30 min",
-    completions: "567",
-    isNew: true
-  },
-  {
-    id: 3,
-    title: "Income Verification Best Practices",
-    description: "Master the techniques for verifying income documents including salary slips, bank statements, and tax returns.",
-    category: "Document Verification",
-    duration: "60 min",
-    completions: "892",
-    isNew: false
-  },
-  {
-    id: 4,
-    title: "Customer Communication Excellence",
-    description: "Enhance your communication skills for handling customer queries and document clarification requests professionally.",
-    category: "Customer Service",
-    duration: "40 min",
-    completions: "445",
-    isNew: false
-  }];
-
+  const [trainingResources, setTrainingResources] = useState([]);
+  const [profileAvatar, setProfileAvatar] = useState(null);
 
   useEffect(() => {
     loadDashboardData();
+    employeeProfileService.getProfile().then((p) => {
+      if (p?.profile?.avatarUrl) setProfileAvatar(resolveAvatarUrl(p.profile.avatarUrl));
+    }).catch(() => {});
   }, []);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // Load dashboard stats
-      const { data: stats } = await employeeService?.getEmployeeDashboardStats();
-      setDashboardStats(stats);
+      const { data: dashboard } = await employeeService.getEmployeeDashboard();
+      setDashboardStats(dashboard?.stats || dashboard);
 
       // Load pending agents
       const { data: agents } = await employeeService?.getPendingAgentOnboarding();
@@ -95,15 +64,41 @@ const EmployeePortal = () => {
 
       // Load assigned applications
       const { data: applications } = await employeeService?.getAssignedApplications();
-      setAssignedApplications(applications || []);
+      const appList = applications || [];
+      setAssignedApplications(appList);
+      const appById = Object.fromEntries(appList.map((a) => [a.id, a]));
 
       // Load pending documents
       const { data: documents } = await employeeService?.getPendingDocuments();
-      setPendingDocuments(documents || []);
+      setPendingDocuments(
+        (documents || []).map((doc) => ({
+          ...doc,
+          applicationNumber:
+            doc.applicationNumber ||
+            appById[doc.applicationId]?.applicationNumber,
+        })),
+      );
 
       // Load activity log
       const { data: activities } = await employeeService?.getEmployeeActivityLog();
       setActivityLog(activities || []);
+
+      const learning = dashboard?.learningResources?.length
+        ? dashboard.learningResources
+        : await employeeLearningService.listForEmployee();
+      setTrainingResources(
+        (Array.isArray(learning) ? learning : []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          category: item.category || item.categoryLabel || 'Document Verification',
+          duration: item.duration || item.durationLabel || '—',
+          completions: item.completions ?? '0',
+          isNew: item.isNew,
+          progress: item.progress ?? 0,
+          openUrl: resolveLearningOpenUrl(item),
+        })),
+      );
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -127,20 +122,19 @@ const EmployeePortal = () => {
     }
   };
 
-  const handleReviewApplication = async (applicationId, reviewData) => {
-    const { error } = await employeeService?.reviewApplication(applicationId, reviewData);
-    if (!error) {
-      setSelectedApplication(null);
-      loadDashboardData();
-    }
+  const openApplicationWorkspace = (app) => {
+    setWorkspaceApplication(app);
   };
 
-  const handleUpdateStatus = async (applicationId, statusData) => {
-    const { error } = await employeeService?.updateApplicationStatus(applicationId, statusData);
-    if (!error) {
-      setShowStatusModal(false);
-      loadDashboardData();
+  const openWorkspaceByApplicationId = async (applicationId) => {
+    const local = assignedApplications.find((a) => a.id === applicationId);
+    if (local) {
+      openApplicationWorkspace(local);
+      return;
     }
+    const { data, error } = await employeeService.getApplication(applicationId);
+    if (data) openApplicationWorkspace(data);
+    else alert(error?.message || 'Application not found');
   };
 
   const handleVerifyDocument = async (documentId, verificationData) => {
@@ -148,6 +142,36 @@ const EmployeePortal = () => {
     if (!error) {
       setSelectedDocument(null);
       loadDashboardData();
+    }
+  };
+
+  const handleLearningOpen = async (resource) => {
+    const url = resource.openUrl;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    if (resource.id) {
+      const next = resource.progress > 0 ? Math.min(100, resource.progress + 25) : 50;
+      try {
+        await employeeLearningService.updateProgress(resource.id, next);
+        setTrainingResources((prev) =>
+          prev.map((r) => (r.id === resource.id ? { ...r, progress: next } : r)),
+        );
+      } catch {
+        /* ignore */
+      }
+    }
+  };
+
+  const handleLearningStart = async (resource) => {
+    await handleLearningOpen(resource);
+    if (resource.id && (resource.progress || 0) < 100) {
+      try {
+        await employeeLearningService.updateProgress(resource.id, 100);
+        setTrainingResources((prev) =>
+          prev.map((r) => (r.id === resource.id ? { ...r, progress: 100 } : r)),
+        );
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -182,7 +206,7 @@ const EmployeePortal = () => {
   const tabs = [
   { id: 'applications', label: 'Applications', icon: 'FileText', count: assignedApplications?.length },
   { id: 'agents', label: 'Agent Verification', icon: 'UserCheck', count: pendingAgents?.length },
-  { id: 'documents', label: 'Document Review', icon: 'FolderOpen', count: pendingDocuments?.length },
+  { id: 'documents', label: 'Pending documents', icon: 'FolderOpen', count: pendingDocuments?.length },
   { id: 'activity', label: 'Activity Log', icon: 'Activity' },
   { id: 'training', label: 'Training', icon: 'GraduationCap' }];
 
@@ -205,6 +229,14 @@ const EmployeePortal = () => {
               <p className="text-sm text-gray-600">Document verification and application processing</p>
             </div>
           </div>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => navigate('/employee/settings')}
+          >
+            <Icon name="Settings" className="w-4 h-4" />
+            Settings
+          </Button>
           <Button
             onClick={async () => {
               await signOut();
@@ -229,13 +261,38 @@ const EmployeePortal = () => {
                 Manage verifications, applications, and customer support tasks
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/employee/settings')}
+                className="rounded-full border-4 border-employee-primary/20 focus:outline-none focus:ring-2 focus:ring-employee-primary shrink-0"
+                title="Profile settings"
+              >
+                {profileAvatar ? (
+                  <img
+                    src={profileAvatar}
+                    alt="Profile"
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-employee-primary to-employee-secondary flex items-center justify-center">
+                    <Icon name="User" className="w-6 h-6 text-white" />
+                  </div>
+                )}
+              </button>
               <Button
                 variant="outline"
-                onClick={() => navigate('/document-management-center')}>
-
+                iconName="Settings"
+                onClick={() => navigate('/employee/settings')}
+              >
+                Settings
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/document-management-center')}
+              >
                 <Icon name="FolderOpen" size={16} className="mr-2" />
-                Documents
+                All documents
               </Button>
               <Button
                 variant="default"
@@ -248,10 +305,12 @@ const EmployeePortal = () => {
 
           {dashboardStats && (
             <PerformanceMetrics metrics={{
-              tasksCompletedToday: dashboardStats?.completedToday,
-              pendingTasks: dashboardStats?.assignedApplications + dashboardStats?.pendingAgents,
-              avgProcessingTime: "18 min",
-              qualityScore: 96
+              tasksCompletedToday: dashboardStats?.completedToday ?? 0,
+              pendingTasks:
+                (Number(dashboardStats?.pendingReview) || 0) +
+                (Number(dashboardStats?.pendingDocuments) || 0),
+              avgProcessingTime: '18 min',
+              qualityScore: 96,
             }} />
           )}
         </div>
@@ -300,7 +359,15 @@ const EmployeePortal = () => {
               </div>
             ) : filteredApplications?.length > 0 ? (
               <div className="space-y-4">
-                {filteredApplications?.map((app) => (
+                {filteredApplications?.map((app) => {
+                  const amount =
+                    app?.loanAmount ??
+                    app?.requestedLoanAmount ??
+                    app?.data?.requested_loan_amount;
+                  const loanLabel =
+                    app?.loanTypeLabel || app?.loanPurpose || app?.data?.loan_purpose || '—';
+                  const submitted = app?.submittedAt || app?.createdAt;
+                  return (
                   <div key={app?.id} className="bg-card border border-border rounded-lg p-4 md:p-6">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                       <div className="flex-1">
@@ -313,11 +380,13 @@ const EmployeePortal = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                           <div>
                             <span className="text-muted-foreground">Loan Type:</span>
-                            <p className="font-medium text-foreground">{app?.loanPurpose}</p>
+                            <p className="font-medium text-foreground">{loanLabel}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Amount:</span>
-                            <p className="font-medium text-foreground">₹{app?.requestedLoanAmount?.toLocaleString()}</p>
+                            <p className="font-medium text-foreground">
+                              {amount != null ? `₹${Number(amount).toLocaleString('en-IN')}` : '—'}
+                            </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Status:</span>
@@ -325,32 +394,28 @@ const EmployeePortal = () => {
                           </div>
                           <div>
                             <span className="text-muted-foreground">Submitted:</span>
-                            <p className="font-medium text-foreground">{new Date(app?.submittedAt)?.toLocaleDateString()}</p>
+                            <p className="font-medium text-foreground">
+                              {submitted
+                                ? new Date(submitted).toLocaleDateString('en-IN')
+                                : '—'}
+                            </p>
                           </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedApplication(app)}>
-                          <Icon name="Eye" size={14} className="mr-1" />
-                          Review
-                        </Button>
-                        <Button
                           variant="default"
                           size="sm"
-                          onClick={() => {
-                            setSelectedApplication(app);
-                            setShowStatusModal(true);
-                          }}>
-                          <Icon name="RefreshCw" size={14} className="mr-1" />
-                          Update Status
+                          onClick={() => openApplicationWorkspace(app)}
+                        >
+                          <Icon name="ClipboardCheck" size={14} className="mr-1" />
+                          Process application
                         </Button>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-12 bg-card border border-border rounded-lg">
@@ -431,38 +496,45 @@ const EmployeePortal = () => {
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
-                          <h3 className="text-lg font-semibold text-foreground">{doc?.title}</h3>
+                          <h3 className="text-lg font-semibold text-foreground">
+                            {doc?.documentName || doc?.title || 'Document'}
+                          </h3>
                           <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-                            {doc?.type}
+                            {doc?.documentType || doc?.type}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                           <div>
-                            <span className="text-muted-foreground">Submitted:</span>
-                            <p className="font-medium text-foreground">{new Date(doc?.createdAt)?.toLocaleDateString()}</p>
+                            <span className="text-muted-foreground">Application:</span>
+                            <p className="font-medium text-foreground">
+                              {doc?.applicationNumber || doc?.applicationId?.slice(0, 8) || '—'}
+                            </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Status:</span>
                             <p className="font-medium text-foreground">{doc?.status}</p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Size:</span>
-                            <p className="font-medium text-foreground">{doc?.size} bytes</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Pages:</span>
-                            <p className="font-medium text-foreground">{doc?.pages}</p>
+                            <span className="text-muted-foreground">Uploaded:</span>
+                            <p className="font-medium text-foreground">
+                              {doc?.uploadedAt || doc?.createdAt
+                                ? new Date(doc.uploadedAt || doc.createdAt).toLocaleDateString('en-IN')
+                                : '—'}
+                            </p>
                           </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedDocument(doc)}>
-                          <Icon name="Eye" size={14} className="mr-1" />
-                          View
-                        </Button>
+                        {doc?.applicationId && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => openWorkspaceByApplicationId(doc.applicationId)}
+                          >
+                            <Icon name="ClipboardCheck" size={14} className="mr-1" />
+                            Process application
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -482,7 +554,11 @@ const EmployeePortal = () => {
         )}
 
         {activeTab === 'training' && (
-          <TrainingResources resources={mockTrainingResources} />
+          <TrainingResources
+            resources={trainingResources}
+            onStartResource={handleLearningStart}
+            onOpenResource={handleLearningOpen}
+          />
         )}
       </main>
 
@@ -505,24 +581,12 @@ const EmployeePortal = () => {
         />
       )}
 
-      {selectedApplication && !showStatusModal && (
-        <ApplicationReviewModal
-          application={selectedApplication}
-          isOpen={!!selectedApplication}
-          onClose={() => setSelectedApplication(null)}
-          onReview={handleReviewApplication}
-        />
-      )}
-
-      {showStatusModal && selectedApplication && (
-        <StatusUpdateModal
-          application={selectedApplication}
-          isOpen={showStatusModal}
-          onClose={() => {
-            setShowStatusModal(false);
-            setSelectedApplication(null);
-          }}
-          onUpdate={handleUpdateStatus}
+      {workspaceApplication && (
+        <ApplicationWorkspaceModal
+          application={workspaceApplication}
+          isOpen={!!workspaceApplication}
+          onClose={() => setWorkspaceApplication(null)}
+          onRefresh={loadDashboardData}
         />
       )}
     </div>

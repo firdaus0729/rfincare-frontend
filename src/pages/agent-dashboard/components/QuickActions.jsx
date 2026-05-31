@@ -9,7 +9,7 @@ const QuickActions = ({ onActionClick }) => {
       label: 'Add Client',
       icon: 'UserPlus',
       color: 'from-blue-500 to-blue-600',
-      description: 'Register new customer'
+      description: 'Full loan application for customer'
     },
     {
       id: 'upload-document',

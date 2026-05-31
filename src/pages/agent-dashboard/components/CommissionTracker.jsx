@@ -54,7 +54,12 @@ const CommissionTracker = ({ commissions }) => {
           <button className="text-xs text-primary hover:underline">View All</button>
         </div>
 
-        {commissions?.slice(0, 5)?.map((commission) => (
+        {!commissions?.length ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Submit customer applications via Add Client to see commission entries here.
+          </p>
+        ) : (
+        commissions?.slice(0, 5)?.map((commission) => (
           <div
             key={commission?.id}
             className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
@@ -79,7 +84,7 @@ const CommissionTracker = ({ commissions }) => {
               </span>
             </div>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );

@@ -3,7 +3,14 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Image from '../../../components/AppImage';
 
-const EmployeeCard = ({ employee, onApprove, onEditRole, onViewActivity }) => {
+const EmployeeCard = ({
+  employee,
+  onApprove,
+  onEditDetails,
+  onResetPassword,
+  onEditRole,
+  onViewActivity,
+}) => {
   const getRoleBadge = (role) => {
     const roleConfig = {
       admin: { bg: 'bg-admin-primary/10', text: 'text-admin-primary', icon: 'Shield' },
@@ -82,18 +89,36 @@ const EmployeeCard = ({ employee, onApprove, onEditRole, onViewActivity }) => {
         <Button
           variant="outline"
           size="sm"
-          iconName="Settings"
+          iconName="UserCog"
           iconPosition="left"
-          onClick={() => onEditRole(employee)}
+          onClick={() => onEditDetails?.(employee)}
         >
-          Edit Role
+          Edit details
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          iconName="Key"
+          iconPosition="left"
+          onClick={() => onResetPassword?.(employee)}
+        >
+          Reset password
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          iconName="Shield"
+          iconPosition="left"
+          onClick={() => onEditRole?.(employee)}
+        >
+          Access type
         </Button>
         <Button
           variant="ghost"
           size="sm"
           iconName="Activity"
           iconPosition="left"
-          onClick={() => onViewActivity(employee)}
+          onClick={() => onViewActivity?.(employee)}
         >
           View Activity
         </Button>

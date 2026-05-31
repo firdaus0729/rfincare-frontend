@@ -83,6 +83,24 @@ export const employeeService = {
     }
   },
 
+  async getApplicationDocuments(applicationId) {
+    try {
+      const res = await apiClient.get('/documents', { params: { applicationId } });
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: [], error: { message: 'Failed to fetch application documents' } };
+    }
+  },
+
+  async getApplication(applicationId) {
+    try {
+      const res = await apiClient.get(`/loan-applications/${applicationId}`);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: 'Failed to load application' } };
+    }
+  },
+
   async verifyDocument(documentId, verificationData) {
     try {
       const res = await apiClient.patch(`/documents/${documentId}/verification`, {
@@ -104,6 +122,15 @@ export const employeeService = {
       return { data: res.data?.stats || res.data, error: null };
     } catch (error) {
       return { data: null, error: { message: 'Failed to fetch stats' } };
+    }
+  },
+
+  async getEmployeeDashboard() {
+    try {
+      const res = await apiClient.get('/portal/employee/dashboard');
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: 'Failed to fetch dashboard' } };
     }
   },
 

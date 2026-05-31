@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from '../../components/ui/Header';
+import { useAuth } from '../../contexts/AuthContext';
 import Icon from '../../components/AppIcon';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
@@ -16,6 +17,9 @@ import {
 const DocumentManagementCenter = () => {
   const location = useLocation();
   const useAdminChrome = location.pathname.startsWith('/admin/');
+  const { userProfile, user } = useAuth();
+  const role = userProfile?.role || user?.role;
+  const isAgent = role === 'agent';
 
   const [view, setView] = useState('applications');
   const [applications, setApplications] = useState([]);
@@ -124,14 +128,26 @@ const DocumentManagementCenter = () => {
             Document Management Center
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Review customer documents by application — open each file, approve or reject with remarks
+            {isAgent
+              ? 'Search your customer applications by application number or mobile number, then upload documents on their behalf.'
+              : 'Review customer documents by application — open each file, approve or reject with remarks'}
           </p>
           <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted-foreground">
-            <Icon name="Shield" size={14} />
-            <span>Application-level identification</span>
-            <span>·</span>
-            <Icon name="FileCheck" size={14} />
-            <span>Per-document verification</span>
+            <Icon name="Search" size={14} />
+            <span>Search by application ID or customer mobile</span>
+            {isAgent ? (
+              <>
+                <span>·</span>
+                <Icon name="Upload" size={14} />
+                <span>Upload PAN, Aadhaar, income proof, and more</span>
+              </>
+            ) : (
+              <>
+                <span>·</span>
+                <Icon name="FileCheck" size={14} />
+                <span>Per-document verification</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -147,7 +163,11 @@ const DocumentManagementCenter = () => {
               <div className="flex-1">
                 <Input
                   label="Search"
-                  placeholder="Application ID, name, mobile, or email…"
+                  placeholder={
+                    isAgent
+                      ? 'Application number or customer mobile number…'
+                      : 'Application ID, name, mobile, or email…'
+                  }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -164,6 +184,7 @@ const DocumentManagementCenter = () => {
             <ApplicationsDocumentTable
               applications={applications}
               loading={loadingApps}
+              isAgent={isAgent}
               onSelectApplication={handleSelectApplication}
             />
           </div>
@@ -174,9 +195,11 @@ const DocumentManagementCenter = () => {
             application={selectedApplication}
             documents={documents}
             loading={loadingDocs}
+            isAgent={isAgent}
             onBack={handleBackToApplications}
             onOpenDocument={handleOpenDocument}
             onDownload={handleDownload}
+            onDocumentUploaded={() => loadDocumentsForApplication(selectedApplication)}
           />
         )}
 
@@ -184,6 +207,7 @@ const DocumentManagementCenter = () => {
           isOpen={!!reviewDocument}
           document={reviewDocument}
           application={selectedApplication}
+          readOnly={isAgent}
           onClose={() => setReviewDocument(null)}
           onUpdated={handleDocumentUpdated}
         />

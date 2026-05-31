@@ -28,6 +28,8 @@ import {
   FINANCIAL_HISTORY_QUESTIONS,
   isFinancialHistoryYes,
 } from '../../constants/assessmentFinancialHistory';
+import { agentApplicationService } from '../../services/agentApplicationService';
+import AgentAssistedBanner from './components/AgentAssistedBanner';
 
 const SESSION_KEY = 'loan_assessment_session';
 
@@ -136,11 +138,55 @@ const getStoredCredentials = (formData) => {
   return null;
 };
 
-const CustomerAssessmentPortal = () => {
+const coerceYesNo = (value) => {
+  if (value === 'yes' || value === 'no') return value;
+  if (value === true || value === 'true' || value === 1 || value === '1') return 'yes';
+  if (value === false || value === 'false' || value === 0 || value === '0') return 'no';
+  return typeof value === 'string' ? value : '';
+};
+
+/** Normalize saved/server draft shapes so step renders never throw. */
+const normalizeAssessmentFormData = (raw = {}) => {
+  const merged = { ...INITIAL_FORM_DATA, ...(raw && typeof raw === 'object' ? raw : {}) };
+  const coRaw = merged.coApplicant;
+  merged.coApplicant = {
+    ...INITIAL_CO_APPLICANT,
+    ...(coRaw && typeof coRaw === 'object' && !Array.isArray(coRaw) ? coRaw : {}),
+  };
+
+  FINANCIAL_HISTORY_QUESTIONS.forEach((q) => {
+    const direct = coerceYesNo(merged[q.field]);
+    if (direct) {
+      merged[q.field] = direct;
+      return;
+    }
+    if (q.legacyBooleanKey && merged[q.legacyBooleanKey] != null) {
+      merged[q.field] = coerceYesNo(merged[q.legacyBooleanKey]);
+    }
+  });
+
+  merged.hasRunningLoanOrCard = coerceYesNo(merged.hasRunningLoanOrCard);
+  merged.hasAnyOverdue = coerceYesNo(merged.hasAnyOverdue);
+
+  const priorities = getLoanPriorities(merged);
+  merged.loanPriorities = priorities;
+  merged.loanPriority = serializeLoanPriorities(priorities);
+
+  // Legacy drafts may still store boolean bankruptcy flags
+  if (!merged.hasRunningLoanOrCard && merged.hasBankruptcy != null) {
+    merged.hasRunningLoanOrCard = coerceYesNo(merged.hasBankruptcy);
+  }
+
+  return merged;
+};
+
+const CustomerAssessmentPortal = ({ assistedByAgent = false } = {}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const [agentMeta, setAgentMeta] = useState(null);
+  const [provisionedCustomerId, setProvisionedCustomerId] = useState(null);
   const sessionKey = useRef(getOrCreateSessionKey());
   const draftHydrated = useRef(false);
   const shouldResume =
@@ -191,9 +237,29 @@ const CustomerAssessmentPortal = () => {
     };
   }, [location.state, searchParams]);
 
+  useEffect(() => {
+    if (!assistedByAgent) return;
+    agentApplicationService
+      .getProfile()
+      .then((profile) => setAgentMeta(profile))
+      .catch(() => setAgentMeta(null));
+  }, [assistedByAgent]);
+
   // Fresh application by default; only restore draft when ?resume=1 or resumeDraft state
   useEffect(() => {
     const init = async () => {
+      if (assistedByAgent) {
+        clearAssessmentDraft();
+        sessionKey.current = createNewSessionKey();
+        setFormData(applyEntryPrefill({ ...INITIAL_FORM_DATA }));
+        setCurrentStep(0);
+        setApplicationId(null);
+        setUploadedDocs({});
+        setProvisionedCustomerId(null);
+        draftHydrated.current = true;
+        return;
+      }
+
       if (!shouldResume) {
         clearAssessmentDraft();
         sessionKey.current = createNewSessionKey();
@@ -216,12 +282,7 @@ const CustomerAssessmentPortal = () => {
         const localStep = localStorage.getItem('loan_assessment_step');
         const savedAppId = localStorage.getItem('loan_assessment_application_id');
         if (localData) {
-          const parsed = JSON.parse(localData);
-          merged = {
-            ...merged,
-            ...parsed,
-            coApplicant: { ...INITIAL_CO_APPLICANT, ...(parsed.coApplicant || {}) },
-          };
+          merged = normalizeAssessmentFormData(JSON.parse(localData));
         }
         if (localStep != null) {
           step = migrateLegacyStep(localStep, merged);
@@ -232,7 +293,7 @@ const CustomerAssessmentPortal = () => {
         try {
           const serverDraft = await leadService.getDraft(sessionKey.current);
           if (serverDraft?.formData) {
-            merged = { ...merged, ...serverDraft.formData };
+            merged = normalizeAssessmentFormData({ ...merged, ...serverDraft.formData });
           }
           if (serverDraft?.currentStep != null) {
             step = migrateLegacyStep(serverDraft.currentStep, merged);
@@ -244,11 +305,7 @@ const CustomerAssessmentPortal = () => {
           /* server draft optional */
         }
 
-        const priorities = getLoanPriorities(merged);
-        merged.loanPriorities = priorities;
-        merged.loanPriority = serializeLoanPriorities(priorities);
-
-        setFormData(merged);
+        setFormData(normalizeAssessmentFormData(merged));
         setCurrentStep(clampStep(step, steps.length));
         if (appId) setApplicationId(appId);
 
@@ -262,7 +319,7 @@ const CustomerAssessmentPortal = () => {
       }
     };
     init();
-  }, [shouldResume, applyEntryPrefill]);
+  }, [shouldResume, applyEntryPrefill, assistedByAgent]);
 
   const saveProgress = useCallback(async (data, step) => {
     setIsSaving(true);
@@ -289,7 +346,7 @@ const CustomerAssessmentPortal = () => {
     } finally {
       setIsSaving(false);
     }
-  }, []);
+  }, [applicationId]);
 
   // Auto-save on form data change (debounced 3 seconds) — after initial load
   useEffect(() => {
@@ -304,7 +361,7 @@ const CustomerAssessmentPortal = () => {
   const handleChange = (field, value) => {
     setFormData((prev) => {
       const next = { ...prev, [field]: value };
-      if (field === 'employmentType' && value !== 'retired') {
+      if (field === 'employmentType' && prev.employmentType === 'retired' && value !== 'retired') {
         next.coApplicant = { ...INITIAL_CO_APPLICANT };
       }
       return next;
@@ -599,6 +656,31 @@ const CustomerAssessmentPortal = () => {
   });
 
   const authenticateApplicant = async () => {
+    if (assistedByAgent) {
+      if (provisionedCustomerId) return provisionedCustomerId;
+      const email = formData?.email?.trim();
+      if (!email) {
+        throw new Error('Customer email is required in Personal details.');
+      }
+      const result = await agentApplicationService.provisionCustomer({
+        email,
+        phone: formData?.phone || '',
+        firstName: formData?.firstName,
+        lastName: formData?.lastName,
+        fullName: [formData?.firstName, formData?.middleName, formData?.lastName].filter(Boolean).join(' '),
+      });
+      setProvisionedCustomerId(result.customerId);
+      if (result.temporaryPassword) {
+        setGeneratedCredentials({
+          email,
+          password: result.temporaryPassword,
+          username: email,
+          isCustomer: true,
+        });
+      }
+      return result.customerId;
+    }
+
     if (user?.id) return user.id;
     if (otpAuthenticatedUserId) return otpAuthenticatedUserId;
 
@@ -653,12 +735,32 @@ const CustomerAssessmentPortal = () => {
     setSubmitError('');
     try {
       const userId = await authenticateApplicant();
+      const payload = buildApplicationPayload(userId, 'draft');
+
+      if (assistedByAgent) {
+        if (applicationId) {
+          await agentApplicationService.updateApplication(applicationId, payload);
+          return applicationId;
+        }
+        const app = await agentApplicationService.createApplication({
+          ...payload,
+          customerId: userId,
+        });
+        const id = app?.id;
+        if (!id) throw new Error('Could not create application draft. Please try again.');
+        setApplicationId(id);
+        return id;
+      }
+
       if (applicationId) {
-        await applicationService.updateApplication(applicationId, buildApplicationPayload(userId, 'draft'));
+        await applicationService.updateApplication(applicationId, payload);
         return applicationId;
       }
-      const app = await applicationService.createApplication(buildApplicationPayload(userId, 'draft'));
+      const app = await applicationService.createApplication(payload);
       const id = app?.id;
+      if (!id) {
+        throw new Error('Could not create your application draft. Please try again.');
+      }
       setApplicationId(id);
       localStorage.setItem('loan_assessment_application_id', id);
       return id;
@@ -721,12 +823,19 @@ const CustomerAssessmentPortal = () => {
   };
 
   const handleFinalSubmit = async () => {
+    if (!validateStep(currentStep)) return;
+
     setIsSubmitting(true);
     setSubmitError('');
     try {
+      const customerId = await authenticateApplicant();
+
       let appId = applicationId;
       if (!appId) {
         appId = await ensureAuthAndDraftApplication();
+      }
+      if (!appId) {
+        throw new Error('Application draft is missing. Go back to Review and tap Continue to Documents again.');
       }
 
       const signatureName = [formData.firstName, formData.middleName, formData.lastName].filter(Boolean).join(' ');
@@ -745,20 +854,33 @@ const CustomerAssessmentPortal = () => {
               signature_name: signatureName,
             };
 
-      await applicationService.updateApplication(appId, {
-        ...buildApplicationPayload(user?.id, 'documents_pending'),
+      const finalPayload = {
+        ...buildApplicationPayload(customerId, 'documents_pending'),
         ...signaturePayload,
-      });
+      };
 
-      await appService.saveConsents(appId, {
-        certify_accuracy: formData.certifyAccuracy,
-        authorize_credit: formData.authorizeCredit,
-        agree_terms: formData.agreeTerms,
-        consent_communications: formData.consentCommunications,
-        electronic_signature: formData.consentSignatureAgreed,
-      });
+      if (assistedByAgent) {
+        await agentApplicationService.updateApplication(appId, finalPayload);
+        await agentApplicationService.submitApplication(appId);
+      } else {
+        await applicationService.updateApplication(appId, finalPayload);
 
-      await appService.submitApplication(appId);
+        const consentResult = await appService.saveConsents(appId, {
+          certify_accuracy: formData.certifyAccuracy,
+          authorize_credit: formData.authorizeCredit,
+          agree_terms: formData.agreeTerms,
+          consent_communications: formData.consentCommunications,
+          electronic_signature: formData.consentSignatureAgreed,
+        });
+        if (consentResult?.error) {
+          throw new Error(consentResult.error.message || 'Failed to save consents');
+        }
+
+        const submitResult = await appService.submitApplication(appId);
+        if (submitResult?.error) {
+          throw new Error(submitResult.error.message || 'Failed to submit application');
+        }
+      }
 
       downloadConsentRecord({
         formData,
@@ -805,7 +927,7 @@ const CustomerAssessmentPortal = () => {
   };
 
   const handleSuccessRedirect = () => {
-    navigate('/customer-dashboard');
+    navigate(assistedByAgent ? '/agent-dashboard' : '/customer-dashboard');
   };
 
   const renderStepContent = () => {
@@ -834,6 +956,7 @@ const CustomerAssessmentPortal = () => {
         return (
           <DocumentUploadStep
             applicationId={applicationId}
+            customerId={assistedByAgent ? provisionedCustomerId : undefined}
             uploadedDocs={uploadedDocs}
             onUploaded={handleDocUploaded}
             onRequirementsLoaded={setDocumentRequirements}
@@ -860,16 +983,25 @@ const CustomerAssessmentPortal = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 lg:py-16">
+        {assistedByAgent && (
+          <AgentAssistedBanner
+            agentCode={agentMeta?.agentCode}
+            agentName={agentMeta?.agentName}
+          />
+        )}
+
         {/* Page Header */}
         <div className="text-center mb-8 md:mb-12 lg:mb-16">
           <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-primary to-secondary mb-4 md:mb-6">
             <Icon name="FileText" size={32} color="white" className="md:w-10 md:h-10 lg:w-12 lg:h-12" />
           </div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-3 md:mb-4">
-            Loan Assessment Portal
+            {assistedByAgent ? 'Customer Loan Application' : 'Loan Assessment Portal'}
           </h1>
           <p className="text-sm md:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Complete your financial profile to get matched with the best loan options tailored to your needs
+            {assistedByAgent
+              ? 'Complete the full application on behalf of your customer. Submissions are linked to your agent code automatically.'
+              : 'Complete your financial profile to get matched with the best loan options tailored to your needs'}
           </p>
           <div className="mt-4 md:mt-6">
             <AutoSaveIndicator lastSaved={lastSaved} isSaving={isSaving} />
@@ -948,10 +1080,12 @@ const CustomerAssessmentPortal = () => {
                 <Icon name="CheckCircle2" size={40} className="text-success md:w-12 md:h-12" />
               </div>
               <h2 className="text-xl md:text-2xl font-bold text-foreground mb-3 md:mb-4">
-                Assessment Complete!
+                {assistedByAgent ? 'Application Submitted!' : 'Assessment Complete!'}
               </h2>
               <p className="text-sm md:text-base text-muted-foreground mb-4">
-                Your account has been created automatically. Please save your login credentials below.
+                {assistedByAgent
+                  ? 'The customer application is saved under your agent code and will appear in your commission tracker.'
+                  : 'Your account has been created automatically. Please save your login credentials below.'}
               </p>
 
               {generatedCredentials && (
@@ -986,7 +1120,7 @@ const CustomerAssessmentPortal = () => {
                 className="w-full inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 <Icon name="LayoutDashboard" size={16} className="mr-2" />
-                Go to My Dashboard
+                {assistedByAgent ? 'Back to Agent Dashboard' : 'Go to My Dashboard'}
               </button>
             </div>
           </div>

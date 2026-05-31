@@ -3,7 +3,14 @@ import React from 'react';
 import Button from '../../../components/ui/Button';
 import Image from '../../../components/AppImage';
 
-const AgentManagementCard = ({ agent, onApprove, onReject, onViewProfile }) => {
+const AgentManagementCard = ({
+  agent,
+  onApprove,
+  onReject,
+  onViewProfile,
+  onEditDetails,
+  onResetPassword,
+}) => {
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { bg: 'bg-warning/10', text: 'text-warning', label: 'Pending Approval' },
@@ -56,16 +63,36 @@ const AgentManagementCard = ({ agent, onApprove, onReject, onViewProfile }) => {
             </div>
           </div>
         </div>
-        <div className="flex flex-col space-y-2 md:ml-4">
+        <div className="flex flex-col space-y-2 md:ml-4 min-w-[160px]">
           <Button
             variant="outline"
             size="sm"
-            iconName="Eye"
+            iconName="UserCog"
             iconPosition="left"
-            onClick={() => onViewProfile(agent)}
+            onClick={() => onEditDetails?.(agent)}
             fullWidth
           >
-            View Profile
+            Edit details
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            iconName="Key"
+            iconPosition="left"
+            onClick={() => onResetPassword?.(agent)}
+            fullWidth
+          >
+            Reset password
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            iconName="IndianRupee"
+            iconPosition="left"
+            onClick={() => onViewProfile?.(agent)}
+            fullWidth
+          >
+            Commission
           </Button>
           {agent?.status === 'pending' && (
             <>

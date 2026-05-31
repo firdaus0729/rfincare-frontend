@@ -125,6 +125,66 @@ export const adminService = {
     }
   },
 
+  async getAgentDetail(agentId) {
+    try {
+      const res = await apiClient.get(`/admin/agents/${agentId}`);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to load agent details') };
+    }
+  },
+
+  async getEmployeeDetail(employeeId) {
+    try {
+      const res = await apiClient.get(`/admin/employees/${employeeId}`);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to load employee details') };
+    }
+  },
+
+  async updateAgent(agentId, payload) {
+    try {
+      const res = await apiClient.patch(`/admin/agents/${agentId}`, payload);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to update agent') };
+    }
+  },
+
+  async updateEmployee(employeeId, payload) {
+    try {
+      const res = await apiClient.patch(`/admin/employees/${employeeId}`, payload);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to update employee') };
+    }
+  },
+
+  async resetAgentPassword(agentId, password, notifyEmail = true) {
+    try {
+      const res = await apiClient.post(`/admin/agents/${agentId}/reset-password`, {
+        password,
+        notifyEmail,
+      });
+      return { data: res.data, error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to reset agent password') };
+    }
+  },
+
+  async resetEmployeePassword(employeeId, password, notifyEmail = true) {
+    try {
+      const res = await apiClient.post(`/admin/employees/${employeeId}/reset-password`, {
+        password,
+        notifyEmail,
+      });
+      return { data: res.data, error: null };
+    } catch (error) {
+      return { data: null, error: apiError(error, 'Failed to reset employee password') };
+    }
+  },
+
   /** Employees + agents for lead assignment (names and codes). */
   async getStaffAssignees() {
     try {

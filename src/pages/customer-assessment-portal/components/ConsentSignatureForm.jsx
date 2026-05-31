@@ -49,6 +49,7 @@ const ConsentSignatureForm = ({
 
   const getCoords = (e) => {
     const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -57,6 +58,7 @@ const ConsentSignatureForm = ({
 
   const startDraw = (e) => {
     e.preventDefault();
+    if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     const { x, y } = getCoords(e);
     ctx.beginPath();
@@ -65,7 +67,7 @@ const ConsentSignatureForm = ({
   };
 
   const draw = (e) => {
-    if (!isDrawing) return;
+    if (!isDrawing || !canvasRef.current) return;
     e.preventDefault();
     const ctx = canvasRef.current.getContext('2d');
     const { x, y } = getCoords(e);
@@ -74,7 +76,7 @@ const ConsentSignatureForm = ({
   };
 
   const endDraw = () => {
-    if (!isDrawing) return;
+    if (!isDrawing || !canvasRef.current) return;
     setIsDrawing(false);
     onSignatureChange(canvasRef.current.toDataURL('image/png'));
   };

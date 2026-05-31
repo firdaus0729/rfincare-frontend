@@ -9,12 +9,18 @@ import ClientKanbanBoard from './components/ClientKanbanBoard';
 import CommissionTracker from './components/CommissionTracker';
 import PerformanceChart from './components/PerformanceChart';
 import UpcomingAppointments from './components/UpcomingAppointments';
+import StaffCommunicationPanel from './components/StaffCommunicationPanel';
 import TrainingResources from './components/TrainingResources';
 import QuickActions from './components/QuickActions';
 import RecentActivity from './components/RecentActivity';
 import SessionTimeout from '../../components/SessionTimeout';
 import { authService } from '../../services/authService';
 import { agentService } from '../../services/agentService';
+import {
+  agentLearningService,
+  resolveLearningOpenUrl,
+} from '../../services/agentLearningService';
+import { resolveAvatarUrl } from '../../services/agentProfileService';
 import { useAuth } from '../../contexts/AuthContext';
 
 const signOut = async () => {
@@ -33,6 +39,11 @@ const AgentDashboard = () => {
   const [selectedView, setSelectedView] = useState('overview');
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [communicationOpen, setCommunicationOpen] = useState(false);
+  const [communicationContext, setCommunicationContext] = useState({
+    applicationId: null,
+    clientLabel: '',
+  });
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -41,6 +52,14 @@ const AgentDashboard = () => {
       setDashboard(data);
     } catch (err) {
       console.error('Agent dashboard load failed:', err);
+      setDashboard({
+        profile: { name: userProfile?.full_name || 'Agent', tier: 'Agent' },
+        metrics: [
+          { id: 1, type: 'customers', label: 'Active Clients', value: '0', subtitle: 'Could not load data' },
+        ],
+        clients: [],
+        performanceAnalytics: { week: [], month: [], quarter: [], year: [] },
+      });
     } finally {
       setLoading(false);
     }
@@ -53,7 +72,9 @@ const AgentDashboard = () => {
   const agentProfile = {
     name: dashboard?.profile?.name || userProfile?.full_name || 'Agent',
     agentId: dashboard?.profile?.agentId || '—',
-    avatar: 'https://img.rocket.new/generatedImages/rocket_gen_img_14da91c34-1763294780479.png',
+    avatar:
+      resolveAvatarUrl(dashboard?.profile?.avatarUrl) ||
+      'https://img.rocket.new/generatedImages/rocket_gen_img_14da91c34-1763294780479.png',
     avatarAlt: `Profile of ${dashboard?.profile?.name || 'agent'}`,
     joinDate: '—',
     tier: dashboard?.profile?.tier || 'Agent',
@@ -74,89 +95,102 @@ const AgentDashboard = () => {
     avatarAlt: c.avatarAlt || c.name,
   }));
 
-  const commissions = [];
+  const commissions = (dashboard?.commissionEntries || []).map((entry) => ({
+    id: entry.id,
+    clientName: entry.clientName,
+    loanType: entry.loanType,
+    amount: entry.amount || 0,
+    status: entry.status || 'pending',
+    date: entry.date
+      ? new Date(entry.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '—',
+  }));
 
-  const chartData = dashboard?.weeklyPerformance || [];
+  const performanceAnalytics = dashboard?.performanceAnalytics || null;
+  const chartData =
+    performanceAnalytics?.month || dashboard?.weeklyPerformance || [];
   const circulars = dashboard?.circulars || [];
 
 
-  const appointments = [
-  {
-    id: 1,
-    clientName: "Michael Rodriguez",
-    clientAvatar: "https://img.rocket.new/generatedImages/rocket_gen_img_143b978a3-1763294952544.png",
-    clientAvatarAlt: "Professional headshot of Hispanic man with short black hair in navy suit",
-    title: "Initial Consultation",
-    type: "consultation",
-    date: "Jan 16, 2026",
-    time: "10:00 AM",
-    location: "Video Call"
-  },
-  {
-    id: 2,
-    clientName: "Emily Chen",
-    clientAvatar: "https://img.rocket.new/generatedImages/rocket_gen_img_18a713e78-1763297858426.png",
-    clientAvatarAlt: "Professional headshot of Asian woman with long black hair wearing white blouse",
-    title: "Document Review",
-    type: "document-review",
-    date: "Jan 16, 2026",
-    time: "2:30 PM",
-    location: "Office Meeting"
-  },
-  {
-    id: 3,
-    clientName: "James Wilson",
-    clientAvatar: "https://img.rocket.new/generatedImages/rocket_gen_img_130504d21-1763295915180.png",
-    clientAvatarAlt: "Professional headshot of Caucasian man with gray hair wearing dark suit",
-    title: "Follow-up Call",
-    type: "follow-up",
-    date: "Jan 17, 2026",
-    time: "11:00 AM",
-    location: "Phone Call"
-  }];
+  const appointments = clients.length
+    ? clients.slice(0, 6).map((c, idx) => ({
+        id: c.id,
+        applicationId: c.id,
+        clientName: c.name,
+        clientAvatar: c.avatar,
+        clientAvatarAlt: c.avatarAlt || c.name,
+        title: c.nextAction || 'Client follow-up',
+        type: c.status === 'new' ? 'consultation' : c.status === 'documents' ? 'document-review' : 'follow-up',
+        date: new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+        time: '—',
+        location: c.loanType || 'Loan application',
+      }))
+    : [];
+
+  const openCommunication = (item) => {
+    setCommunicationContext({
+      applicationId: item?.applicationId || item?.id || null,
+      clientLabel: item?.clientName || item?.name || '',
+    });
+    setCommunicationOpen(true);
+  };
 
 
-  const trainingResources = [
-  {
-    id: 1,
-    type: 'course',
-    title: 'Advanced Loan Processing',
-    description: 'Master complex loan scenarios and approval strategies',
-    duration: '4 hours',
-    progress: 65,
-    completedBy: 234,
-    isNew: false
-  },
-  {
-    id: 2,
-    type: 'certification',
-    title: 'Financial Services Certification',
-    description: 'Industry-recognized certification for financial advisors',
-    duration: '8 hours',
-    progress: 0,
-    completedBy: 156,
-    isNew: true
-  },
-  {
-    id: 3,
-    type: 'video',
-    title: 'Customer Communication Best Practices',
-    description: 'Effective strategies for client engagement and retention',
-    duration: '45 minutes',
-    progress: 100,
-    completedBy: 412,
-    isNew: false
-  },
-  {
-    id: 4,
-    type: 'webinar',
-    title: 'Q1 2026 Product Updates',
-    description: 'Latest features and policy changes for loan products',
-    duration: '1 hour',
-    progress: 0,
-    completedBy: 89,
-    isNew: true
-  }];
+  const mapLearningResource = (item) => ({
+    id: item.id,
+    type: item.type || item.contentType,
+    title: item.title,
+    description: item.description,
+    duration: item.duration || item.durationLabel || '—',
+    progress: item.progress ?? 0,
+    isNew: Boolean(item.isNew ?? item.is_new),
+    openUrl: resolveLearningOpenUrl(item),
+    legacy: item.legacy,
+  });
+
+  const trainingResources = (dashboard?.learningResources || []).map(mapLearningResource);
+
+  const handleLearningOpen = async (resource) => {
+    const url = resource.openUrl;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    if (!resource.legacy && resource.id) {
+      const nextProgress = resource.progress > 0 ? Math.min(100, resource.progress + 25) : 50;
+      try {
+        await agentLearningService.updateProgress(resource.id, nextProgress);
+        setDashboard((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            learningResources: (prev.learningResources || []).map((r) =>
+              r.id === resource.id ? { ...r, progress: nextProgress } : r,
+            ),
+          };
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+  };
+
+  const handleLearningStart = async (resource) => {
+    await handleLearningOpen(resource);
+    if (!resource.legacy && resource.id && (resource.progress || 0) < 100) {
+      try {
+        await agentLearningService.updateProgress(resource.id, 100);
+        setDashboard((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            learningResources: (prev.learningResources || []).map((r) =>
+              r.id === resource.id ? { ...r, progress: 100 } : r,
+            ),
+          };
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
 
   const recentActivities = [
@@ -232,10 +266,18 @@ const AgentDashboard = () => {
     console.log('Quick action:', actionId);
     
     switch(actionId) {
-      case 'add-client': navigate('/customer-registration-portal');
+      case 'add-client':
+        navigate('/agent/customer-application');
         break;
       case 'upload-document':
-        navigate('/document-management-center');
+        if (clients[0]?.id) {
+          openCommunication({ applicationId: clients[0].id, clientName: clients[0].name });
+        } else {
+          openCommunication({});
+        }
+        break;
+      case 'message-employee':
+        openCommunication({});
         break;
       case 'schedule-meeting':
         // Scroll to appointments section or open scheduling modal
@@ -293,10 +335,18 @@ const AgentDashboard = () => {
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             <div className="flex items-center space-x-4">
-              <img
-                src={agentProfile?.avatar}
-                alt={agentProfile?.avatarAlt}
-                className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-4 border-primary/20" />
+              <button
+                type="button"
+                onClick={() => navigate('/agent/settings')}
+                className="rounded-full border-4 border-primary/20 focus:outline-none focus:ring-2 focus:ring-primary"
+                title="Profile settings"
+              >
+                <img
+                  src={agentProfile?.avatar}
+                  alt={agentProfile?.avatarAlt}
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover"
+                />
+              </button>
 
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-foreground">
@@ -316,10 +366,23 @@ const AgentDashboard = () => {
             </div>
 
             <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                iconName="MessageSquare"
+                onClick={() => openCommunication({})}
+              >
+                Messages
+              </Button>
               <Button variant="outline" size="sm" iconName="Bell">
                 Notifications
               </Button>
-              <Button variant="default" size="sm" iconName="Settings">
+              <Button
+                variant="default"
+                size="sm"
+                iconName="Settings"
+                onClick={() => navigate('/agent/settings')}
+              >
                 Settings
               </Button>
             </div>
@@ -380,7 +443,7 @@ const AgentDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div data-section="appointments">
-                <UpcomingAppointments appointments={appointments} />
+                <UpcomingAppointments appointments={appointments} onMessage={openCommunication} />
               </div>
               <RecentActivity activities={recentActivities} />
             </div>
@@ -409,7 +472,12 @@ const AgentDashboard = () => {
               )}
             </div>
 
-            <TrainingResources resources={trainingResources} />
+            <TrainingResources
+              resources={trainingResources}
+              onViewAll={() => navigate('/agent/learning')}
+              onOpenResource={handleLearningOpen}
+              onStartResource={handleLearningStart}
+            />
           </div>
         }
 
@@ -426,16 +494,28 @@ const AgentDashboard = () => {
         {selectedView === 'performance' &&
         <div className="space-y-6">
             <PerformanceMetrics metrics={performanceMetrics} />
-            <PerformanceChart data={chartData} />
+            <PerformanceChart performanceAnalytics={performanceAnalytics} fallbackData={chartData} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div data-section="commission">
                 <CommissionTracker commissions={commissions} />
               </div>
-              <TrainingResources resources={trainingResources} />
+              <TrainingResources
+                resources={trainingResources}
+                onViewAll={() => navigate('/agent/learning')}
+                onOpenResource={handleLearningOpen}
+                onStartResource={handleLearningStart}
+              />
             </div>
           </div>
         }
       </main>
+
+      <StaffCommunicationPanel
+        isOpen={communicationOpen}
+        onClose={() => setCommunicationOpen(false)}
+        applicationId={communicationContext.applicationId}
+        clientLabel={communicationContext.clientLabel}
+      />
     </div>
   );
 

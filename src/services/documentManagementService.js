@@ -31,6 +31,18 @@ export const documentManagementService = {
   },
 
   downloadDocument: (documentId) => customerJourneyService.downloadDocument(documentId),
+
+  async uploadDocument(file, { applicationId, customerId, documentType }) {
+    const form = new FormData();
+    form.append('file', file);
+    if (applicationId) form.append('applicationId', applicationId);
+    if (customerId) form.append('customerId', customerId);
+    if (documentType) form.append('documentType', documentType);
+    const res = await apiClient.post('/documents', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return toCamelCase(res.data);
+  },
 };
 
 export const DOC_SUMMARY_LABELS = {

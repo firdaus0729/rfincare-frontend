@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { apiClient, setAccessToken } from '../lib/apiClient';
 
-const AuthContext = createContext({})
+const AuthContext = createContext(null)
 
 // Role-based route mapping
 const getRoleBasedRoute = (role) => {
@@ -17,7 +17,7 @@ const getRoleBasedRoute = (role) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
-  if (!context) {
+  if (context === null || context === undefined) {
     throw new Error('useAuth must be used within AuthProvider')
   }
   return context

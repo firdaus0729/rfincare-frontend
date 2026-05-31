@@ -37,20 +37,30 @@ export function requiresCoApplicant(employmentType) {
 
 export function normalizeDynamicDocumentRequirements(requirements = []) {
   if (!Array.isArray(requirements) || !requirements.length) return APPLICANT_DOCUMENTS;
-  return requirements.map((item, index) => ({
-    type: item.documentType,
-    label: item.title || item.documentType,
-    description: item.subtitle || '',
-    icon: item.icon || 'FileText',
-    allowedFileTypes: item.allowedFileTypes || [],
-    sortOrder: Number(item.sortOrder ?? index),
-    isRequired: item.isRequired !== false,
-  }));
+  const seen = new Set();
+  const normalized = [];
+  requirements.forEach((item, index) => {
+    const type = item?.documentType || item?.type;
+    if (!type || seen.has(type)) return;
+    seen.add(type);
+    normalized.push({
+      type,
+      label: item.title || item.label || type,
+      description: item.subtitle || item.description || '',
+      icon: item.icon || 'FileText',
+      allowedFileTypes: item.allowedFileTypes || [],
+      sortOrder: Number(item.sortOrder ?? index),
+      isRequired: item.isRequired !== false,
+    });
+  });
+  return normalized.length ? normalized : APPLICANT_DOCUMENTS;
 }
 
 /** All document type keys required for the current applicant profile. */
 export function getRequiredDocumentTypes(employmentType, requirements = APPLICANT_DOCUMENTS) {
-  const base = requirements.filter((d) => d.isRequired !== false).map((d) => d.type);
+  const base = requirements
+    .filter((d) => d.isRequired !== false && d.type)
+    .map((d) => d.type);
   if (!requiresCoApplicant(employmentType)) return base;
   return [...base, ...base.map(coApplicantDocType)];
 }
