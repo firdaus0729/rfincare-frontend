@@ -35,10 +35,12 @@ const Footer = () => {
   const currentYear = new Date()?.getFullYear();
 
   const footerLinks = {
-    products: loanProducts.map((p) => ({
-      label: p.label,
-      path: `/products/${p.slug}`,
-    })),
+    products: (Array.isArray(loanProducts) ? loanProducts : [])
+      .filter((p) => p?.slug)
+      .map((p) => ({
+        label: p.label,
+        path: `/products/${p.slug}`,
+      })),
     company: [
       { label: t('footer.aboutUs'), path: '/about-us' },
       { label: t('footer.howItWorks'), path: '/homepage#how-it-works' },

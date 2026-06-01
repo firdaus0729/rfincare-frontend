@@ -17,7 +17,9 @@ const QuickEligibilityCheck = () => {
     creditScore: ''
   });
 
-  const loanTypes = loanProducts.map((p) => ({ value: p.slug, label: p.label }));
+  const loanTypes = (Array.isArray(loanProducts) ? loanProducts : [])
+    .filter((p) => p?.slug)
+    .map((p) => ({ value: p.slug, label: p.label }));
 
   const creditScoreRanges = [
     { value: 'excellent', label: 'Excellent (750+)' },

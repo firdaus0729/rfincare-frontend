@@ -7,6 +7,8 @@ import Button from '../../components/ui/Button';
 import PerformanceMetrics from './components/PerformanceMetrics';
 import ClientKanbanBoard from './components/ClientKanbanBoard';
 import CommissionTracker from './components/CommissionTracker';
+import CommissionReportPanel from './components/CommissionReportPanel';
+import { usePortalPolling } from '../../hooks/usePortalPolling';
 import PerformanceChart from './components/PerformanceChart';
 import UpcomingAppointments from './components/UpcomingAppointments';
 import StaffCommunicationPanel from './components/StaffCommunicationPanel';
@@ -68,6 +70,8 @@ const AgentDashboard = () => {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  usePortalPolling(loadDashboard, 20000, !loading);
 
   const agentProfile = {
     name: dashboard?.profile?.name || userProfile?.full_name || 'Agent',
@@ -438,6 +442,7 @@ const AgentDashboard = () => {
               </div>
               <div>
                 <CommissionTracker commissions={commissions} />
+                <CommissionReportPanel />
               </div>
             </div>
 

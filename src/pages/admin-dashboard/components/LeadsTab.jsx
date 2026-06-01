@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { leadService } from '../../../services/leadService';
 import { adminService } from '../../../services/adminService';
 import Button from '../../../components/ui/Button';
+import { copyTextToClipboard } from '../../../utils/copyToClipboard';
 
 const LeadsTab = () => {
   const [leads, setLeads] = useState([]);
@@ -12,6 +13,8 @@ const LeadsTab = () => {
   const [error, setError] = useState('');
   const [assigneesError, setAssigneesError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+  const [lastResumeUrl, setLastResumeUrl] = useState('');
+  const [resumeBusyId, setResumeBusyId] = useState(null);
 
   const loadAssignees = useCallback(async () => {
     setAssigneesLoading(true);
@@ -63,25 +66,44 @@ const LeadsTab = () => {
     }
   };
 
-  const handleResumeLink = async (lead, sendNotification = false) => {
+  const handleResumeLink = async (lead, { sendNotification = false } = {}) => {
+    setResumeBusyId(lead.id);
+    setActionMsg('');
+    setLastResumeUrl('');
     try {
-      if (!lead.sessionKey) {
-        setActionMsg('No saved session for this lead yet.');
-        return;
-      }
       const data = await leadService.createLeadResumeLink(lead.id, {
         frontendOrigin: window.location.origin,
         sendNotification,
         channel: 'email',
       });
-      await navigator.clipboard?.writeText(data.url);
-      setActionMsg(
-        sendNotification
-          ? `Continue link sent and copied: ${data.url}`
-          : `Continue link copied: ${data.url}`,
-      );
+      const url = data?.url || data?.resumeUrl;
+      if (!url) {
+        setActionMsg('Resume link was created but no URL was returned. Try again.');
+        return;
+      }
+
+      setLastResumeUrl(url);
+      const copied = await copyTextToClipboard(url);
+
+      if (sendNotification) {
+        setActionMsg(
+          copied
+            ? `Resume link emailed to ${lead.email} and copied to clipboard.`
+            : `Resume link emailed to ${lead.email}. Copy it from the box below.`,
+        );
+      } else if (copied) {
+        setActionMsg('Resume link copied to clipboard.');
+      } else {
+        setActionMsg('Select the link below and copy it (Ctrl+C / Cmd+C).');
+      }
+
+      if (!lead.sessionKey) {
+        load();
+      }
     } catch (err) {
-      setActionMsg(err?.response?.data?.error || 'Could not create resume link');
+      setActionMsg(err?.response?.data?.error || err?.message || 'Could not create resume link');
+    } finally {
+      setResumeBusyId(null);
     }
   };
 
@@ -154,7 +176,31 @@ const LeadsTab = () => {
         </div>
       )}
       {actionMsg && (
-        <div className="p-3 bg-primary/10 text-primary rounded-lg text-sm break-all">{actionMsg}</div>
+        <div className="p-3 bg-primary/10 text-primary rounded-lg text-sm space-y-2">
+          <p>{actionMsg}</p>
+          {lastResumeUrl && (
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <input
+                type="text"
+                readOnly
+                value={lastResumeUrl}
+                className="flex-1 text-xs font-mono bg-background border border-border rounded px-2 py-1.5 text-foreground"
+                onFocus={(e) => e.target.select()}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const ok = await copyTextToClipboard(lastResumeUrl);
+                  setActionMsg(ok ? 'Link copied to clipboard.' : 'Could not copy — select the field and use Ctrl+C.');
+                }}
+              >
+                Copy again
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="overflow-x-auto border border-border rounded-lg">
@@ -216,16 +262,17 @@ const LeadsTab = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={!lead.sessionKey}
-                        onClick={() => handleResumeLink(lead, false)}
+                        loading={resumeBusyId === lead.id}
+                        onClick={() => handleResumeLink(lead, { sendNotification: false })}
                       >
                         Copy resume link
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        disabled={!lead.sessionKey}
-                        onClick={() => handleResumeLink(lead, true)}
+                        loading={resumeBusyId === lead.id}
+                        disabled={!lead.email}
+                        onClick={() => handleResumeLink(lead, { sendNotification: true })}
                       >
                         Email resume link
                       </Button>

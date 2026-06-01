@@ -46,7 +46,14 @@ export function SiteContactProvider({ children }) {
   };
 
   useEffect(() => {
-    refresh();
+    setLoading(false);
+    const run = () => refresh();
+    if (typeof requestIdleCallback !== 'undefined') {
+      const id = requestIdleCallback(run, { timeout: 2000 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(run, 50);
+    return () => window.clearTimeout(t);
   }, []);
 
   return (

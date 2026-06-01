@@ -1,24 +1,40 @@
-import React from "react";
-import { createRoot } from "react-dom/client";
-import App from "./App";
-import { AuthProvider } from "./contexts/AuthContext";
-import { applyRuntimeToApiClient, loadRuntimeConfig } from "./lib/runtimeConfig";
-import { apiClient } from "./lib/apiClient";
-import "./styles/tailwind.css";
-import "./styles/index.css";
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import { AuthProvider } from './contexts/AuthContext';
+import {
+  applyRuntimeToApiClient,
+  inferApiBaseFromHost,
+  loadRuntimeConfig,
+} from './lib/runtimeConfig';
+import { apiClient } from './lib/apiClient';
+import './styles/tailwind.css';
+import './styles/index.css';
 
-const container = document.getElementById("root");
+const container = document.getElementById('root');
 const root = createRoot(container);
 
-async function bootstrap() {
-  await loadRuntimeConfig();
-  applyRuntimeToApiClient(apiClient);
-
+function renderApp() {
   root.render(
     <AuthProvider>
       <App />
-    </AuthProvider>
+    </AuthProvider>,
   );
+}
+
+async function bootstrap() {
+  const earlyBase =
+    import.meta.env?.VITE_API_BASE_URL?.replace(/\/$/, '') || inferApiBaseFromHost();
+  if (earlyBase) {
+    apiClient.defaults.baseURL = earlyBase;
+    renderApp();
+    loadRuntimeConfig().then(() => applyRuntimeToApiClient(apiClient));
+    return;
+  }
+
+  await loadRuntimeConfig();
+  applyRuntimeToApiClient(apiClient);
+  renderApp();
 }
 
 bootstrap();

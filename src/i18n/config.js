@@ -4,36 +4,41 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import { LANGUAGE_CODES } from './languages.js';
 import enTranslations from './locales/en.json';
-import hiTranslations from './locales/hi.json';
-import mrTranslations from './locales/mr.json';
-import guTranslations from './locales/gu.json';
-import bnTranslations from './locales/bn.json';
-import taTranslations from './locales/ta.json';
-import teTranslations from './locales/te.json';
-import knTranslations from './locales/kn.json';
 
-i18n?.use(LanguageDetector)?.use(initReactI18next)?.init({
-    resources: {
-      en: { translation: enTranslations },
-      hi: { translation: hiTranslations },
-      mr: { translation: mrTranslations },
-      gu: { translation: guTranslations },
-      bn: { translation: bnTranslations },
-      ta: { translation: taTranslations },
-      te: { translation: teTranslations },
-      kn: { translation: knTranslations },
-    },
-    supportedLngs: LANGUAGE_CODES,
-    fallbackLng: 'en',
-    debug: false,
-    interpolation: {
-      escapeValue: false
-    },
-    detection: {
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage']
-    }
-  });
+const LAZY_LOCALES = {
+  hi: () => import('./locales/hi.json'),
+  mr: () => import('./locales/mr.json'),
+  gu: () => import('./locales/gu.json'),
+  bn: () => import('./locales/bn.json'),
+  ta: () => import('./locales/ta.json'),
+  te: () => import('./locales/te.json'),
+  kn: () => import('./locales/kn.json'),
+};
+
+async function ensureLocale(lang) {
+  const code = (lang || 'en').split('-')[0];
+  if (code === 'en' || i18n.hasResourceBundle(code, 'translation')) return;
+  const loader = LAZY_LOCALES[code];
+  if (!loader) return;
+  const mod = await loader();
+  i18n.addResourceBundle(code, 'translation', mod.default || mod, true, true);
+}
+
+i18n.use(LanguageDetector).use(initReactI18next).init({
+  resources: {
+    en: { translation: enTranslations },
+  },
+  supportedLngs: LANGUAGE_CODES,
+  fallbackLng: 'en',
+  debug: false,
+  interpolation: {
+    escapeValue: false,
+  },
+  detection: {
+    order: ['localStorage', 'navigator'],
+    caches: ['localStorage'],
+  },
+});
 
 const applyDocumentLanguage = (lang) => {
   if (typeof document === 'undefined') return;
@@ -42,7 +47,12 @@ const applyDocumentLanguage = (lang) => {
   document.documentElement.setAttribute('data-lang', baseLang);
 };
 
-applyDocumentLanguage(i18n?.language);
-i18n?.on('languageChanged', applyDocumentLanguage);
+applyDocumentLanguage(i18n.language);
+i18n.on('languageChanged', (lang) => {
+  applyDocumentLanguage(lang);
+  ensureLocale(lang);
+});
+
+ensureLocale(i18n.language);
 
 export default i18n;

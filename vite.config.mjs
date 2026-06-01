@@ -1,19 +1,32 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  // This changes the out put dir from dist to build
-  // comment this out if that isn't relevant for your project
   build: {
-    outDir: "dist",
-    chunkSizeWarningLimit: 2000,
+    outDir: 'dist',
+    sourcemap: false,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          // Only chart libraries — avoid pulling clsx/tailwind-merge into this chunk.
+          if (id.includes('/recharts/') || id.includes('\\recharts\\')) return 'charts';
+          if (id.includes('/d3-') || id.includes('\\d3-')) return 'charts';
+          if (id.includes('clsx') || id.includes('tailwind-merge')) return 'utils';
+          if (id.includes('framer-motion')) return 'motion';
+          if (id.includes('i18next') || id.includes('react-i18next')) return 'i18n';
+          if (id.includes('react-dom') || id.includes('react-router')) return 'react-vendor';
+          if (id.includes('axios')) return 'http';
+        },
+      },
+    },
   },
   plugins: [tsconfigPaths(), react()],
   server: {
-    port: "4028",
-    host: "0.0.0.0",
+    port: '4028',
+    host: '0.0.0.0',
     strictPort: true,
     allowedHosts: ['.amazonaws.com', '.builtwithrocket.new'],
     proxy: {
@@ -22,5 +35,5 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-  }
+  },
 });

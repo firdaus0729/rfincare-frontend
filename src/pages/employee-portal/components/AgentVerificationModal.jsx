@@ -36,7 +36,7 @@ const AgentVerificationModal = ({ agent, isOpen, onClose, onApprove, onReject })
     
     setLoading(true);
     try {
-      await onApprove(agent?.id, credentials);
+      await onApprove(agent?.userId || agent?.id, credentials?.notes || credentials);
       onClose();
     } catch (error) {
       console.error('Approval failed:', error);
@@ -53,7 +53,7 @@ const AgentVerificationModal = ({ agent, isOpen, onClose, onApprove, onReject })
     
     setLoading(true);
     try {
-      await onReject(agent?.id, rejectionReason);
+      await onReject(agent?.userId || agent?.id, rejectionReason);
       onClose();
     } catch (error) {
       console.error('Rejection failed:', error);

@@ -29,10 +29,42 @@ export const employeeService = {
   // AGENT ONBOARDING VERIFICATION (STUBS)
   // ============================================
   async getPendingAgentOnboarding() {
-    return { data: [], error: null };
+    try {
+      const res = await apiClient.get('/portal/employee/milestone4/agent-onboarding/pending');
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: [], error: { message: 'Failed to load agent onboarding queue' } };
+    }
   },
-  async approveAgentOnboarding(agentId) {
-    return { error: { message: 'Agent onboarding is managed by admin.' } };
+  async approveAgentOnboarding(agentUserId, notes = '') {
+    try {
+      await apiClient.post(`/portal/employee/milestone4/agent-onboarding/${agentUserId}/qc`, {
+        decision: 'approved',
+        notes,
+      });
+      return { error: null };
+    } catch (error) {
+      return { error: { message: error.response?.data?.error || 'QC approval failed' } };
+    }
+  },
+  async rejectAgentOnboarding(agentUserId, notes) {
+    try {
+      await apiClient.post(`/portal/employee/milestone4/agent-onboarding/${agentUserId}/qc`, {
+        decision: 'rejected',
+        notes,
+      });
+      return { error: null };
+    } catch (error) {
+      return { error: { message: error.response?.data?.error || 'QC rejection failed' } };
+    }
+  },
+  async getCustomerProfile(customerId) {
+    try {
+      const res = await apiClient.get(`/portal/employee/milestone4/customers/${customerId}`);
+      return { data: toCamelCase(res.data), error: null };
+    } catch (error) {
+      return { data: null, error: { message: 'Failed to load customer profile' } };
+    }
   },
 
   // ============================================

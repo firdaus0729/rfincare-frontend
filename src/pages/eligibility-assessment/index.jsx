@@ -56,7 +56,9 @@ const EligibilityAssessment = () => {
     }));
   }, [canShowEligibilityForm, location.state]);
 
-  const loanTypes = loanProducts.map((p) => ({ value: p.apiKey, label: p.label }));
+  const loanTypes = (Array.isArray(loanProducts) ? loanProducts : [])
+    .filter((p) => p?.apiKey)
+    .map((p) => ({ value: p.apiKey, label: p.label }));
 
   const employmentTypes = [
     { value: 'salaried', label: 'Salaried' },
@@ -185,21 +187,25 @@ const EligibilityAssessment = () => {
 
   const handleApplyNow = () => {
     if (!calculatedResult) return;
-    const slug = loanProducts.find((p) => p.apiKey === formData.loanType)?.slug;
+    const slug = (Array.isArray(loanProducts) ? loanProducts : []).find(
+      (p) => p.apiKey === formData.loanType,
+    )?.slug;
     const qs = slug ? `?loanType=${slug}` : '';
-    if (user) {
-      navigate(`/customer-assessment-portal${qs}`, {
-        state: { eligibilityData: { ...formData, ...calculatedResult } },
-      });
-    } else {
-      navigate(`/customer-assessment-portal${qs}`, {
-        state: {
-          quickCheck: formData,
-          eligibilityData: { ...formData, ...calculatedResult },
-          leadMeta,
-        },
-      });
-    }
+    const quickCheck = {
+      loanType: formData.loanType,
+      loanAmount: formData.loanAmount,
+      monthlyIncome: formData.monthlyIncome,
+      employmentType: formData.employmentType,
+      creditScore: formData.creditScore,
+      creditScoreRange: formData.creditScore,
+      existingLoans: formData.existingLoans,
+    };
+    navigate(`/customer-assessment-portal${qs}`, {
+      state: {
+        quickCheck,
+        leadMeta: leadMeta || undefined,
+      },
+    });
   };
 
   return (

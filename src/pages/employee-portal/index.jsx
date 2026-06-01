@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import Header from '../../components/ui/Header';
@@ -21,6 +21,7 @@ import {
 import SessionTimeout from '../../components/SessionTimeout';
 import { useAuth } from '../../contexts/AuthContext';
 import { employeeProfileService, resolveAvatarUrl } from '../../services/employeeProfileService';
+import { usePortalPolling } from '../../hooks/usePortalPolling';
 
 
 const EmployeePortal = () => {
@@ -45,14 +46,7 @@ const EmployeePortal = () => {
   const [trainingResources, setTrainingResources] = useState([]);
   const [profileAvatar, setProfileAvatar] = useState(null);
 
-  useEffect(() => {
-    loadDashboardData();
-    employeeProfileService.getProfile().then((p) => {
-      if (p?.profile?.avatarUrl) setProfileAvatar(resolveAvatarUrl(p.profile.avatarUrl));
-    }).catch(() => {});
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: dashboard } = await employeeService.getEmployeeDashboard();
@@ -104,18 +98,27 @@ const EmployeePortal = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleApproveAgent = async (agentId, credentials) => {
-    const { error } = await employeeService?.approveAgentOnboarding(agentId, credentials);
+  useEffect(() => {
+    loadDashboardData();
+    employeeProfileService.getProfile().then((p) => {
+      if (p?.profile?.avatarUrl) setProfileAvatar(resolveAvatarUrl(p.profile.avatarUrl));
+    }).catch(() => {});
+  }, [loadDashboardData]);
+
+  usePortalPolling(loadDashboardData, 20000, !loading);
+
+  const handleApproveAgent = async (agentUserId, notes) => {
+    const { error } = await employeeService?.approveAgentOnboarding(agentUserId, notes);
     if (!error) {
       setSelectedAgent(null);
       loadDashboardData();
     }
   };
 
-  const handleRejectAgent = async (agentId, reason) => {
-    const { error } = await employeeService?.rejectAgentOnboarding(agentId, reason);
+  const handleRejectAgent = async (agentUserId, reason) => {
+    const { error } = await employeeService?.rejectAgentOnboarding(agentUserId, reason);
     if (!error) {
       setSelectedAgent(null);
       loadDashboardData();

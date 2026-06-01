@@ -2,7 +2,7 @@ import React from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 
-const ChartContainer = ({ title, subtitle, icon, children, onExport, onFullscreen }) => {
+const ChartContainer = ({ title, subtitle, icon, children, onExport, onFullscreen, exporting = false }) => {
   return (
     <div className="bg-card border border-border rounded-lg p-4 md:p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 space-y-3 md:space-y-0">
@@ -27,18 +27,22 @@ const ChartContainer = ({ title, subtitle, icon, children, onExport, onFullscree
             variant="ghost"
             size="sm"
             iconName="Download"
-            onClick={onExport}
+            disabled={!onExport}
+            loading={exporting}
+            onClick={() => onExport?.()}
           >
             Export
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            iconName="Maximize2"
-            onClick={onFullscreen}
-          >
-            Fullscreen
-          </Button>
+          {onFullscreen && (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconName="Maximize2"
+              onClick={onFullscreen}
+            >
+              Fullscreen
+            </Button>
+          )}
         </div>
       </div>
 

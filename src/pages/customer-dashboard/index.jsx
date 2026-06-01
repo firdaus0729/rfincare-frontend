@@ -14,6 +14,7 @@ import DocumentUploadModal from './components/DocumentUploadModal';
 import ApplicationDetailModal from './components/ApplicationDetailModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { customerJourneyService } from '../../services/customerJourneyService';
+import { milestone4Service } from '../../services/milestone4Service';
 
 
 const CustomerDashboard = () => {
@@ -150,6 +151,12 @@ const CustomerDashboard = () => {
   const unreadNotifications = notifications?.filter(n => !n?.isRead);
   const displayedNotifications = showAllNotifications ? notifications : notifications?.slice(0, 5);
 
+  const primaryApp = applications?.[0];
+  const documentOnlyMode =
+    primaryApp?.journeyMode === 'document_only' ||
+    primaryApp?.journey_mode === 'document_only' ||
+    (primaryApp?.status === 'submitted' && primaryApp?.submittedAt);
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'LayoutDashboard' },
     { id: 'applications', label: 'Applications', icon: 'FileText' },
@@ -202,9 +209,31 @@ const CustomerDashboard = () => {
             Welcome back, {profileData?.name?.split(' ')?.[0]}!
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Track your loan applications and manage your documents
+            {documentOnlyMode
+              ? 'Your application is submitted. Upload documents and view your read-only application summary below.'
+              : 'Track your loan applications and manage your documents'}
           </p>
         </div>
+
+        {documentOnlyMode && primaryApp?.id && (
+          <div className="mb-6 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-950 text-sm space-y-2">
+            <p className="font-semibold">Document-only mode</p>
+            <p>
+              Your full application and final consent are locked. You may upload required documents
+              and download a read-only PDF summary. For changes, contact our helpline or write to
+              support.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                window.open(milestone4Service.applicationSummaryPdfUrl(primaryApp.id), '_blank')
+              }
+            >
+              View / download application PDF
+            </Button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="mb-6 border-b border-border overflow-x-auto">

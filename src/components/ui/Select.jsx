@@ -1,7 +1,7 @@
 // components/ui/Select.jsx - Shadcn style Select
 import React, { useState } from "react";
-import { ChevronDown, Check, Search, X } from "lucide-react";
 import { cn } from "../../utils/cn";
+import AppIcon from "../AppIcon";
 import Button from "./Button";
 import Input from "./Input";
 
@@ -145,11 +145,11 @@ const Select = React.forwardRef(({
                                 className="h-4 w-4"
                                 onClick={handleClear}
                             >
-                                <X className="h-3 w-3" />
+                                <AppIcon name="X" size={12} className="h-3 w-3" />
                             </Button>
                         )}
 
-                        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                        <AppIcon name="ChevronDown" size={16} className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
                     </div>
                 </button>
 
@@ -177,7 +177,7 @@ const Select = React.forwardRef(({
                         {searchable && (
                             <div className="p-2 border-b">
                                 <div className="relative">
-                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <AppIcon name="Search" size={16} className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         placeholder="Search options..."
                                         value={searchTerm}
@@ -206,7 +206,7 @@ const Select = React.forwardRef(({
                                     >
                                         <span className="flex-1">{option?.label}</span>
                                         {multiple && isSelected(option?.value) && (
-                                            <Check className="h-4 w-4" />
+                                            <AppIcon name="Check" size={16} className="h-4 w-4" />
                                         )}
                                         {option?.description && (
                                             <span className="text-xs text-muted-foreground ml-2">

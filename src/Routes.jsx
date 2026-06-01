@@ -1,68 +1,69 @@
-import React from "react";
-import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
-import ScrollToTop from "components/ScrollToTop";
-import ErrorBoundary from "components/ErrorBoundary";
-import ProtectedRoute from "components/ProtectedRoute";
-import AdminRouteShell from "./components/layout/AdminRouteShell";
-import { LoanProductsProvider } from "./contexts/LoanProductsContext";
-import { SiteContactProvider } from "./contexts/SiteContactContext";
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes as RouterRoutes, Route } from 'react-router-dom';
+import ScrollToTop from 'components/ScrollToTop';
+import ErrorBoundary from 'components/ErrorBoundary';
+import ProtectedRoute from 'components/ProtectedRoute';
+import AdminRouteShell from './components/layout/AdminRouteShell';
+import PageLoader from './components/PageLoader';
+import { LoanProductsProvider } from './contexts/LoanProductsContext';
+import { SiteContactProvider } from './contexts/SiteContactContext';
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics';
-import NotFound from "pages/NotFound";
 
-// Public Pages
-import Homepage from './pages/homepage';
-import AboutUs from './pages/about-us';
-import ContactUs from './pages/contact-us';
-import ProductComparison from './pages/product-comparison';
-import ProductLanding from './pages/product-landing';
-import EligibilityAssessment from './pages/eligibility-assessment';
-import LoanEmiCalculator from './pages/loan-emi-calculator';
-import LegalPage from './pages/legal-page';
-import ShareYourStory from './pages/share-your-story';
-import OAuthCallback from './pages/oauth-callback';
-import ResumeApplicationPage from './pages/resume-application';
-import DevelopmentPanel from './pages/development';
+const lazyPage = (factory) => lazy(factory);
 
-// Login Pages (Separate for each role)
-import LoginPage from './pages/login-page';
-import AdminLogin from './pages/admin-login';
-import EmployeeLogin from './pages/employee-login';
-import AgentLogin from './pages/agent-login';
-import CustomerLogin from './pages/customer-login';
+const Homepage = lazyPage(() => import('./pages/homepage'));
+const AboutUs = lazyPage(() => import('./pages/about-us'));
+const ContactUs = lazyPage(() => import('./pages/contact-us'));
+const ProductComparison = lazyPage(() => import('./pages/product-comparison'));
+const ProductLanding = lazyPage(() => import('./pages/product-landing'));
+const EligibilityAssessment = lazyPage(() => import('./pages/eligibility-assessment'));
+const LoanEmiCalculator = lazyPage(() => import('./pages/loan-emi-calculator'));
+const LegalPage = lazyPage(() => import('./pages/legal-page'));
+const ShareYourStory = lazyPage(() => import('./pages/share-your-story'));
+const OAuthCallback = lazyPage(() => import('./pages/oauth-callback'));
+const ResumeApplicationPage = lazyPage(() => import('./pages/resume-application'));
+const DevelopmentPanel = lazyPage(() => import('./pages/development'));
+const NotFound = lazyPage(() => import('./pages/NotFound'));
 
-// Customer Journey (Public - Pre-Registration)
-import CustomerAssessmentPortal from './pages/customer-assessment-portal';
-import BankMarketplace from './pages/bank-marketplace';
+const LoginPage = lazyPage(() => import('./pages/login-page'));
+const AdminLogin = lazyPage(() => import('./pages/admin-login'));
+const EmployeeLogin = lazyPage(() => import('./pages/employee-login'));
+const AgentLogin = lazyPage(() => import('./pages/agent-login'));
+const CustomerLogin = lazyPage(() => import('./pages/customer-login'));
 
-// Protected Dashboards
-import AdminDashboard from './pages/admin-dashboard';
-import EmployeePortal from './pages/employee-portal';
-import AgentDashboard from './pages/agent-dashboard';
-import AgentAssistedApplicationPage from './pages/agent-assisted-application';
-import AgentLearningPage from './pages/agent-learning';
-import AgentSettingsPage from './pages/agent-settings';
-import EmployeeSettingsPage from './pages/employee-settings';
-import CustomerDashboard from './pages/customer-dashboard';
+const CustomerAssessmentPortal = lazyPage(() => import('./pages/customer-assessment-portal'));
+const BankMarketplace = lazyPage(() => import('./pages/bank-marketplace'));
 
-// Protected Admin Pages
-import AdminSecurityDashboard from './pages/admin-security-dashboard';
-import ReportsAndAnalytics from './pages/reports-and-analytics';
-import BankMarketplaceManagement from './pages/bank-marketplace-management';
-import ApprovalMatrixManagement from './pages/approval-matrix-management';
-import InterestMatrixManagement from './pages/interest-matrix-management';
+const AdminDashboard = lazyPage(() => import('./pages/admin-dashboard'));
+const EmployeePortal = lazyPage(() => import('./pages/employee-portal'));
+const AgentDashboard = lazyPage(() => import('./pages/agent-dashboard'));
+const AgentAssistedApplicationPage = lazyPage(() => import('./pages/agent-assisted-application'));
+const AgentLearningPage = lazyPage(() => import('./pages/agent-learning'));
+const AgentSettingsPage = lazyPage(() => import('./pages/agent-settings'));
+const EmployeeSettingsPage = lazyPage(() => import('./pages/employee-settings'));
+const CustomerDashboard = lazyPage(() => import('./pages/customer-dashboard'));
 
-// Protected Customer Pages
-import CustomerProfile from './pages/customer-profile';
-import DocumentManagementCenter from './pages/document-management-center';
-import AdditionalQuestionnaire from './pages/additional-questionnaire';
-import BankSelectionAndConsent from './pages/bank-selection-and-consent';
+const AdminSecurityDashboard = lazyPage(() => import('./pages/admin-security-dashboard'));
+const ReportsAndAnalytics = lazyPage(() => import('./pages/reports-and-analytics'));
+const BankMarketplaceManagement = lazyPage(() => import('./pages/bank-marketplace-management'));
+const ApprovalMatrixManagement = lazyPage(() => import('./pages/approval-matrix-management'));
+const InterestMatrixManagement = lazyPage(() => import('./pages/interest-matrix-management'));
 
-// Legacy Pages (to be deprecated)
-import AuthenticationManagementCenter from './pages/authentication-management-center';
-import CustomerRegistrationPortal from './pages/customer-registration-portal';
-import PasswordManagementSystem from './pages/password-management-system';
+const CustomerProfile = lazyPage(() => import('./pages/customer-profile'));
+const DocumentManagementCenter = lazyPage(() => import('./pages/document-management-center'));
+const AdditionalQuestionnaire = lazyPage(() => import('./pages/additional-questionnaire'));
+const BankSelectionAndConsent = lazyPage(() => import('./pages/bank-selection-and-consent'));
 
-// Wrapper component to use Google Analytics inside Router context
+const AuthenticationManagementCenter = lazyPage(
+  () => import('./pages/authentication-management-center'),
+);
+const CustomerRegistrationPortal = lazyPage(() => import('./pages/customer-registration-portal'));
+const PasswordManagementSystem = lazyPage(() => import('./pages/password-management-system'));
+
+function SuspenseRoute({ children }) {
+  return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
+}
+
 const GoogleAnalyticsTracker = () => {
   useGoogleAnalytics();
   return null;
@@ -72,152 +73,145 @@ function Routes() {
   return (
     <BrowserRouter>
       <LoanProductsProvider>
-      <SiteContactProvider>
-      <ErrorBoundary>
-        <GoogleAnalyticsTracker />
-        <ScrollToTop />
-        <RouterRoutes>
-          {/* ==================== PUBLIC ROUTES ==================== */}
-          <Route path="/" element={<Homepage />} />
-          <Route path="/homepage" element={<Homepage />} />
-          <Route path="/about-us" element={<AboutUs />} />
-          <Route path="/contact-us" element={<ContactUs />} />
-          <Route path="/products/:loanType" element={<ProductLanding />} />
-          <Route path="/product-comparison" element={<ProductComparison />} />
-          <Route path="/eligibility-assessment" element={<EligibilityAssessment />} />
-          <Route path="/resources/loan-emi-calculator" element={<LoanEmiCalculator />} />
-          <Route path="/legal/:slug" element={<LegalPage />} />
-          <Route path="/share-your-story" element={<ShareYourStory />} />
-          <Route path="/oauth/callback" element={<OAuthCallback />} />
-          <Route path="/development" element={<DevelopmentPanel />} />
-          
-          {/* ==================== LOGIN ROUTES (Separate for each role) ==================== */}
-          <Route path="/login-page" element={<LoginPage />} />
-          <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/employee-login" element={<EmployeeLogin />} />
-          <Route path="/agent-login" element={<AgentLogin />} />
-          <Route path="/customer-login" element={<CustomerLogin />} />
-          
-          {/* ==================== CUSTOMER JOURNEY (Public - Pre-Registration) ==================== */}
-          <Route path="/resume-application/:token" element={<ResumeApplicationPage />} />
-          <Route path="/customer-assessment-portal" element={<CustomerAssessmentPortal />} />
-          <Route path="/bank-marketplace" element={<BankMarketplace />} />
-          
-          {/* ==================== ADMIN PROTECTED ROUTES (shared top nav) ==================== */}
-          <Route element={<AdminRouteShell />}>
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/admin-security-dashboard" element={<AdminSecurityDashboard />} />
-            <Route path="/reports-and-analytics" element={<ReportsAndAnalytics />} />
-            <Route path="/bank-marketplace-management" element={<BankMarketplaceManagement />} />
-            <Route path="/approval-matrix-management" element={<ApprovalMatrixManagement />} />
-            <Route path="/interest-matrix-management" element={<InterestMatrixManagement />} />
-            <Route path="/admin/documents" element={<DocumentManagementCenter />} />
-          </Route>
-          
-          {/* ==================== EMPLOYEE PROTECTED ROUTES ==================== */}
-          <Route 
-            path="/employee-portal" 
-            element={
-              <ProtectedRoute allowedRoles={['employee', 'admin', 'super_admin']}>
-                <EmployeePortal />
-              </ProtectedRoute>
-            } 
-          />
-          <Route
-            path="/employee/settings"
-            element={
-              <ProtectedRoute allowedRoles={['employee', 'admin', 'super_admin']}>
-                <EmployeeSettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* ==================== AGENT PROTECTED ROUTES ==================== */}
-          <Route 
-            path="/agent-dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
-                <AgentDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route
-            path="/agent/customer-application"
-            element={
-              <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
-                <AgentAssistedApplicationPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/agent/learning"
-            element={
-              <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
-                <AgentLearningPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/agent/settings"
-            element={
-              <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
-                <AgentSettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* ==================== CUSTOMER PROTECTED ROUTES ==================== */}
-          <Route 
-            path="/customer-dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={['customer']}>
-                <CustomerDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/profile" 
-            element={
-              <ProtectedRoute allowedRoles={['customer']}>
-                <CustomerProfile />
-              </ProtectedRoute>
-            } 
-          />
-          <Route
-            path="/document-management-center"
-            element={
-              <ProtectedRoute allowedRoles={['customer', 'employee', 'agent']}>
-                <DocumentManagementCenter />
-              </ProtectedRoute>
-            }
-          />
-          <Route 
-            path="/additional-questionnaire" 
-            element={
-              <ProtectedRoute allowedRoles={['customer']}>
-                <AdditionalQuestionnaire />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/bank-selection-and-consent" 
-            element={
-              <ProtectedRoute allowedRoles={['customer']}>
-                <BankSelectionAndConsent />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* ==================== LEGACY ROUTES (To be deprecated) ==================== */}
-          <Route path="/authentication-management-center" element={<AuthenticationManagementCenter />} />
-          <Route path="/customer-registration-portal" element={<CustomerRegistrationPortal />} />
-          <Route path="/password-management-system" element={<PasswordManagementSystem />} />
-          
-          {/* Catch-all 404 route - MUST be last */}
-          <Route path="*" element={<NotFound />} />
-        </RouterRoutes>
-      </ErrorBoundary>
-      </SiteContactProvider>
+        <SiteContactProvider>
+          <ErrorBoundary>
+            <GoogleAnalyticsTracker />
+            <ScrollToTop />
+            <Suspense fallback={<PageLoader />}>
+              <RouterRoutes>
+                <Route path="/" element={<SuspenseRoute><Homepage /></SuspenseRoute>} />
+                <Route path="/homepage" element={<SuspenseRoute><Homepage /></SuspenseRoute>} />
+                <Route path="/about-us" element={<SuspenseRoute><AboutUs /></SuspenseRoute>} />
+                <Route path="/contact-us" element={<SuspenseRoute><ContactUs /></SuspenseRoute>} />
+                <Route path="/products/:loanType" element={<SuspenseRoute><ProductLanding /></SuspenseRoute>} />
+                <Route path="/product-comparison" element={<SuspenseRoute><ProductComparison /></SuspenseRoute>} />
+                <Route path="/eligibility-assessment" element={<SuspenseRoute><EligibilityAssessment /></SuspenseRoute>} />
+                <Route path="/resources/loan-emi-calculator" element={<SuspenseRoute><LoanEmiCalculator /></SuspenseRoute>} />
+                <Route path="/legal/:slug" element={<SuspenseRoute><LegalPage /></SuspenseRoute>} />
+                <Route path="/share-your-story" element={<SuspenseRoute><ShareYourStory /></SuspenseRoute>} />
+                <Route path="/oauth/callback" element={<SuspenseRoute><OAuthCallback /></SuspenseRoute>} />
+                <Route path="/development" element={<SuspenseRoute><DevelopmentPanel /></SuspenseRoute>} />
+
+                <Route path="/login-page" element={<SuspenseRoute><LoginPage /></SuspenseRoute>} />
+                <Route path="/admin-login" element={<SuspenseRoute><AdminLogin /></SuspenseRoute>} />
+                <Route path="/employee-login" element={<SuspenseRoute><EmployeeLogin /></SuspenseRoute>} />
+                <Route path="/agent-login" element={<SuspenseRoute><AgentLogin /></SuspenseRoute>} />
+                <Route path="/customer-login" element={<SuspenseRoute><CustomerLogin /></SuspenseRoute>} />
+
+                <Route path="/resume-application/:token" element={<SuspenseRoute><ResumeApplicationPage /></SuspenseRoute>} />
+                <Route path="/customer-assessment-portal" element={<SuspenseRoute><CustomerAssessmentPortal /></SuspenseRoute>} />
+                <Route path="/bank-marketplace" element={<SuspenseRoute><BankMarketplace /></SuspenseRoute>} />
+
+                <Route element={<AdminRouteShell />}>
+                  <Route path="/admin-dashboard" element={<SuspenseRoute><AdminDashboard /></SuspenseRoute>} />
+                  <Route path="/admin-security-dashboard" element={<SuspenseRoute><AdminSecurityDashboard /></SuspenseRoute>} />
+                  <Route path="/reports-and-analytics" element={<SuspenseRoute><ReportsAndAnalytics /></SuspenseRoute>} />
+                  <Route path="/bank-marketplace-management" element={<SuspenseRoute><BankMarketplaceManagement /></SuspenseRoute>} />
+                  <Route path="/approval-matrix-management" element={<SuspenseRoute><ApprovalMatrixManagement /></SuspenseRoute>} />
+                  <Route path="/interest-matrix-management" element={<SuspenseRoute><InterestMatrixManagement /></SuspenseRoute>} />
+                  <Route path="/admin/documents" element={<SuspenseRoute><DocumentManagementCenter /></SuspenseRoute>} />
+                </Route>
+
+                <Route
+                  path="/employee-portal"
+                  element={
+                    <ProtectedRoute allowedRoles={['employee', 'admin', 'super_admin']}>
+                      <SuspenseRoute><EmployeePortal /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/employee/settings"
+                  element={
+                    <ProtectedRoute allowedRoles={['employee', 'admin', 'super_admin']}>
+                      <SuspenseRoute><EmployeeSettingsPage /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/agent-dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+                      <SuspenseRoute><AgentDashboard /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/agent/customer-application"
+                  element={
+                    <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+                      <SuspenseRoute><AgentAssistedApplicationPage /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/agent/learning"
+                  element={
+                    <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+                      <SuspenseRoute><AgentLearningPage /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/agent/settings"
+                  element={
+                    <ProtectedRoute allowedRoles={['agent', 'admin', 'super_admin']}>
+                      <SuspenseRoute><AgentSettingsPage /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/customer-dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <SuspenseRoute><CustomerDashboard /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <SuspenseRoute><CustomerProfile /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/document-management-center"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer', 'employee', 'agent']}>
+                      <SuspenseRoute><DocumentManagementCenter /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/additional-questionnaire"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <SuspenseRoute><AdditionalQuestionnaire /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/bank-selection-and-consent"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <SuspenseRoute><BankSelectionAndConsent /></SuspenseRoute>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route path="/authentication-management-center" element={<SuspenseRoute><AuthenticationManagementCenter /></SuspenseRoute>} />
+                <Route path="/customer-registration-portal" element={<SuspenseRoute><CustomerRegistrationPortal /></SuspenseRoute>} />
+                <Route path="/password-management-system" element={<SuspenseRoute><PasswordManagementSystem /></SuspenseRoute>} />
+
+                <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />
+              </RouterRoutes>
+            </Suspense>
+          </ErrorBoundary>
+        </SiteContactProvider>
       </LoanProductsProvider>
     </BrowserRouter>
   );

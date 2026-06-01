@@ -9,7 +9,6 @@ export default function AgentOnboardingModal({ isOpen, onClose, onSuccess }) {
     username: '',
     password: '',
     agentName: '',
-    agentCode: '',
     email: '',
     mobileNumber: '',
     accountNumber: '',
@@ -45,7 +44,6 @@ export default function AgentOnboardingModal({ isOpen, onClose, onSuccess }) {
         username: '',
         password: '',
         agentName: '',
-        agentCode: '',
         email: '',
         mobileNumber: '',
         accountNumber: '',
@@ -158,22 +156,11 @@ export default function AgentOnboardingModal({ isOpen, onClose, onSuccess }) {
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Hash className="w-4 h-4 inline mr-2" />
-                  Agent Code *
-                </label>
-                <Input
-                  type="text"
-                  name="agentCode"
-                  value={formData?.agentCode}
-                  onChange={handleChange}
-                  placeholder="Enter agent code"
-                  required
-                  className="w-full"
-                />
+              <div className="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-gray-700">
+                <Hash className="w-4 h-4 inline mr-2 text-blue-600" />
+                Agent code is assigned automatically in the <strong>RFA</strong> series (e.g. RFA-000001).
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Mail className="w-4 h-4 inline mr-2" />

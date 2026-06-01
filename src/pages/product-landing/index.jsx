@@ -92,7 +92,15 @@ const ProductLanding = () => {
                 <Button variant="outline" className="w-full" onClick={() => navigate(`/product-comparison?${qs}`)}>
                   Compare product types
                 </Button>
-                <Button variant="secondary" className="w-full" onClick={() => navigate(`/customer-assessment-portal?${qs}`)}>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() =>
+                    navigate(`/customer-assessment-portal?${qs}`, {
+                      state: { quickCheck: { loanType: product.apiKey } },
+                    })
+                  }
+                >
                   Apply now
                 </Button>
               </div>

@@ -88,7 +88,6 @@ const StaffManageModal = ({ staffType, staff, isOpen, onClose, onSuccess, initia
     const payload = isAgent
       ? {
           agentName: form.name,
-          agentCode: form.code,
           username: form.username,
           email: form.email,
           mobileNumber: form.mobileNumber,
@@ -214,10 +213,17 @@ const StaffManageModal = ({ staffType, staff, isOpen, onClose, onSuccess, initia
                   required
                 />
                 <Input
-                  label={isAgent ? 'Agent code' : 'Employee code'}
+                  label={isAgent ? 'Agent code (RFA)' : 'Employee code'}
                   value={form.code}
-                  onChange={(e) => handleChange('code', e.target.value)}
-                  required
+                  onChange={(e) => !isAgent && handleChange('code', e.target.value)}
+                  readOnly={isAgent}
+                  disabled={isAgent}
+                  required={!isAgent}
+                  description={
+                    isAgent
+                      ? 'Assigned automatically in the RFA series (e.g. RFA-000001).'
+                      : undefined
+                  }
                 />
                 <Input
                   label="Username"

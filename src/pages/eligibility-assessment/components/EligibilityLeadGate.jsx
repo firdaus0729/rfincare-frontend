@@ -205,6 +205,11 @@ const EligibilityLeadGate = ({ onVerified, loanType }) => {
             {otpSettings.requireMobileOtp && otpSettings.requireEmailOtp && ' · '}
             {otpSettings.requireEmailOtp && <>Email OTP sent to {email.trim()}</>}
           </p>
+          {import.meta.env?.DEV && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+              Development: use the OTP shown in the API response or server logs when LOG_OTP is enabled.
+            </p>
+          )}
         </div>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}

@@ -19,8 +19,7 @@ import AutoSaveIndicator from './components/AutoSaveIndicator';
 import BankPreferencesStep from './components/BankPreferencesStep';
 import { getLoanPriorities, serializeLoanPriorities } from '../../utils/loanPriorities';
 import Icon from '../../components/AppIcon';
-import { normalizeLoanApiKey } from '../../constants/loanProducts';
-import { leadService } from '../../services/leadService';
+import { leadService, loadEligibilityResults } from '../../services/leadService';
 import { downloadConsentRecord } from '../../utils/consentRecord';
 import { getRequiredDocumentTypes, requiresCoApplicant } from '../../constants/assessmentDocuments';
 import {
@@ -30,6 +29,10 @@ import {
 } from '../../constants/assessmentFinancialHistory';
 import { agentApplicationService } from '../../services/agentApplicationService';
 import AgentAssistedBanner from './components/AgentAssistedBanner';
+import {
+  buildAssessmentEntryState,
+  stripUnsafeFormFields,
+} from '../../utils/assessmentFormData';
 
 const SESSION_KEY = 'loan_assessment_session';
 
@@ -145,10 +148,13 @@ const coerceYesNo = (value) => {
   return typeof value === 'string' ? value : '';
 };
 
+const FORM_SCALAR_KEYS = Object.keys(INITIAL_FORM_DATA);
+
 /** Normalize saved/server draft shapes so step renders never throw. */
 const normalizeAssessmentFormData = (raw = {}) => {
-  const merged = { ...INITIAL_FORM_DATA, ...(raw && typeof raw === 'object' ? raw : {}) };
-  const coRaw = merged.coApplicant;
+  const safe = stripUnsafeFormFields(raw, FORM_SCALAR_KEYS);
+  const merged = { ...INITIAL_FORM_DATA, ...safe };
+  const coRaw = raw?.coApplicant ?? merged.coApplicant;
   merged.coApplicant = {
     ...INITIAL_CO_APPLICANT,
     ...(coRaw && typeof coRaw === 'object' && !Array.isArray(coRaw) ? coRaw : {}),
@@ -220,22 +226,18 @@ const CustomerAssessmentPortal = ({ assistedByAgent = false } = {}) => {
 
   const [errors, setErrors] = useState({});
 
-  const applyEntryPrefill = useCallback((base) => {
-    const quick = location.state?.quickCheck || location.state?.eligibilityData;
-    const selectedBank = location.state?.selectedBank;
-    const loanTypeParam = searchParams.get('loanType');
-    if (!quick && !loanTypeParam && !selectedBank) return base;
-    return {
-      ...base,
-      loanAmount: quick?.loanAmount || base.loanAmount,
-      monthlyIncome: quick?.monthlyIncome || base.monthlyIncome,
-      creditScoreRange: quick?.creditScore || quick?.creditScoreRange || base.creditScoreRange,
-      loanPurpose: normalizeLoanApiKey(quick?.loanType || loanTypeParam) || base.loanPurpose,
-      employmentType: quick?.employmentType || base.employmentType,
-      preferredBankId: selectedBank?.id || base.preferredBankId,
-      preferredBankName: selectedBank?.name || base.preferredBankName,
-    };
-  }, [location.state, searchParams]);
+  const applyEntryPrefill = useCallback(
+    (base) =>
+      buildAssessmentEntryState({
+        initialFormData: base,
+        financialHistoryInitial: FINANCIAL_HISTORY_INITIAL,
+        financialHistoryQuestions: FINANCIAL_HISTORY_QUESTIONS,
+        locationState: location.state,
+        searchParams,
+        sessionFormData: loadEligibilityResults()?.formData,
+      }),
+    [location.state, searchParams],
+  );
 
   useEffect(() => {
     if (!assistedByAgent) return;
@@ -251,7 +253,7 @@ const CustomerAssessmentPortal = ({ assistedByAgent = false } = {}) => {
       if (assistedByAgent) {
         clearAssessmentDraft();
         sessionKey.current = createNewSessionKey();
-        setFormData(applyEntryPrefill({ ...INITIAL_FORM_DATA }));
+        setFormData(normalizeAssessmentFormData(applyEntryPrefill({ ...INITIAL_FORM_DATA })));
         setCurrentStep(0);
         setApplicationId(null);
         setUploadedDocs({});
@@ -263,7 +265,7 @@ const CustomerAssessmentPortal = ({ assistedByAgent = false } = {}) => {
       if (!shouldResume) {
         clearAssessmentDraft();
         sessionKey.current = createNewSessionKey();
-        setFormData(applyEntryPrefill({ ...INITIAL_FORM_DATA }));
+        setFormData(normalizeAssessmentFormData(applyEntryPrefill({ ...INITIAL_FORM_DATA })));
         setCurrentStep(0);
         setApplicationId(null);
         setUploadedDocs({});

@@ -2,8 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Select from '../../../components/ui/Select';
-import { apiClient } from '../../../lib/apiClient';
 import { employeeService } from '../../../services/employeeService';
+import { milestone4Service } from '../../../services/milestone4Service';
+import { apiClient } from '../../../lib/apiClient';
+import { customerJourneyService } from '../../../services/customerJourneyService';
+import { getDocumentPreviewUrl } from '../../../utils/documentUrls';
 
 const STATUS_OPTIONS = [
   { value: 'submitted', label: 'Submitted' },
@@ -67,6 +70,17 @@ const ApplicationWorkspaceModal = ({ application, isOpen, onClose, onRefresh }) 
   );
   const [statusSaving, setStatusSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [cibilCheck, setCibilCheck] = useState(null);
+
+  const loadCibil = useCallback(async () => {
+    if (!application?.id) return;
+    try {
+      const check = await milestone4Service.getApplicationCibil(application.id);
+      setCibilCheck(check);
+    } catch {
+      setCibilCheck(null);
+    }
+  }, [application?.id]);
 
   const loadDocuments = useCallback(async () => {
     if (!application?.id) return;
@@ -84,21 +98,43 @@ const ApplicationWorkspaceModal = ({ application, isOpen, onClose, onRefresh }) 
       setStatusNotes('');
       setMessage('');
       loadDocuments();
+      loadCibil();
     }
-  }, [isOpen, application, loadDocuments]);
+  }, [isOpen, application, loadDocuments, loadCibil]);
 
   const pendingCount = documents.filter((d) =>
     ['pending', 'uploaded'].includes(String(d.status || d.verificationStatus || '').toLowerCase()),
   ).length;
 
-  const openDocument = async (docId) => {
-    try {
-      const res = await apiClient.get(`/documents/${docId}/download`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
+  const openDocument = async (doc) => {
+    const docId = doc?.id;
+    if (!docId) {
       alert('Could not open document');
+      return;
     }
+
+    const previewUrl = getDocumentPreviewUrl(doc);
+    if (previewUrl) {
+      window.open(previewUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const { data, error } = await customerJourneyService.downloadDocument(docId);
+    if (error || !data?.blob) {
+      alert(error?.message || 'Could not open document');
+      return;
+    }
+
+    const url = URL.createObjectURL(data.blob);
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.click();
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   const handleVerifyDoc = async (docId, decision) => {
@@ -198,6 +234,36 @@ const ApplicationWorkspaceModal = ({ application, isOpen, onClose, onRefresh }) 
             </div>
           </div>
 
+          {cibilCheck && (
+            <section className="border border-border rounded-lg p-4 bg-muted/30">
+              <h3 className="font-semibold text-foreground flex items-center gap-2 mb-2">
+                <Icon name="Shield" size={18} />
+                CIBIL / bureau check
+              </h3>
+              <p className="text-sm">
+                Vendor: {cibilCheck.vendorName || cibilCheck.vendorKey} · Score:{' '}
+                {cibilCheck.creditScore ?? '—'} · Status: {cibilCheck.status}
+              </p>
+              {cibilCheck.reportPath && (
+                <Button
+                  className="mt-2"
+                  size="xs"
+                  variant="outline"
+                  onClick={async () => {
+                    const res = await apiClient.get(
+                      `/admin/milestone4/applications/${application.id}/cibil/report`,
+                      { responseType: 'blob' },
+                    );
+                    const url = URL.createObjectURL(res.data);
+                    window.open(url, '_blank');
+                  }}
+                >
+                  Download CIBIL PDF
+                </Button>
+              )}
+            </section>
+          )}
+
           <section className="border border-border rounded-lg overflow-hidden">
             <div className="bg-muted/80 px-4 py-3 flex items-center justify-between">
               <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -237,7 +303,7 @@ const ApplicationWorkspaceModal = ({ application, isOpen, onClose, onRefresh }) 
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2 shrink-0">
-                          <Button variant="outline" size="xs" onClick={() => openDocument(doc.id)}>
+                          <Button variant="outline" size="xs" onClick={() => openDocument(doc)}>
                             View
                           </Button>
                           {isPending && (

@@ -13,7 +13,7 @@ export function getRuntimeEnv(key) {
 
 const PRODUCTION_API_BASE = 'https://rfincare-backend.onrender.com';
 
-function inferApiBaseFromHost() {
+export function inferApiBaseFromHost() {
   if (typeof window === 'undefined') return '';
   const host = window.location.hostname;
   if (
@@ -31,7 +31,15 @@ export function getApiBaseUrl() {
   return getRuntimeEnv('VITE_API_BASE_URL') || inferApiBaseFromHost() || '';
 }
 
-export async function loadRuntimeConfig() {
+function applyInferredDefaults() {
+  const inferred = buildTime.VITE_API_BASE_URL?.replace(/\/$/, '') || inferApiBaseFromHost();
+  if (inferred) {
+    runtime = { ...buildTime, VITE_API_BASE_URL: inferred };
+    loaded = true;
+  }
+}
+
+async function fetchRemoteOverrides() {
   const buildBase = buildTime.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
   const inferredBase = inferApiBaseFromHost();
   const fetchBase = buildBase || inferredBase;
@@ -40,20 +48,41 @@ export async function loadRuntimeConfig() {
     : '/public/runtime-config';
   try {
     const res = await fetch(configUrl, { credentials: 'omit' });
-    if (res.ok) {
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await res.json();
-        runtime = { ...buildTime, ...(data?.vite || {}) };
-      }
+    if (!res.ok) return;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) return;
+    const data = await res.json();
+    runtime = { ...runtime, ...(data?.vite || {}) };
+    if (!runtime.VITE_API_BASE_URL && inferredBase) {
+      runtime.VITE_API_BASE_URL = inferredBase;
     }
+    loaded = true;
   } catch {
+    applyInferredDefaults();
+  }
+}
+
+export async function loadRuntimeConfig() {
+  applyInferredDefaults();
+  if (loaded && runtime.VITE_API_BASE_URL) {
+    fetchRemoteOverrides();
+    return runtime;
+  }
+
+  const buildBase = buildTime.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
+  const inferredBase = inferApiBaseFromHost();
+  if (buildBase || inferredBase) {
+    runtime.VITE_API_BASE_URL = buildBase || inferredBase;
+    loaded = true;
+    fetchRemoteOverrides();
+    return runtime;
+  }
+
+  await fetchRemoteOverrides();
+  if (!loaded) {
     runtime = { ...buildTime };
+    loaded = true;
   }
-  if (!runtime.VITE_API_BASE_URL && inferredBase) {
-    runtime.VITE_API_BASE_URL = inferredBase;
-  }
-  loaded = true;
   return runtime;
 }
 

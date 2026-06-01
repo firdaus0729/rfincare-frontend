@@ -40,6 +40,8 @@ import DocumentRequirementsTab from './components/DocumentRequirementsTab';
 import HierarchyMappingTab from './components/HierarchyMappingTab';
 import AgentLearningTab from './components/AgentLearningTab';
 import EmployeeLearningTab from './components/EmployeeLearningTab';
+import AdminSettingsTab from './components/AdminSettingsTab';
+import Milestone4AdminPanel from './components/Milestone4AdminPanel';
 
 
 const AdminDashboard = () => {
@@ -690,9 +692,12 @@ const AdminDashboard = () => {
 
                 {activeTab === 'employee-learning' && <EmployeeLearningTab />}
 
+                {activeTab === 'settings' && <AdminSettingsTab />}
+
                 {/* System Configuration Tab */}
                 {activeTab === 'system' && (
                   <div className="space-y-8">
+                    <Milestone4AdminPanel />
                     <OAuthProviderSettingsForm />
                     <OtpProviderSettingsForm />
                     <SystemConfigPanel />
