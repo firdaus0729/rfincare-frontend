@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 /** Per-icon chunks — avoids loading the full Lucide catalog up front. */
-const iconLoaders = import.meta.glob('../../../node_modules/lucide-react/dist/esm/icons/*.js');
+const iconLoaders = import.meta.glob('/node_modules/lucide-react/dist/esm/icons/*.js');
 
 /** Map legacy / custom names to Lucide file stems. */
 const ICON_ALIASES = {
