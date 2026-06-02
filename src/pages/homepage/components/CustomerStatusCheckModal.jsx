@@ -94,13 +94,27 @@ const CustomerStatusCheckModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-card rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+      role="button"
+      tabIndex={-1}
+      aria-label="Close application status modal"
+    >
+      <div
+        className="bg-card rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold">
             {mode === 'status' ? 'Check Application Status' : 'Continue Saved Application'}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
             <Icon name="X" size={20} />
           </button>
         </div>

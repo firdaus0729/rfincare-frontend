@@ -44,21 +44,47 @@ function findLoader(key) {
 function Icon({ name, size = 24, color = 'currentColor', className = '', strokeWidth = 2, ...props }) {
   const iconKey = resolveIconKey(name);
   const [IconComponent, setIconComponent] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
     setIconComponent(null);
+    setLoadFailed(false);
     const load = findLoader(iconKey) || findLoader('help-circle');
     if (!load) return undefined;
-    load().then((mod) => {
-      if (active) setIconComponent(() => mod.default);
-    });
+    load()
+      .then((mod) => {
+        if (active) setIconComponent(() => mod.default);
+      })
+      .catch(() => {
+        if (active) setLoadFailed(true);
+      });
     return () => {
       active = false;
     };
   }, [iconKey]);
 
   if (!IconComponent) {
+    if (loadFailed) {
+      return (
+        <span
+          className={className}
+          style={{
+            display: 'inline-flex',
+            width: size,
+            height: size,
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: Math.max(10, Math.floor(size * 0.6)),
+            lineHeight: 1,
+          }}
+          aria-hidden
+          {...props}
+        >
+          ?
+        </span>
+      );
+    }
     return (
       <span
         className={className}

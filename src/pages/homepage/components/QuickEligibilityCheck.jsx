@@ -14,6 +14,7 @@ const QuickEligibilityCheck = () => {
     loanAmount: '',
     loanType: '',
     monthlyIncome: '',
+    totalEmi: '',
     creditScore: ''
   });
 
@@ -76,6 +77,15 @@ const QuickEligibilityCheck = () => {
                 placeholder="Enter monthly income"
                 value={formData?.monthlyIncome}
                 onChange={(e) => setFormData({ ...formData, monthlyIncome: e?.target?.value })}
+                required
+              />
+
+              <Input
+                label="Total EMI"
+                type="number"
+                placeholder="Enter total EMI"
+                value={formData?.totalEmi}
+                onChange={(e) => setFormData({ ...formData, totalEmi: e?.target?.value })}
                 required
               />
 
